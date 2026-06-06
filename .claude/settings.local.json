@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"C:\\\\Users\\\\kahki\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\" /b)",
+      "Bash(findstr kakao *)",
+      "PowerShell(Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force)",
+      "PowerShell(Get-ExecutionPolicy -List)",
+      "Bash(flutter --version)",
+      "Bash(where flutter *)",
+      "Read(//c/Program Files/Android/Android Studio/**)",
+      "Read(//c/Users/kahki/AppData/Local/Android/Sdk/**)",
+      "Bash(flutter doctor *)",
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\kahki\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\kakao_map_plugin-0.4.0\\\\android\\\\build.gradle\"\\) | Select-String \"compileSdk\")",
+      "Bash(flutter pub *)",
+      "Bash(flutter run *)",
+      "Bash(timeout 60 bash -c \"until grep -qE '\\(flutter run|Syncing|Running|error:|Error\\)' 'C:\\\\Users\\\\kahki\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--src-zGUM\\\\86fe6934-b217-4c2b-b72b-3b8a794f9ae1\\\\tasks\\\\brb94nnk5.output' 2>/dev/null; do sleep 3; done\")",
+      "Bash(timeout 90 bash -c \"until grep -qE '\\(Syncing files|error:|Error:\\)' 'C:\\\\Users\\\\kahki\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--src-zGUM\\\\86fe6934-b217-4c2b-b72b-3b8a794f9ae1\\\\tasks\\\\brc8t407p.output' 2>/dev/null; do sleep 4; done\")"
+    ]
+  }
+}

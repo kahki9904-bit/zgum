@@ -1,0 +1,75 @@
+{
+  "@@locale": "zh",
+
+  "appName": "Z:GUM",
+
+  "tabNow": "此刻",
+  "tabYesterday": "昨天",
+
+  "panelTitle": "此刻",
+  "momentCount": "{count}个时刻",
+  "noMomentsNearby": "附近暂无进行中的时刻",
+  "walkingMinutes": "步行{minutes}分钟",
+  "partnerBadge": "此刻",
+
+  "checkInButton": "此刻",
+  "alarmSet": "设置提醒",
+  "alarmSetDone": "已设置",
+  "navigate": "出发",
+  "alarmSheetTitle": "设置提醒时间",
+  "alarmSheetSubtitle": "活动结束前多久提醒您？",
+  "alarmConfirm": "设置提醒",
+  "alarmMin10": "10分钟",
+  "alarmBeforeMinutes": "{minutes}分钟前提醒",
+  "alarmBeforeHourMin": "{hours}小时{minutes}分钟前提醒",
+  "alarmBeforeHour": "{hours}小时前提醒",
+  "alarmPermissionDenied": "需要通知权限，请在设置中允许。",
+
+  "timerEnded": "已结束",
+  "timerDaysLeft": "剩余{days}天{hours}小时",
+
+  "checkInMemoHint": "记录这一刻（选填）",
+  "addPhoto": "添加照片（选填）",
+  "cancel": "取消",
+  "camera": "相机",
+  "gallery": "相册",
+  "isFree": "免费入场",
+  "isPaid": "付费入场",
+  "navigateStop": "结束导航",
+  "routeSearching": "正在规划路线...",
+  "routeError": "无法获取路线，请稍后重试。",
+  "dataError": "无法加载数据，请稍后重试。",
+  "retry": "重试",
+
+  "searchHint": "搜索活动或场馆",
+  "searchEmpty": "没有搜索结果",
+
+  "settings": "设置",
+  "settingIdentity": "身份验证",
+  "settingNotifications": "通知",
+  "settingAppInfo": "关于",
+  "settingLanguage": "语言",
+
+  "languageTitle": "选择语言",
+  "langKo": "한국어",
+  "langEn": "English",
+  "langJa": "日本語",
+  "langZh": "中文",
+
+  "identityVerified": "已验证",
+  "identityNotVerified": "未验证",
+  "identityReset": "重置验证",
+
+  "checkInEmpty": "还没有记录的时刻",
+  "checkInDelete": "删除",
+
+  "categoryAll": "全部",
+  "categoryMovie": "电影",
+  "categoryTheater": "戏剧",
+  "categoryExhibition": "展览",
+  "categoryShow": "演出",
+  "categoryConcert": "音乐",
+  "categoryPartner": "此刻",
+
+  "adultOnly": "18+"
+}

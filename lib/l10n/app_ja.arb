@@ -1,0 +1,75 @@
+{
+  "@@locale": "ja",
+
+  "appName": "Z:GUM",
+
+  "tabNow": "いま",
+  "tabYesterday": "きのう",
+
+  "panelTitle": "いま",
+  "momentCount": "{count}の瞬間",
+  "noMomentsNearby": "近くに進行中の瞬間はありません",
+  "walkingMinutes": "徒歩{minutes}分",
+  "partnerBadge": "いま",
+
+  "checkInButton": "いま",
+  "alarmSet": "アラーム設定",
+  "alarmSetDone": "設定済み",
+  "navigate": "案内",
+  "alarmSheetTitle": "アラーム時間の設定",
+  "alarmSheetSubtitle": "イベント終了の何分前に通知しますか？",
+  "alarmConfirm": "アラームを設定",
+  "alarmMin10": "10分",
+  "alarmBeforeMinutes": "{minutes}分前に通知",
+  "alarmBeforeHourMin": "{hours}時間{minutes}分前に通知",
+  "alarmBeforeHour": "{hours}時間前に通知",
+  "alarmPermissionDenied": "通知の許可が必要です。設定からお許しください。",
+
+  "timerEnded": "終了",
+  "timerDaysLeft": "あと{days}日{hours}時間",
+
+  "checkInMemoHint": "この瞬間を残す（任意）",
+  "addPhoto": "写真を追加（任意）",
+  "cancel": "キャンセル",
+  "camera": "カメラ",
+  "gallery": "ギャラリー",
+  "isFree": "入場無料",
+  "isPaid": "有料入場",
+  "navigateStop": "案内終了",
+  "routeSearching": "ルート検索中...",
+  "routeError": "ルートを取得できません。後でもう一度お試しください。",
+  "dataError": "データを取得できません。後でもう一度お試しください。",
+  "retry": "再試行",
+
+  "searchHint": "公演名または場所を検索",
+  "searchEmpty": "検索結果がありません",
+
+  "settings": "設定",
+  "settingIdentity": "本人確認",
+  "settingNotifications": "通知",
+  "settingAppInfo": "アプリ情報",
+  "settingLanguage": "言語",
+
+  "languageTitle": "言語を選択",
+  "langKo": "한국어",
+  "langEn": "English",
+  "langJa": "日本語",
+  "langZh": "中文",
+
+  "identityVerified": "認証済み",
+  "identityNotVerified": "未認証",
+  "identityReset": "認証をリセット",
+
+  "checkInEmpty": "まだ記録された瞬間はありません",
+  "checkInDelete": "削除",
+
+  "categoryAll": "すべて",
+  "categoryMovie": "映画",
+  "categoryTheater": "演劇",
+  "categoryExhibition": "展示",
+  "categoryShow": "観覧",
+  "categoryConcert": "コンサート",
+  "categoryPartner": "いま",
+
+  "adultOnly": "18+"
+}

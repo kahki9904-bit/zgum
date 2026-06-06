@@ -1,0 +1,51 @@
+name: zgum
+description: Z:GUM (NOW) — 지금, 주변의 문화 행사를 발견하세요.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+
+  # 지도 — OpenStreetMap
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
+  # 위치
+  geolocator: ^11.0.0
+  permission_handler: ^11.3.1
+
+  # 상태 관리
+  flutter_riverpod: ^2.5.1
+
+  # 네트워크 (추후 공공데이터포털 API 연동)
+  dio: ^5.4.3+1
+
+  # 유틸
+  equatable: ^2.0.5
+
+  # 체크인 기록 — 로컬 저장 (추후 클라우드 전환 시 Repository 구현체만 교체)
+  shared_preferences: ^2.3.2
+  path_provider: ^2.1.4
+
+  # 사진 — 카메라/갤러리 (추후 firebase_storage 등으로 업로드 레이어 추가)
+  image_picker: ^1.1.2
+
+  # 로컬 알림 — 사용자가 지정한 이벤트에만 알림 예약 (추후 FCM 푸시로 확장 가능)
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  generate: true
+  uses-material-design: true

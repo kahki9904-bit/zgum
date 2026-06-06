@@ -1,0 +1,99 @@
+{
+  "@@locale": "ko",
+
+  "appName": "Z:GUM",
+
+  "tabNow": "지금",
+  "tabYesterday": "어제",
+
+  "panelTitle": "지금",
+  "momentCount": "{count}개의 순간",
+  "@momentCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "noMomentsNearby": "주변에 진행 중인 순간이 없습니다",
+  "walkingMinutes": "도보 {minutes}분",
+  "@walkingMinutes": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "partnerBadge": "지금",
+
+  "checkInButton": "지금",
+  "alarmSet": "알림 설정",
+  "alarmSetDone": "알림 설정됨",
+  "navigate": "안내",
+  "alarmSheetTitle": "알림 시간 설정",
+  "alarmSheetSubtitle": "이벤트 종료 몇 분 전에 알림을 받을까요?",
+  "alarmConfirm": "알림 설정",
+  "alarmMin10": "10분",
+  "alarmBeforeMinutes": "{minutes}분 전 알림",
+  "@alarmBeforeMinutes": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "alarmBeforeHourMin": "{hours}시간 {minutes}분 전 알림",
+  "@alarmBeforeHourMin": {
+    "placeholders": {
+      "hours": { "type": "int" },
+      "minutes": { "type": "int" }
+    }
+  },
+  "alarmBeforeHour": "{hours}시간 전 알림",
+  "@alarmBeforeHour": {
+    "placeholders": { "hours": { "type": "int" } }
+  },
+  "alarmPermissionDenied": "알림 권한이 필요합니다. 설정에서 허용해 주세요.",
+
+  "timerEnded": "종료됨",
+  "timerDaysLeft": "{days}일 {hours}시간 남음",
+  "@timerDaysLeft": {
+    "placeholders": {
+      "days": { "type": "int" },
+      "hours": { "type": "int" }
+    }
+  },
+
+  "checkInMemoHint": "이 순간을 기록하세요 (선택)",
+  "addPhoto": "사진 추가 (선택)",
+  "cancel": "취소",
+  "camera": "카메라",
+  "gallery": "갤러리",
+  "isFree": "무료 입장",
+  "isPaid": "유료 입장",
+  "navigateStop": "안내 종료",
+  "routeSearching": "경로 탐색 중...",
+  "routeError": "경로를 불러오지 못했습니다. 잠시 후 다시 시도하세요.",
+  "dataError": "데이터를 불러오지 못했습니다. 잠시 후 다시 시도하세요.",
+  "retry": "재시도",
+
+  "searchHint": "공연명 또는 장소 검색",
+  "searchEmpty": "검색 결과가 없습니다",
+
+  "settings": "설정",
+  "settingIdentity": "본인인증",
+  "settingNotifications": "알림",
+  "settingAppInfo": "앱 정보",
+  "settingLanguage": "언어",
+
+  "languageTitle": "언어 선택",
+  "langKo": "한국어",
+  "langEn": "English",
+  "langJa": "日本語",
+  "langZh": "中文",
+
+  "identityVerified": "인증 완료",
+  "identityNotVerified": "미인증",
+  "identityReset": "인증 초기화",
+
+  "checkInEmpty": "아직 기록된 순간이 없습니다",
+  "checkInDelete": "삭제",
+
+  "categoryAll": "전체",
+  "categoryMovie": "영화",
+  "categoryTheater": "연극",
+  "categoryExhibition": "전시",
+  "categoryShow": "관람",
+  "categoryConcert": "공연",
+  "categoryPartner": "지금",
+
+  "adultOnly": "19+"
+}

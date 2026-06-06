@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter emulators *)",
+      "Bash(flutter analyze *)",
+      "Bash(findstr /r \"applicationId\\\\|namespace\" c:\\\\src\\\\zGUM\\\\android\\\\app\\\\build.gradle.kts)",
+      "Read(//c/src/**)"
+    ]
+  }
+}

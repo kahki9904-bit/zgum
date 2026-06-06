@@ -1,0 +1,75 @@
+{
+  "@@locale": "en",
+
+  "appName": "Z:GUM",
+
+  "tabNow": "NOW",
+  "tabYesterday": "Yesterday",
+
+  "panelTitle": "NOW",
+  "momentCount": "{count} moments",
+  "noMomentsNearby": "No moments nearby right now",
+  "walkingMinutes": "{minutes} min walk",
+  "partnerBadge": "NOW",
+
+  "checkInButton": "NOW",
+  "alarmSet": "Set Alarm",
+  "alarmSetDone": "Alarm Set",
+  "navigate": "Go",
+  "alarmSheetTitle": "Set Alarm Time",
+  "alarmSheetSubtitle": "How early before the event ends?",
+  "alarmConfirm": "Set Alarm",
+  "alarmMin10": "10 min",
+  "alarmBeforeMinutes": "{minutes} min before",
+  "alarmBeforeHourMin": "{hours}h {minutes}m before",
+  "alarmBeforeHour": "{hours}h before",
+  "alarmPermissionDenied": "Notification permission required. Please allow it in Settings.",
+
+  "timerEnded": "Ended",
+  "timerDaysLeft": "{days}d {hours}h left",
+
+  "checkInMemoHint": "Capture this moment (optional)",
+  "addPhoto": "Add photo (optional)",
+  "cancel": "Cancel",
+  "camera": "Camera",
+  "gallery": "Gallery",
+  "isFree": "Free entry",
+  "isPaid": "Paid entry",
+  "navigateStop": "Stop",
+  "routeSearching": "Finding route...",
+  "routeError": "Could not load route. Please try again.",
+  "dataError": "Could not load data. Please try again.",
+  "retry": "Retry",
+
+  "searchHint": "Search events or venues",
+  "searchEmpty": "No results found",
+
+  "settings": "Settings",
+  "settingIdentity": "Identity Verification",
+  "settingNotifications": "Notifications",
+  "settingAppInfo": "About",
+  "settingLanguage": "Language",
+
+  "languageTitle": "Select Language",
+  "langKo": "한국어",
+  "langEn": "English",
+  "langJa": "日本語",
+  "langZh": "中文",
+
+  "identityVerified": "Verified",
+  "identityNotVerified": "Not verified",
+  "identityReset": "Reset verification",
+
+  "checkInEmpty": "No moments recorded yet",
+  "checkInDelete": "Delete",
+
+  "categoryAll": "All",
+  "categoryMovie": "Film",
+  "categoryTheater": "Theater",
+  "categoryExhibition": "Exhibition",
+  "categoryShow": "Show",
+  "categoryConcert": "Concert",
+  "categoryPartner": "NOW",
+
+  "adultOnly": "19+"
+}
