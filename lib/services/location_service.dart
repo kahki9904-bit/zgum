@@ -157,7 +157,7 @@ class LocationService {
     } catch (_) {}
 
     // 4단계: 수동 (사용자가 지도 커서 이동)
-    return LocationResult(
+    return const LocationResult(
         position: AppConstants.defaultLocation,
         status: LocationStatus.granted,
         step: LocationStep.manual);

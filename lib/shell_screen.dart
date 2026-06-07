@@ -13,6 +13,7 @@ class ShellScreen extends StatefulWidget {
 
 class _ShellScreenState extends State<ShellScreen> {
   final _pc = PageController(initialPage: 1);
+  final _mapKey = GlobalKey<MapRoomScreenState>();
   int _page = 1;
 
   @override
@@ -36,8 +37,10 @@ class _ShellScreenState extends State<ShellScreen> {
       curve: Curves.easeInOut,
     );
     setState(() => _page = page);
-    // 페이지 전환 후 제외 영역 갱신
-    WidgetsBinding.instance.addPostFrameCallback((_) => _syncExclusionRects());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncExclusionRects();
+      if (page == 1) _mapKey.currentState?.recenterOnUser();
+    });
   }
 
   /// 지도 화면에서는 좌/우 40dp 엣지를 시스템 백 제스처에서 제외합니다.
@@ -84,6 +87,7 @@ class _ShellScreenState extends State<ShellScreen> {
               ),
               // 지도: 포인터 콜백으로 스와이프 처리
               MapRoomScreen(
+                key: _mapKey,
                 onSwipeToUserRoom: () => _goTo(0),
                 onSwipeToPartnerRoom: () => _goTo(2),
               ),
@@ -102,7 +106,7 @@ class _ShellScreenState extends State<ShellScreen> {
   }
 }
 
-class _SwipeWrapper extends StatelessWidget {
+class _SwipeWrapper extends StatefulWidget {
   final Widget child;
   final VoidCallback? onSwipeLeft;
   final VoidCallback? onSwipeRight;
@@ -114,15 +118,45 @@ class _SwipeWrapper extends StatelessWidget {
   });
 
   @override
+  State<_SwipeWrapper> createState() => _SwipeWrapperState();
+}
+
+class _SwipeWrapperState extends State<_SwipeWrapper> {
+  double? _startX;
+  double? _startY;
+  bool _triggered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Listener(
       behavior: HitTestBehavior.translucent,
-      onHorizontalDragEnd: (d) {
-        final dx = d.velocity.pixelsPerSecond.dx;
-        if (dx < -300) onSwipeLeft?.call();
-        if (dx > 300) onSwipeRight?.call();
+      onPointerDown: (e) {
+        _startX = e.position.dx;
+        _startY = e.position.dy;
+        _triggered = false;
       },
-      child: child,
+      onPointerMove: (e) {
+        if (_triggered || _startX == null || _startY == null) return;
+        final dx = e.position.dx - _startX!;
+        final dy = (e.position.dy - _startY!).abs();
+        if (dx.abs() < 60 || dx.abs() < dy * 1.2) return;
+        _triggered = true;
+        _startX = null;
+        _startY = null;
+        if (dx < 0) widget.onSwipeLeft?.call();
+        if (dx > 0) widget.onSwipeRight?.call();
+      },
+      onPointerUp: (_) {
+        _startX = null;
+        _startY = null;
+        _triggered = false;
+      },
+      onPointerCancel: (_) {
+        _startX = null;
+        _startY = null;
+        _triggered = false;
+      },
+      child: widget.child,
     );
   }
 }

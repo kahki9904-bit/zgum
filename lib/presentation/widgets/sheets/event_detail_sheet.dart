@@ -24,6 +24,7 @@ class EventDetailSheet {
     VoidCallback? onNavigate,
     bool isCheckedIn = false,
     void Function(String? memo, String? photoPath)? onCheckIn,
+    int friendTraceCount = 0,
   }) async {
     if (!context.mounted) return;
 
@@ -38,6 +39,7 @@ class EventDetailSheet {
         onNavigate: onNavigate,
         isCheckedIn: isCheckedIn,
         onCheckIn: onCheckIn,
+        friendTraceCount: friendTraceCount,
       ),
     );
   }
@@ -77,6 +79,7 @@ class _SheetWrapper extends StatefulWidget {
   final VoidCallback? onNavigate;
   final bool isCheckedIn;
   final void Function(String? memo, String? photoPath)? onCheckIn;
+  final int friendTraceCount;
 
   const _SheetWrapper({
     required this.event,
@@ -85,6 +88,7 @@ class _SheetWrapper extends StatefulWidget {
     this.onNavigate,
     this.isCheckedIn = false,
     this.onCheckIn,
+    this.friendTraceCount = 0,
   });
 
   @override
@@ -333,6 +337,13 @@ class _SheetWrapperState extends State<_SheetWrapper> {
                     ),
                   ),
 
+                // 친구 흔적 배지
+                if (widget.friendTraceCount > 0)
+                  _FriendTraceBadge(count: widget.friendTraceCount),
+
+                // 파트너 공간 예약 — Firebase 연동 후 파트너 전용 콘텐츠로 교체
+                const SizedBox.shrink(),
+
                 // 정보 바
                 if (showTimer || walkMins != null)
                   _InfoBar(
@@ -562,7 +573,7 @@ class _CheckInDialogState extends State<_CheckInDialog> {
                               size: 22, color: Color(0xFFCCCCCC)),
                           const SizedBox(height: 4),
                           Text(context.l10n.addPhoto,
-                              style: TextStyle(
+                              style: const TextStyle(
                                   fontSize: 11, color: Color(0xFFCCCCCC))),
                         ],
                       ),
@@ -746,4 +757,55 @@ class _DragHandle extends StatelessWidget {
               borderRadius: BorderRadius.circular(2)),
         ),
       );
+}
+
+// ── 친구 흔적 배지 ────────────────────────────────────────────────────────────────
+
+class _FriendTraceBadge extends StatelessWidget {
+  final int count;
+
+  const _FriendTraceBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('친구 $count명이 이 장소에 흔적을 남겼습니다'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF16213E),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
+        decoration: const BoxDecoration(
+          color: Color(0xFFF0F4FF),
+          border: Border(
+            bottom: BorderSide(color: Color(0xFFD8E2FF), width: 0.8),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.pets, size: 16, color: Color(0xFF3A5FCD)),
+            const SizedBox(width: 4),
+            Text(
+              '$count',
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF3A5FCD),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

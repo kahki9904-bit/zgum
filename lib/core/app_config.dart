@@ -52,8 +52,18 @@ abstract final class AppConfig {
     defaultValue: '',
   );
 
+  // ── 소상공인시장진흥공단 상가(상권)정보 API ──────────────────────────────────
+  static const String sdscApiKey = String.fromEnvironment(
+    'SDSC_API_KEY',
+    defaultValue: '',
+  );
+
+  static const String sdscApiBaseUrl =
+      'https://apis.data.go.kr/B553077/api/open/sdsc2';
+
   // ── 키 등록 여부 확인 헬퍼 ────────────────────────────────────────────────
   static bool get hasTourApiKey => tourApiKey.isNotEmpty;
+  static bool get hasSdscKey => sdscApiKey.isNotEmpty;
   static bool get hasNaverKey => naverClientId.isNotEmpty;
   static bool get hasKakaoKey => kakaoApiKey.isNotEmpty;
 }

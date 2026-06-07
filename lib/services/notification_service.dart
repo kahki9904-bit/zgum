@@ -59,4 +59,58 @@ class NotificationService {
   Future<void> cancelEventAlarm(String eventId) async {
     await _plugin.cancel(eventId.hashCode.abs() % 100000);
   }
+
+  // 친구 근접 알림 — 즉시 표시
+  Future<void> showFriendNearbyNotification() async {
+    await _plugin.show(
+      900001,
+      'Z:GUM',
+      '친구가 근처에 있어요. 찾아볼까요?',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'zgum_friend_nearby',
+          '친구 근접 알림',
+          channelDescription: '친구탐험 — 근처에 있는 친구 알림',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
+
+  // 친구 등록 완료 알림
+  Future<void> showFriendRegisteredNotification() async {
+    await _plugin.show(
+      900002,
+      'Z:GUM',
+      '친구 등록이 완료됐어요.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'zgum_friend_registered',
+          '친구 등록 알림',
+          channelDescription: '친구 등록 완료 알림',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
+      ),
+    );
+  }
+
+  // 만료 예정 친구 알림
+  Future<void> showFriendExpiryNotification() async {
+    await _plugin.show(
+      900003,
+      'Z:GUM',
+      '곧 만남이 끊길 친구가 있어요. 다시 만나서 이어가세요.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'zgum_friend_expiry',
+          '친구 만료 예정 알림',
+          channelDescription: '친구 연결이 곧 만료되는 경우 알림',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
+      ),
+    );
+  }
 }

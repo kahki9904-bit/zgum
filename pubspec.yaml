@@ -13,9 +13,12 @@ dependencies:
     sdk: flutter
   intl: ^0.20.2
 
-  # 지도 — OpenStreetMap
+  # 지도 — OpenStreetMap (FlutterMapEngine 폴백용으로 유지)
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
+
+  # 지도 — 카카오 (WebView 기반, JS 키만 필요, 심사 불필요)
+  kakao_map_plugin: ^0.4.0
 
   # 위치
   geolocator: ^11.0.0

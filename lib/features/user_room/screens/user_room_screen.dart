@@ -1,20 +1,23 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 import '../../../data/models/check_in_record.dart';
+import '../../../services/device_id_service.dart';
+import '../../../services/notification_service.dart';
 import '../providers/check_in_provider.dart';
+import '../../friend/data/models/friend_duration.dart';
+import '../../friend/data/models/friend_request.dart';
+import '../../friend/data/repositories/friend_repository.dart';
+import '../../friend/providers/friend_provider.dart';
 import 'settings_screen.dart';
 
-class UserRoomScreen extends ConsumerStatefulWidget {
+class UserRoomScreen extends ConsumerWidget {
   const UserRoomScreen({super.key});
 
   @override
-  ConsumerState<UserRoomScreen> createState() => _UserRoomScreenState();
-}
-
-class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
       body: SafeArea(
@@ -25,6 +28,8 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
             const SizedBox(height: 32),
             const _Rule(),
             const SizedBox(height: 32),
+            const _FriendButton(),
+            const SizedBox(height: 20),
             _CheckInTimelineSection(
               records: ref.watch(checkInProvider),
               onDelete: (id) => ref.read(checkInProvider.notifier).delete(id),
@@ -83,7 +88,473 @@ class _ProfileSection extends StatelessWidget {
   }
 }
 
-// ── 구역 2: 체크인 타임라인 ────────────────────────────────────────────────────
+// ── 구역 2: 친구 신청/수락 버튼 ────────────────────────────────────────────────
+
+class _FriendButton extends ConsumerStatefulWidget {
+  const _FriendButton();
+
+  @override
+  ConsumerState<_FriendButton> createState() => _FriendButtonState();
+}
+
+class _FriendButtonState extends ConsumerState<_FriendButton> {
+  String? _myUserId;
+  FriendRequest? _myBroadcast;
+  FriendRequest? _incomingRequest;
+  Timer? _broadcastTimer;
+  Timer? _pollTimer;
+  int _secondsLeft = 0;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    DeviceIdService.getId().then((id) {
+      if (!mounted) return;
+      setState(() => _myUserId = id);
+      _checkOnLaunch(id);
+      _startPolling(id);
+    });
+  }
+
+  Future<void> _checkOnLaunch(String userId) async {
+    final repo = ref.read(friendRepositoryProvider);
+    // 같은 기기 테스트: 자기 신청도 보이도록 다른 ID로 조회
+    final requests = await repo.getNearbyRequests(
+      myLocation: const LatLng(37.5665, 126.9780),
+      myUserId: '${userId}_b',
+    );
+    if (!mounted || requests.isEmpty) return;
+    setState(() => _incomingRequest = requests.first);
+  }
+
+  @override
+  void dispose() {
+    _broadcastTimer?.cancel();
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startPolling(String userId) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      if (!mounted || _myBroadcast != null) return;
+      final repo = ref.read(friendRepositoryProvider);
+      final requests = await repo.getNearbyRequests(
+        myLocation: const LatLng(37.5665, 126.9780),
+        myUserId: userId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _incomingRequest = requests.isEmpty ? null : requests.first;
+      });
+    });
+  }
+
+  void _cancelBroadcast() {
+    _broadcastTimer?.cancel();
+    setState(() => _myBroadcast = null);
+  }
+
+  // A: 기간 칩 + 코드 입력 통합 팝업 (2단계)
+  void _showRequestPopup() {
+    FriendDuration selectedDuration = FriendDuration.oneDay;
+    FriendRequest? broadcastedReq;
+    final tokenCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) {
+          final sent = broadcastedReq != null;
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16)),
+            title: Text(
+              sent ? '상대방 번호 입력' : '친구 신청',
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF16213E)),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 기간 칩
+                Row(
+                  children: FriendDuration.values.map((d) {
+                    final on = d == selectedDuration;
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: sent
+                            ? null
+                            : () => setDialog(() => selectedDuration = d),
+                        child: Container(
+                          margin:
+                              const EdgeInsets.symmetric(horizontal: 2),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: on
+                                ? const Color(0xFF16213E)
+                                : const Color(0xFFF4F4F4),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            d.chipLabel,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: on
+                                  ? Colors.white
+                                  : (sent
+                                      ? const Color(0xFFCCCCCC)
+                                      : const Color(0xFF555555)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                if (sent) ...[
+                  const SizedBox(height: 20),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '상대방이 알려주는 숫자 2자리를 입력하세요.',
+                      style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFFAAAAAA),
+                          height: 1.5),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: tokenCtrl,
+                    keyboardType: TextInputType.number,
+                    maxLength: 2,
+                    textAlign: TextAlign.center,
+                    autofocus: true,
+                    style: const TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 12,
+                      color: Color(0xFF16213E),
+                    ),
+                    decoration: InputDecoration(
+                      counterText: '',
+                      hintText: '--',
+                      hintStyle: const TextStyle(
+                        color: Color(0xFFDDDDDD),
+                        fontSize: 36,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 12,
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFFF8F8F8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _cancelBroadcast();
+                },
+                child: const Text('취소',
+                    style: TextStyle(color: Color(0xFFAAAAAA))),
+              ),
+              FilledButton(
+                onPressed: sent
+                    ? () async {
+                        final token = tokenCtrl.text.trim();
+                        if (token.length != 2) return;
+                        Navigator.pop(ctx);
+                        setState(() => _loading = true);
+                        final repo = ref.read(friendRepositoryProvider);
+                        final friend = await repo.confirmRequest(
+                          requestId: broadcastedReq!.id,
+                          responseToken: token,
+                          myUserId: _myUserId ?? 'test_requester',
+                          myLocation: const LatLng(37.5665, 126.9780),
+                        );
+                        if (!mounted) return;
+                        setState(() {
+                          _loading = false;
+                          if (friend != null) {
+                            _myBroadcast = null;
+                            _broadcastTimer?.cancel();
+                          }
+                        });
+                        if (friend != null) {
+                          ref.invalidate(activeFriendsProvider);
+                          await NotificationService.instance
+                              .showFriendRegisteredNotification();
+                        }
+                      }
+                    : () async {
+                        if (_myUserId == null) return;
+                        final repo = ref.read(friendRepositoryProvider);
+                        setState(() => _loading = true);
+                        final request = await repo.broadcastRequest(
+                          myUserId: _myUserId!,
+                          myLocation: const LatLng(37.5665, 126.9780),
+                          duration: selectedDuration,
+                        );
+                        _broadcastTimer?.cancel();
+                        setState(() {
+                          _myBroadcast = request;
+                          _secondsLeft =
+                              FriendRepository.requestTtl.inSeconds;
+                          _loading = false;
+                        });
+                        _broadcastTimer = Timer.periodic(
+                            const Duration(seconds: 1), (_) {
+                          if (!mounted) return;
+                          if (_secondsLeft <= 0) {
+                            _broadcastTimer?.cancel();
+                            setState(() => _myBroadcast = null);
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            return;
+                          }
+                          setState(() => _secondsLeft--);
+                        });
+                        setDialog(() => broadcastedReq = request);
+                      },
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF16213E),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Text(sent ? '확인' : '신청'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // B: 기간 칩 + 코드 생성 통합 팝업 (2단계)
+  void _showRespondPopup(FriendRequest request) {
+    FriendDuration selectedDuration = FriendDuration.oneDay;
+    String? generatedToken;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) {
+          final responded = generatedToken != null;
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16)),
+            title: Text(
+              responded ? '상대방에게 알려주세요' : '친구 수락',
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF16213E)),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 기간 칩
+                Row(
+                  children: FriendDuration.values.map((d) {
+                    final on = d == selectedDuration;
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: responded
+                            ? null
+                            : () => setDialog(() => selectedDuration = d),
+                        child: Container(
+                          margin:
+                              const EdgeInsets.symmetric(horizontal: 2),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: on
+                                ? const Color(0xFF16213E)
+                                : const Color(0xFFF4F4F4),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            d.chipLabel,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: on
+                                  ? Colors.white
+                                  : (responded
+                                      ? const Color(0xFFCCCCCC)
+                                      : const Color(0xFF555555)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                if (responded) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    generatedToken!,
+                    style: const TextStyle(
+                      fontSize: 80,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 20,
+                      color: Color(0xFF16213E),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '이 번호를 상대방에게 알려주세요.',
+                    style:
+                        TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              if (!responded)
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('취소',
+                      style: TextStyle(color: Color(0xFFAAAAAA))),
+                ),
+              FilledButton(
+                onPressed: responded
+                    ? () => Navigator.pop(ctx)
+                    : () async {
+                        setState(() => _loading = true);
+                        final repo = ref.read(friendRepositoryProvider);
+                        final token = await repo.respondToRequest(
+                          requestId: request.id,
+                          myUserId: _myUserId ?? 'test_responder',
+                          myLocation: const LatLng(37.5665, 126.9780),
+                          skipProximityCheck: true,
+                        );
+                        if (!mounted) return;
+                        setState(() {
+                          _loading = false;
+                          if (token != null) _incomingRequest = null;
+                        });
+                        if (token != null) {
+                          setDialog(() => generatedToken = token);
+                        }
+                      },
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF16213E),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Text(responded ? '완료' : '수락'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_incomingRequest != null) {
+      return _buildAcceptButton();
+    }
+    return _buildRequestButton();
+  }
+
+  void _onRequestTap() {
+    if (_myBroadcast != null) {
+      _showRequestPopup();
+    } else {
+      _showRequestPopup();
+    }
+  }
+
+  Widget _buildRequestButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: FilledButton(
+        onPressed: _loading ? null : _onRequestTap,
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFF16213E),
+          disabledBackgroundColor: const Color(0xFF16213E).withValues(alpha: 0.4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: _loading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )
+            : const Text(
+                '신청',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+      ),
+    );
+  }
+
+
+  Widget _buildAcceptButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: FilledButton(
+        onPressed: _loading ? null : () => _showRespondPopup(_incomingRequest!),
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFF16213E),
+          disabledBackgroundColor:
+              const Color(0xFF16213E).withValues(alpha: 0.4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: _loading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )
+            : const Text(
+                '수락',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+// ── 구역 3: 체크인 타임라인 ────────────────────────────────────────────────────
 
 class _CheckInTimelineSection extends StatelessWidget {
   final List<CheckInRecord> records;
@@ -94,7 +565,6 @@ class _CheckInTimelineSection extends StatelessWidget {
     required this.onDelete,
   });
 
-  // 날짜별 그룹핑 (최신순)
   Map<String, List<CheckInRecord>> _grouped() {
     final map = <String, List<CheckInRecord>>{};
     for (final r in records) {
@@ -133,7 +603,8 @@ class _CheckInTimelineSection extends StatelessWidget {
             child: Center(
               child: Text(
                 '아직 기록한 순간이 없습니다',
-                style: TextStyle(color: Color(0xFFCCCCCC), fontSize: 13),
+                style:
+                    TextStyle(color: Color(0xFFCCCCCC), fontSize: 13),
               ),
             ),
           )
@@ -221,10 +692,12 @@ class _CheckInCard extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, size: 16, color: Color(0xFFCCCCCC)),
+                    icon: const Icon(Icons.close,
+                        size: 16, color: Color(0xFFCCCCCC)),
                     onPressed: () => _confirmDelete(context),
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    constraints: const BoxConstraints(
+                        minWidth: 32, minHeight: 32),
                   ),
                 ],
               ),
@@ -251,7 +724,8 @@ class _CheckInCard extends StatelessWidget {
                     width: double.infinity,
                     height: 160,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    errorBuilder: (_, __, ___) =>
+                        const SizedBox.shrink(),
                   ),
                 ),
               ),
@@ -266,19 +740,23 @@ class _CheckInCard extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('기록 삭제', style: TextStyle(fontSize: 16)),
-        content: const Text('이 기록을 삭제할까요?', style: TextStyle(fontSize: 14)),
+        title: const Text('기록 삭제',
+            style: TextStyle(fontSize: 16)),
+        content: const Text('이 기록을 삭제할까요?',
+            style: TextStyle(fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('취소', style: TextStyle(color: Color(0xFFAAAAAA))),
+            child: const Text('취소',
+                style: TextStyle(color: Color(0xFFAAAAAA))),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               onDelete(record.id);
             },
-            child: const Text('삭제', style: TextStyle(color: Color(0xFFE74C3C))),
+            child: const Text('삭제',
+                style: TextStyle(color: Color(0xFFE74C3C))),
           ),
         ],
       ),
@@ -286,7 +764,7 @@ class _CheckInCard extends StatelessWidget {
   }
 }
 
-// ── 구역 3: 설정 버튼 ─────────────────────────────────────────────────────────
+// ── 구역 4: 설정 버튼 ─────────────────────────────────────────────────────────
 
 class _SettingsSection extends StatelessWidget {
   const _SettingsSection();
@@ -317,16 +795,19 @@ class _SettingsSection extends StatelessWidget {
                     color: const Color(0xFFF0F0F0),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.settings_outlined, size: 17, color: Color(0xFFAAAAAA)),
+                  child: const Icon(Icons.settings_outlined,
+                      size: 17, color: Color(0xFFAAAAAA)),
                 ),
                 const SizedBox(width: 14),
                 const Expanded(
                   child: Text(
                     '설정',
-                    style: TextStyle(color: Color(0xFF333333), fontSize: 15),
+                    style: TextStyle(
+                        color: Color(0xFF333333), fontSize: 15),
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: Color(0xFFDDDDDD), size: 20),
+                const Icon(Icons.chevron_right,
+                    color: Color(0xFFDDDDDD), size: 20),
               ],
             ),
           ),

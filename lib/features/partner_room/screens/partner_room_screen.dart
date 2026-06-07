@@ -64,7 +64,7 @@ class _PartnerRoomScreenState extends State<PartnerRoomScreen> {
   Future<List<_NearbyPlace>> _fetchNearbyPlaces(LatLng pos) async {
     await Future.delayed(const Duration(milliseconds: 500));
     return [
-      _NearbyPlace(name: '이 위치 근처 (정확한 장소를 선택해 주세요)', address: ''),
+      const _NearbyPlace(name: '이 위치 근처 (정확한 장소를 선택해 주세요)', address: ''),
     ];
   }
 
@@ -87,12 +87,12 @@ class _PartnerRoomScreenState extends State<PartnerRoomScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 36, 24, 0),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(24, 36, 24, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Z:GUM',
                     style: TextStyle(
                       color: Colors.white,
@@ -101,8 +101,8 @@ class _PartnerRoomScreenState extends State<PartnerRoomScreen> {
                       letterSpacing: 6,
                     ),
                   ),
-                  const SizedBox(height: 56),
-                  const Text(
+                  SizedBox(height: 56),
+                  Text(
                     '파트너 룸',
                     style: TextStyle(
                       color: Colors.white,
@@ -111,7 +111,7 @@ class _PartnerRoomScreenState extends State<PartnerRoomScreen> {
                       height: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
                 ],
               ),
             ),

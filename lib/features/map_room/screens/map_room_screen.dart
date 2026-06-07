@@ -14,10 +14,11 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../core/providers/tick_provider.dart';
 import '../../../data/adapters/cultural_event_adapter.dart';
 import '../../../data/models/cultural_event.dart';
-import '../../../data/repositories/api_cultural_event_repository.dart'
-    show CulturalEventApiException;
+import '../../../core/app_config.dart';
+import '../../../data/repositories/api_cultural_event_repository.dart';
 import '../../../data/repositories/cultural_event_repository.dart';
 import '../../../data/repositories/mock_cultural_event_repository.dart';
+import '../../../data/repositories/sdsc_store_repository.dart';
 import '../../../services/location_service.dart';
 import '../../../services/time_service.dart';
 import '../../../presentation/widgets/sheets/event_detail_sheet.dart';
@@ -38,10 +39,10 @@ class MapRoomScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<MapRoomScreen> createState() => _MapRoomScreenState();
+  ConsumerState<MapRoomScreen> createState() => MapRoomScreenState();
 }
 
-class _MapRoomScreenState extends ConsumerState<MapRoomScreen>
+class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
@@ -50,7 +51,9 @@ class _MapRoomScreenState extends ConsumerState<MapRoomScreen>
   final MapEngine _engine = FlutterMapEngine();
 
   final _locationService = LocationService();
-  final CulturalEventRepository _repository = MockCulturalEventRepository();
+  final CulturalEventRepository _publicRepo = MockCulturalEventRepository();
+  final CulturalEventRepository? _partnerRepo =
+      AppConfig.hasSdscKey ? SdscStoreRepository() : null;
   final _timeService = const TimeService();
 
   late final MapEngineController _mapCtrl;
@@ -90,6 +93,13 @@ class _MapRoomScreenState extends ConsumerState<MapRoomScreen>
   bool _isNavigating = false;
   bool _isLoadingRoute = false;
 
+  // ── 친구 흔적 mock 데이터 (Firebase 연동 전 임시) ────────────────────────────
+  static const _mockFriendTrace = <String, int>{
+    'test-001': 2,
+    'pub-004': 1,
+    'par-001': 3,
+  };
+
   @override
   void initState() {
     super.initState();
@@ -106,6 +116,11 @@ class _MapRoomScreenState extends ConsumerState<MapRoomScreen>
     _searchCtrl.dispose();
     _searchFocus.dispose();
     super.dispose();
+  }
+
+  void recenterOnUser() {
+    if (!mounted || _locationAcquiring) return;
+    _mapCtrl.move(_centerCoord, AppConstants.defaultZoom);
   }
 
   Future<void> _init() async {
@@ -133,11 +148,25 @@ class _MapRoomScreenState extends ConsumerState<MapRoomScreen>
     try {
       final isIdentityVerified =
           ref.read(authStateProvider).isIdentityVerified;
-      final all = await _repository.fetchNearbyEvents(
+      final args = (
         center: _center,
         radiusKm: AppConstants.defaultRadiusKm,
         isIdentityVerified: isIdentityVerified,
       );
+      final results = await Future.wait([
+        _publicRepo.fetchNearbyEvents(
+          center: args.center,
+          radiusKm: args.radiusKm,
+          isIdentityVerified: args.isIdentityVerified,
+        ),
+        if (_partnerRepo != null)
+          _partnerRepo.fetchNearbyEvents(
+            center: args.center,
+            radiusKm: args.radiusKm,
+            isIdentityVerified: args.isIdentityVerified,
+          ),
+      ]);
+      final all = results.expand((list) => list).toList();
       final now = _timeService.now();
       final active = all
           .where((e) => !EventFade.isFullyExpired(e.endDateTime, now))
@@ -328,6 +357,7 @@ class _MapRoomScreenState extends ConsumerState<MapRoomScreen>
         timeService: _timeService,
         userLocation: _center,
         isCheckedIn: ref.read(checkInProvider.notifier).checkedInEventIds.contains(event.id),
+        friendTraceCount: _mockFriendTrace[event.id] ?? 0,
         onCheckIn: (String? memo, String? photoPath) {
           final record = CheckInRecord.fromEvent(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -503,6 +533,7 @@ class _MapRoomScreenState extends ConsumerState<MapRoomScreen>
         timeService: _timeService,
         userLocation: _center,
         isCheckedIn: ref.read(checkInProvider.notifier).checkedInEventIds.contains(event.id),
+        friendTraceCount: _mockFriendTrace[event.id] ?? 0,
         onCheckIn: (String? memo, String? photoPath) {
           final record = CheckInRecord.fromEvent(
             id: DateTime.now().millisecondsSinceEpoch.toString(),

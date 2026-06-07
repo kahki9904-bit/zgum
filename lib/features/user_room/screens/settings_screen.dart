@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/providers/locale_provider.dart';
+import '../../friend/providers/friend_provider.dart';
 import 'adult_verification_screen.dart';
 import 'notification_setting_screen.dart';
 import 'app_info_screen.dart';
@@ -12,6 +13,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentLocale = ref.watch(localeProvider);
+    final explorationOn = ref.watch(friendExplorationProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
@@ -77,6 +79,18 @@ class SettingsScreen extends ConsumerWidget {
                         context,
                         MaterialPageRoute(builder: (_) => const AppInfoScreen()),
                       ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(left: 58),
+                      child: _Rule(),
+                    ),
+                    _ToggleRow(
+                      icon: Icons.explore_outlined,
+                      label: '친구탐험 알림',
+                      value: explorationOn,
+                      onToggle: () => ref
+                          .read(friendExplorationProvider.notifier)
+                          .toggle(),
                     ),
                   ],
                 ),
@@ -271,6 +285,56 @@ class _SettingRow extends StatelessWidget {
               const Icon(Icons.chevron_right, color: Color(0xFFDDDDDD), size: 20),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToggleRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool value;
+  final VoidCallback onToggle;
+
+  const _ToggleRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SizedBox(
+        height: 52,
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F0F0),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 17, color: const Color(0xFFAAAAAA)),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                    color: Color(0xFF333333), fontSize: 15),
+              ),
+            ),
+            Switch(
+              value: value,
+              onChanged: (_) => onToggle(),
+              activeThumbColor: const Color(0xFF16213E),
+            ),
+          ],
         ),
       ),
     );
