@@ -508,7 +508,7 @@ class _FriendButtonState extends ConsumerState<_FriendButton> {
                     strokeWidth: 2, color: Colors.white),
               )
             : const Text(
-                '신청',
+                '지금',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,

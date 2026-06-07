@@ -267,7 +267,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   // ── 검색 ──────────────────────────────────────────────────────────────────
 
   List<CulturalEvent> get _searchResults {
-    if (_searchQuery.isEmpty) return _events;
+    if (_searchQuery.isEmpty) return [];
     final q = _searchQuery.toLowerCase();
     return _events
         .where((e) =>
@@ -421,64 +421,64 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: _searchResults.isEmpty
-              ? const Center(
-                  child: Text(
-                    '검색 결과가 없습니다',
-                    style:
-                        TextStyle(color: Color(0xFFCCCCCC), fontSize: 13),
-                  ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  itemCount: _searchResults.length,
-                  separatorBuilder: (_, __) =>
-                      Container(height: 1, color: const Color(0xFFF0F0F0)),
-                  itemBuilder: (_, i) {
-                    final e = _searchResults[i];
-                    return InkWell(
-                      onTap: () => _selectResult(e),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    e.title,
-                                    style: const TextStyle(
-                                      color: Color(0xFF333333),
-                                      fontSize: 14,
+        if (_searchQuery.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Expanded(
+            child: _searchResults.isEmpty
+                ? const Center(
+                    child: Text(
+                      '검색 결과가 없습니다',
+                      style: TextStyle(color: Color(0xFFCCCCCC), fontSize: 13),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                    itemCount: _searchResults.length,
+                    separatorBuilder: (_, __) =>
+                        Container(height: 1, color: const Color(0xFFF0F0F0)),
+                    itemBuilder: (_, i) {
+                      final e = _searchResults[i];
+                      return InkWell(
+                        onTap: () => _selectResult(e),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      e.title,
+                                      style: const TextStyle(
+                                        color: Color(0xFF333333),
+                                        fontSize: 14,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    e.venue,
-                                    style: const TextStyle(
-                                      color: Color(0xFFAAAAAA),
-                                      fontSize: 12,
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      e.venue,
+                                      style: const TextStyle(
+                                        color: Color(0xFFAAAAAA),
+                                        fontSize: 12,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                            const Icon(
-                              Icons.chevron_right,
-                              color: Color(0xFFDDDDDD),
-                              size: 18,
-                            ),
-                          ],
+                              const Icon(
+                                Icons.chevron_right,
+                                color: Color(0xFFDDDDDD),
+                                size: 18,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ],
     );
   }
@@ -608,67 +608,54 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
             ),
           ),
 
-          // ── 검색 레이어 ────────────────────────────────────────────────
+          // ── 검색: 빈공간 터치 닫기 ────────────────────────────────────
+          if (_searchOpen)
+            Positioned(
+              top: safePadding + (_searchQuery.isNotEmpty ? panelHeight : 60.0),
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _closeSearch,
+              ),
+            ),
+
+          // ── 검색 패널 (상단 스와이프로 열기) ──────────────────────────
           Column(
             children: [
               SizedBox(height: safePadding),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 600),
-                curve: Curves.easeOut,
-                height: _searchOpen ? panelHeight : 48,
-                clipBehavior: Clip.hardEdge,
-                decoration: BoxDecoration(
-                  color: _searchOpen ? Colors.white : Colors.transparent,
-                  boxShadow: _searchOpen
-                      ? const [
-                          BoxShadow(
-                            color: Color(0x18000000),
-                            blurRadius: 8,
-                            offset: Offset(0, 4),
-                          ),
-                        ]
-                      : const [],
-                ),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: _searchOpen
-                          ? _buildSearchPanel()
-                          : const SizedBox.shrink(),
-                    ),
-                    GestureDetector(
-                      onTap: _toggleSearch,
-                      child: _searchOpen
-                          ? const SizedBox(
-                              height: 48,
-                              child: Center(
-                                child: Icon(
-                                  Icons.keyboard_arrow_up,
-                                  color: Color(0xFF16213E),
-                                  size: 26,
-                                ),
-                              ),
-                            )
-                          : Container(
-                              width: double.infinity,
-                              height: 48,
-                              alignment: Alignment.center,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.85),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: const Icon(
-                                  Icons.keyboard_arrow_down,
-                                  color: Color(0xFF16213E),
-                                  size: 22,
-                                ),
-                              ),
+              GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onVerticalDragEnd: (details) {
+                  final v = details.primaryVelocity ?? 0;
+                  if (v > 150 && !_searchOpen) _toggleSearch();
+                  if (v < -150 && _searchOpen) _closeSearch();
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 350),
+                  curve: Curves.easeOut,
+                  height: !_searchOpen
+                      ? 28
+                      : _searchQuery.isNotEmpty
+                          ? panelHeight
+                          : 60.0,
+                  clipBehavior: Clip.hardEdge,
+                  decoration: BoxDecoration(
+                    color: _searchOpen ? Colors.white : Colors.transparent,
+                    boxShadow: _searchOpen
+                        ? const [
+                            BoxShadow(
+                              color: Color(0x18000000),
+                              blurRadius: 8,
+                              offset: Offset(0, 4),
                             ),
-                    ),
-                  ],
+                          ]
+                        : const [],
+                  ),
+                  child: _searchOpen
+                      ? _buildSearchPanel()
+                      : const SizedBox.shrink(),
                 ),
               ),
             ],
@@ -869,7 +856,20 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
             ),
           ],
 
-          // ── 지금 패널 (하단 스와이프) ──────────────────────────────────
+          // ── 지금 패널: 빈공간 터치 닫기 ──────────────────────────────
+          if (_nowPanelOpen)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: nowPanelHeight + bottomPadding + 32,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _toggleNowPanel,
+              ),
+            ),
+
+          // ── 지금 패널 (하단 스와이프로 열기) ────────────────────────────
           Positioned(
             bottom: 0,
             left: 0,

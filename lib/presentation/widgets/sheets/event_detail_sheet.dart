@@ -28,18 +28,30 @@ class EventDetailSheet {
   }) async {
     if (!context.mounted) return;
 
-    showModalBottomSheet<void>(
+    showGeneralDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _SheetWrapper(
-        event: event,
-        timeService: timeService,
-        userLocation: userLocation,
-        onNavigate: onNavigate,
-        isCheckedIn: isCheckedIn,
-        onCheckIn: onCheckIn,
-        friendTraceCount: friendTraceCount,
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black45,
+      transitionDuration: const Duration(milliseconds: 350),
+      pageBuilder: (_, __, ___) => Align(
+        alignment: Alignment.topCenter,
+        child: _SheetWrapper(
+          event: event,
+          timeService: timeService,
+          userLocation: userLocation,
+          onNavigate: onNavigate,
+          isCheckedIn: isCheckedIn,
+          onCheckIn: onCheckIn,
+          friendTraceCount: friendTraceCount,
+        ),
+      ),
+      transitionBuilder: (_, animation, __, child) => SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, -1),
+          end: Offset.zero,
+        ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+        child: child,
       ),
     );
   }
@@ -793,7 +805,11 @@ class _FriendTraceBadge extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.pets, size: 16, color: Color(0xFF3A5FCD)),
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CustomPaint(painter: _FootprintPainter(Color(0xFF3A5FCD))),
+            ),
             const SizedBox(width: 4),
             Text(
               '$count',
@@ -808,4 +824,37 @@ class _FriendTraceBadge extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FootprintPainter extends CustomPainter {
+  final Color color;
+  const _FootprintPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    // 발 본체
+    canvas.drawOval(
+      Rect.fromLTWH(size.width * 0.18, size.height * 0.38, size.width * 0.64, size.height * 0.60),
+      paint,
+    );
+
+    // 발가락 5개
+    final toes = [
+      Offset(size.width * 0.14, size.height * 0.26),
+      Offset(size.width * 0.30, size.height * 0.15),
+      Offset(size.width * 0.50, size.height * 0.11),
+      Offset(size.width * 0.68, size.height * 0.16),
+      Offset(size.width * 0.82, size.height * 0.28),
+    ];
+    for (final t in toes) {
+      canvas.drawCircle(t, size.width * 0.10, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_FootprintPainter old) => old.color != color;
 }
