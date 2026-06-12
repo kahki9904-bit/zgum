@@ -1,83 +1,45 @@
-import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:kakao_map_plugin/kakao_map_plugin.dart' as kakao;
+import 'package:kakao_map_sdk/kakao_map_sdk.dart' as kakao;
 
 import '../../../core/interfaces/map_engine.dart';
 import '../../../core/models/map_marker_model.dart';
 
-// ── 좌표 변환 ─────────────────────────────────────────────────────────────────
-
-extension _ToKakao on MapCoordinate {
-  kakao.LatLng toKakao() => kakao.LatLng(latitude, longitude);
-}
-
-// flutter_map zoom(높을수록 확대) → kakao level(낮을수록 확대)
-int _toKakaoLevel(double zoom) => (18 - zoom).round().clamp(1, 14);
-
-// ── 마커 이미지 (SVG → base64 data URL) ───────────────────────────────────────
-
-String _svgPinUrl(Color color) {
-  int toHex(double c) => (c * 255.0).round().clamp(0, 255);
-  final hex = '#'
-      '${toHex(color.r).toRadixString(16).padLeft(2, '0')}'
-      '${toHex(color.g).toRadixString(16).padLeft(2, '0')}'
-      '${toHex(color.b).toRadixString(16).padLeft(2, '0')}';
-  final svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="30" viewBox="0 0 24 30">'
-      '<path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 18 12 18s12-9 12-18C24 5.37 18.63 0 12 0z" fill="$hex"/>'
-      '<circle cx="12" cy="12" r="4.5" fill="white" opacity="0.7"/>'
-      '</svg>';
-  return 'data:image/svg+xml;base64,${base64Encode(utf8.encode(svg))}';
-}
-
-String _svgUserDotUrl() {
-  const svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">'
-      '<circle cx="10" cy="10" r="8" fill="#16213E" stroke="white" stroke-width="3"/>'
-      '<circle cx="10" cy="10" r="3" fill="white"/>'
-      '</svg>';
-  return 'data:image/svg+xml;base64,${base64Encode(utf8.encode(svg))}';
-}
+int _zoomToLevel(double zoom) => zoom.round().clamp(6, 21);
 
 // ── 컨트롤러 ──────────────────────────────────────────────────────────────────
 
-class _KakaoMapController implements MapEngineController {
-  kakao.KakaoMapController? _inner;
+class _KakaoNativeController implements MapEngineController {
+  _KakaoNativeController(MapCoordinate center)
+      : _center = center;
+
   MapCoordinate _center;
+  _KakaoMapViewState? _state;
 
-  _KakaoMapController(this._center);
-
-  void _attach(kakao.KakaoMapController inner) {
-    _inner = inner;
-  }
-
-  void _syncCenter(MapCoordinate c) {
-    _center = c;
+  void _attach(_KakaoMapViewState state) => _state = state;
+  void _detach(_KakaoMapViewState state) {
+    if (_state == state) _state = null;
   }
 
   @override
   void move(MapCoordinate center, double zoom) {
     _center = center;
-    _inner?.setCenter(center.toKakao());
-    _inner?.setLevel(_toKakaoLevel(zoom));
+    _state?._move(center, zoom);
   }
 
   @override
   MapCoordinate get center => _center;
 
   @override
-  Object get raw => _inner ?? this;
+  Object get raw => this;
 }
 
 // ── 엔진 ──────────────────────────────────────────────────────────────────────
 
 class KakaoMapEngine extends MapEngine {
   @override
-  MapEngineController createController() {
-    return _KakaoMapController(
-      const MapCoordinate(37.5665, 126.9780),
-    );
-  }
+  MapEngineController createController() =>
+      _KakaoNativeController(const MapCoordinate(37.5665, 126.9780));
 
   @override
   Widget buildWidget({
@@ -89,62 +51,182 @@ class KakaoMapEngine extends MapEngine {
     MapCoordinate? userLocation,
     List<MapCoordinate>? routePoints,
   }) {
-    final ctrl = controller as _KakaoMapController;
-    ctrl._syncCenter(initialCenter);
+    final ctrl = controller as _KakaoNativeController;
+    ctrl._center = initialCenter;
+    return _KakaoMapView(
+      controller: ctrl,
+      initialCenter: initialCenter,
+      initialZoom: initialZoom,
+      markers: markers,
+      userLocation: userLocation,
+      routePoints: routePoints,
+      onMarkerTap: onMarkerTap,
+      colorForMarker: markerColor,
+    );
+  }
+}
 
-    final userDotUrl = _svgUserDotUrl();
-    final kakaoMarkers = <kakao.Marker>[];
+// ── 뷰 ────────────────────────────────────────────────────────────────────────
 
-    if (userLocation != null) {
-      kakaoMarkers.add(kakao.Marker(
-        markerId: '__user__',
-        latLng: userLocation.toKakao(),
-        // ignore: deprecated_member_use
-        markerImageSrc: userDotUrl,
-        width: 20,
-        height: 20,
-        offsetX: 10,
-        offsetY: 10,
-      ));
+class _KakaoMapView extends StatefulWidget {
+  final _KakaoNativeController controller;
+  final MapCoordinate initialCenter;
+  final double initialZoom;
+  final List<MapMarkerModel> markers;
+  final MapCoordinate? userLocation;
+  final List<MapCoordinate>? routePoints;
+  final void Function(MapMarkerModel) onMarkerTap;
+  final int Function(MapMarkerModel) colorForMarker;
+
+  const _KakaoMapView({
+    required this.controller,
+    required this.initialCenter,
+    required this.initialZoom,
+    required this.markers,
+    required this.userLocation,
+    required this.routePoints,
+    required this.onMarkerTap,
+    required this.colorForMarker,
+  });
+
+  @override
+  State<_KakaoMapView> createState() => _KakaoMapViewState();
+}
+
+class _KakaoMapViewState extends State<_KakaoMapView> {
+  kakao.KakaoMapController? _native;
+  final List<kakao.Poi> _activePois = [];
+  kakao.Route? _activeRoute;
+  bool _syncing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller._attach(this);
+  }
+
+  @override
+  void didUpdateWidget(covariant _KakaoMapView old) {
+    super.didUpdateWidget(old);
+    final native = _native;
+    if (native == null) return;
+    if (widget.markers != old.markers ||
+        widget.userLocation != old.userLocation) {
+      _syncMarkers(native);
     }
-
-    for (final m in markers) {
-      final color = Color(markerColor(m));
-      final w = m.isPartner ? 28 : 24;
-      final h = m.isPartner ? 35 : 30;
-      kakaoMarkers.add(kakao.Marker(
-        markerId: m.id,
-        latLng: m.location.toKakao(),
-        // ignore: deprecated_member_use
-        markerImageSrc: _svgPinUrl(color),
-        width: w,
-        height: h,
-        offsetX: w ~/ 2,
-        offsetY: h,
-      ));
+    if (widget.routePoints != old.routePoints) {
+      _syncRoute(native);
     }
+  }
 
-    final kakaoPolylines = <kakao.Polyline>[];
-    if (routePoints != null && routePoints.isNotEmpty) {
-      kakaoPolylines.add(kakao.Polyline(
-        polylineId: 'route',
-        points: routePoints.map((c) => c.toKakao()).toList(),
-        strokeColor: const Color(0xFF16213E),
-        strokeWidth: 4,
-        strokeOpacity: 0.9,
-      ));
+  @override
+  void dispose() {
+    widget.controller._detach(this);
+    super.dispose();
+  }
+
+  void _move(MapCoordinate center, double zoom) {
+    _native?.moveCamera(
+      kakao.CameraUpdate.newCenterPosition(
+        kakao.LatLng(center.latitude, center.longitude),
+        zoomLevel: _zoomToLevel(zoom),
+      ),
+    );
+  }
+
+  Future<void> _syncMarkers(kakao.KakaoMapController ctrl) async {
+    if (_syncing) return;
+    _syncing = true;
+    try {
+      // 기존 POI 삭제
+      for (final poi in _activePois) {
+        await ctrl.labelLayer.removePoi(poi);
+      }
+      _activePois.clear();
+
+      final allMarkers = [
+        ...widget.markers,
+        if (widget.userLocation != null)
+          MapMarkerModel(
+            id: '__user__',
+            location: widget.userLocation!,
+            category: MarkerCategory.other,
+            title: '',
+            venue: '',
+          ),
+      ];
+
+      for (final m in allMarkers) {
+        if (!mounted) break;
+        final isUser = m.id == '__user__';
+        final color = isUser
+            ? const Color(0xFF16213E)
+            : Color(widget.colorForMarker(m));
+        final size = isUser ? 20.0 : (m.isHighlighted ? 22.0 : 18.0);
+        final borderWidth = isUser ? 3.0 : (m.isHighlighted ? 3.0 : 2.0);
+
+        final icon = await kakao.KImage.fromWidget(
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: borderWidth),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x40000000),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+          ),
+          Size(size, size),
+        );
+
+        final poi = await ctrl.labelLayer.addPoi(
+          kakao.LatLng(m.location.latitude, m.location.longitude),
+          style: kakao.PoiStyle(icon: icon),
+          onClick: isUser ? null : () => widget.onMarkerTap(m),
+        );
+        _activePois.add(poi);
+      }
+    } finally {
+      _syncing = false;
     }
+  }
 
+  Future<void> _syncRoute(kakao.KakaoMapController ctrl) async {
+    final existing = _activeRoute;
+    if (existing != null) {
+      await ctrl.routeLayer.removeRoute(existing);
+      _activeRoute = null;
+    }
+    final points = widget.routePoints;
+    if (points == null || points.length < 2) return;
+    _activeRoute = await ctrl.routeLayer.addRoute(
+      points.map((p) => kakao.LatLng(p.latitude, p.longitude)).toList(),
+      kakao.RouteStyle(const Color(0xFF16213E), 4),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return kakao.KakaoMap(
-      onMapCreated: ctrl._attach,
-      center: initialCenter.toKakao(),
-      currentLevel: _toKakaoLevel(initialZoom),
-      markers: kakaoMarkers,
-      polylines: kakaoPolylines.isEmpty ? null : kakaoPolylines,
-      onMarkerTap: (markerId, latLng, zoomLevel) {
-        if (markerId == '__user__') return;
-        final matched = markers.where((m) => m.id == markerId).firstOrNull;
-        if (matched != null) onMarkerTap(matched);
+      option: kakao.KakaoMapOption(
+        position: kakao.LatLng(
+          widget.initialCenter.latitude,
+          widget.initialCenter.longitude,
+        ),
+        zoomLevel: _zoomToLevel(widget.initialZoom),
+      ),
+      onMapReady: (controller) {
+        _native = controller;
+        widget.controller._attach(this);
+        _move(widget.controller._center, widget.initialZoom);
+        _syncMarkers(controller);
+        _syncRoute(controller);
       },
     );
   }

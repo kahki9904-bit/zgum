@@ -52,6 +52,14 @@ abstract final class AppConfig {
     defaultValue: '',
   );
 
+  // ── KOPIS 공연예술통합전산망 ────────────────────────────────────────────────
+  static const String kopisApiKey = String.fromEnvironment(
+    'KOPIS_API_KEY',
+    defaultValue: '',
+  );
+
+  static const String kopisApiBaseUrl = 'http://www.kopis.or.kr/openApi/restful';
+
   // ── 소상공인시장진흥공단 상가(상권)정보 API ──────────────────────────────────
   static const String sdscApiKey = String.fromEnvironment(
     'SDSC_API_KEY',
@@ -62,7 +70,8 @@ abstract final class AppConfig {
       'https://apis.data.go.kr/B553077/api/open/sdsc2';
 
   // ── 키 등록 여부 확인 헬퍼 ────────────────────────────────────────────────
-  static bool get hasTourApiKey => tourApiKey.isNotEmpty;
+  static bool get hasTourApiKey => tourApiKey.trim().isNotEmpty;
+  static bool get hasKopisKey => kopisApiKey.trim().isNotEmpty;
   static bool get hasSdscKey => sdscApiKey.isNotEmpty;
   static bool get hasNaverKey => naverClientId.isNotEmpty;
   static bool get hasKakaoKey => kakaoApiKey.isNotEmpty;

@@ -1,16 +1,27 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../shell_screen.dart';
-import 'consent_guard.dart';
 
-class BrandingScreen extends StatelessWidget {
+class BrandingScreen extends StatefulWidget {
   const BrandingScreen({super.key});
 
-  void _proceed(BuildContext context) {
+  @override
+  State<BrandingScreen> createState() => _BrandingScreenState();
+}
+
+class _BrandingScreenState extends State<BrandingScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Timer(const Duration(milliseconds: 2500), _proceed);
+  }
+
+  void _proceed() {
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) =>
-            const ConsentGuard(child: ShellScreen()),
+        pageBuilder: (_, __, ___) => const ShellScreen(),
         transitionsBuilder: (_, animation, __, child) =>
             FadeTransition(opacity: animation, child: child),
         transitionDuration: const Duration(milliseconds: 500),
@@ -20,16 +31,12 @@ class BrandingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
+    return const AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: Colors.white,
-        body: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => _proceed(context),
-          child: const Center(
-            child: _BrandBlock(),
-          ),
+        body: Center(
+          child: _BrandBlock(),
         ),
       ),
     );

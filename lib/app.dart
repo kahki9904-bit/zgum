@@ -5,7 +5,7 @@ import 'l10n/app_localizations.dart';
 import 'core/theme.dart';
 import 'core/constants.dart';
 import 'core/providers/locale_provider.dart';
-import 'presentation/screens/branding_screen.dart';
+import 'presentation/screens/auth_gate_screen.dart';
 
 class ZGumApp extends ConsumerWidget {
   const ZGumApp({super.key});
@@ -32,7 +32,7 @@ class ZGumApp extends ConsumerWidget {
         Locale('ja'),
         Locale('zh'),
       ],
-      home: const BrandingScreen(),
+      home: const AuthGateScreen(),
     );
   }
 }

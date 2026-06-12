@@ -1,458 +1,1329 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import '../../../core/constants.dart';
 import '../../../services/location_service.dart';
+import '../../../core/models/free_use_status.dart';
+import '../../../core/providers/free_use_provider.dart';
+import '../../../core/services/free_use_service.dart';
+import '../../../data/models/cultural_event.dart';
+import '../../../core/providers/partner_focus_provider.dart';
+import '../../../core/providers/shell_page_provider.dart';
+import '../../../dev/mock_partner_event_store.dart';
+import '../../../features/alert/models/partner_event.dart';
+import '../../../features/alert/providers/event_stats_provider.dart';
+import 'partner_dashboard_screen.dart';
 
-class PartnerRoomScreen extends StatefulWidget {
+class PartnerRoomScreen extends ConsumerStatefulWidget {
   const PartnerRoomScreen({super.key});
 
   @override
-  State<PartnerRoomScreen> createState() => _PartnerRoomScreenState();
+  ConsumerState<PartnerRoomScreen> createState() => _PartnerRoomScreenState();
 }
 
-class _PartnerRoomScreenState extends State<PartnerRoomScreen> {
-  final _locationService = LocationService();
+class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
+  final List<PartnerEvent> _myEvents = [];
+  bool _newestFirst = true;
 
-  _RegisterStep _step = _RegisterStep.idle;
-  LocationResult? _locationResult;
+  void _openRegisterSheet() async {
+    final freeService = FreeUseService.instance;
+    final isFreeActive = ref.read(freeUseProvider) == FreeUseStatus.active;
 
-  // 주변 장소 목록 (실제 API 연동 전 구조 준비)
-  List<_NearbyPlace> _nearbyPlaces = [];
-  _NearbyPlace? _selectedPlace;
+    // 무료이용 활성화 상태이고 오늘 한도가 남아 있으면 결제 없이 등록
+    if (isFreeActive) {
+      final messenger = ScaffoldMessenger.of(context);
+      final canRegister = await freeService.canRegisterToday();
+      if (!canRegister) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('오늘 등록 가능 횟수(3회)를 모두 사용했습니다.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+    }
 
-  // 주소 직접 입력
-  final _addressCtrl = TextEditingController();
-  bool _showAddressInput = false;
-
-  @override
-  void dispose() {
-    _addressCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _startLocationAcquire() async {
-    setState(() {
-      _step = _RegisterStep.acquiring;
-      _nearbyPlaces = [];
-      _selectedPlace = null;
-      _showAddressInput = false;
-    });
-
-    final result = await _locationService.acquireLocation();
+    // 등록 전 GPS 위치 획득. 실패 시 fallback 위치 사용 (테스트용 임시 처리)
+    final locationResult = await LocationService().acquireLocation();
     if (!mounted) return;
+    final registerLocation = locationResult.position;
 
-    if (result.step == LocationStep.manual) {
-      // GPS·네트워크 모두 실패 → 주소 직접 입력으로
-      setState(() {
-        _step = _RegisterStep.addressInput;
-        _showAddressInput = true;
-      });
+    PartnerEvent? pending;
+    await _PartnerEventSheet.show(
+      context,
+      isFreeUse: isFreeActive,
+      registerLocation: registerLocation,
+      onSubmit: (e) { pending = e; },
+    );
+    if (pending == null || !mounted) return;
+
+    // 무료이용: 결제 시트 건너뜀
+    if (isFreeActive) {
+      await freeService.recordRegistration();
+      final freeEvent = pending!.copyWith(
+        paymentStatus: PaymentStatus.paid,
+        paidAt: DateTime.now(),
+      );
+      setState(() => _myEvents.insert(0, freeEvent));
+      _applyToMap(freeEvent);
       return;
     }
 
-    // 위치 확보 → 주변 장소 조회 (mock, 실제 API로 교체 예정)
-    final places = await _fetchNearbyPlaces(result.position);
+    // 기존 결제 흐름
+    // 등록 시트 종료 애니메이션(280ms)이 끝난 뒤 결제 시트를 열어야 정상 표시됨
+    await Future.delayed(const Duration(milliseconds: 350));
     if (!mounted) return;
-
-    setState(() {
-      _locationResult = result;
-      _nearbyPlaces = places;
-      _step = _RegisterStep.confirm;
-    });
+    final paid = await _MockPaymentSheet.show(context, pending!);
+    if (!paid || !mounted) return;
+    final paidEvent = pending!.copyWith(
+      paymentStatus: PaymentStatus.paid,
+      paidAt: DateTime.now(),
+    );
+    setState(() => _myEvents.insert(0, paidEvent));
+    _applyToMap(paidEvent);
   }
 
-  // 실제 카카오 로컬 API로 교체 예정
-  Future<List<_NearbyPlace>> _fetchNearbyPlaces(LatLng pos) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return [
-      const _NearbyPlace(name: '이 위치 근처 (정확한 장소를 선택해 주세요)', address: ''),
+  // DEV/MOCK ONLY: PartnerEvent를 CulturalEvent로 변환해 지도에 즉시 반영
+  // 운영 전환 시 삭제 → Firebase 결제 검증 후 Firestore 저장으로 대체
+  void _applyToMap(PartnerEvent event) {
+    final mockCultural = CulturalEvent(
+      id: event.id,
+      title: event.title,
+      venue: event.venue,
+      address: '현재 위치',
+      description: event.message ?? event.title,
+      startDate: event.startsAt,
+      endDateTime: event.expiresAt,
+      location: event.location,
+      category: EventCategory.partner,
+      isFree: false,
+      source: EventSource.partner,
+      partnerMessage: event.message,
+    );
+    ref.read(mockPartnerEventStoreProvider.notifier).state = [
+      ...ref.read(mockPartnerEventStoreProvider),
+      mockCultural,
     ];
+    // 등록 완료 후 지도 탭으로 전환 + 해당 이벤트 포커스 요청
+    ref.read(partnerFocusPendingProvider.notifier).state = true;
+    ref.read(partnerFocusProvider.notifier).state = mockCultural;
+    ref.read(shellPageProvider.notifier).state = 1;
   }
 
-  void _confirmPlace(_NearbyPlace place) {
-    setState(() {
-      _selectedPlace = place;
-      _step = _RegisterStep.ready;
-    });
-  }
-
-  void _retry() {
-    _startLocationAcquire();
+  void _seedPreviewData() {
+    final now = DateTime.now();
+    final seeds = [
+      PartnerEvent(
+        id: 'seed-001',
+        partnerId: 'local-device',
+        title: '오늘 한정 50% 할인',
+        venue: '홍대 카페 VIBE',
+        message: '지금 오시면 아메리카노 반값!',
+        location: AppConstants.defaultLocation,
+        geoHash: 'mock',
+        startsAt: now.subtract(const Duration(minutes: 10)),
+        expiresAt: now.add(const Duration(minutes: 20)),
+      ),
+      PartnerEvent(
+        id: 'seed-002',
+        partnerId: 'local-device',
+        title: '버스킹 공연 시작',
+        venue: '홍대 걷고싶은거리',
+        location: AppConstants.defaultLocation,
+        geoHash: 'mock',
+        startsAt: now.subtract(const Duration(minutes: 5)),
+        expiresAt: now.add(const Duration(minutes: 55)),
+      ),
+      PartnerEvent(
+        id: 'seed-003',
+        partnerId: 'local-device',
+        title: '팝업 전시 오픈',
+        venue: '연남동 갤러리 ONE',
+        message: '오늘만 무료 입장',
+        location: AppConstants.defaultLocation,
+        geoHash: 'mock',
+        startsAt: now.subtract(const Duration(hours: 1)),
+        expiresAt: now.subtract(const Duration(minutes: 5)),
+      ),
+      PartnerEvent(
+        id: 'seed-004',
+        partnerId: 'local-device',
+        title: '라이브 재즈 공연',
+        venue: '마포 재즈바 BLUE',
+        location: AppConstants.defaultLocation,
+        geoHash: 'mock',
+        startsAt: now.subtract(const Duration(minutes: 20)),
+        expiresAt: now.add(const Duration(minutes: 40)),
+      ),
+      PartnerEvent(
+        id: 'seed-005',
+        partnerId: 'local-device',
+        title: '플리마켓 진행 중',
+        venue: '상수동 광장',
+        message: '핸드메이드 소품 판매',
+        location: AppConstants.defaultLocation,
+        geoHash: 'mock',
+        startsAt: now.subtract(const Duration(hours: 2)),
+        expiresAt: now.subtract(const Duration(minutes: 30)),
+      ),
+      PartnerEvent(
+        id: 'seed-006',
+        partnerId: 'local-device',
+        title: '신메뉴 무료 시식',
+        venue: '이태원 레스토랑 NOMA',
+        location: AppConstants.defaultLocation,
+        geoHash: 'mock',
+        startsAt: now.subtract(const Duration(minutes: 15)),
+        expiresAt: now.add(const Duration(minutes: 45)),
+      ),
+    ];
+    setState(() => _myEvents
+      ..clear()
+      ..addAll(seeds));
   }
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.paddingOf(context).top;
+    final botPad = MediaQuery.paddingOf(context).bottom;
+    final sorted = _newestFirst
+        ? List<PartnerEvent>.from(_myEvents)
+        : _myEvents.reversed.toList();
+
     return Scaffold(
-      backgroundColor: const Color(0xFF16213E),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 36, 24, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Z:GUM',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 6,
-                    ),
-                  ),
-                  SizedBox(height: 56),
-                  Text(
-                    '파트너 룸',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                      height: 1.2,
-                    ),
-                  ),
-                  SizedBox(height: 14),
-                ],
-              ),
-            ),
-
-            Expanded(
-              child: _buildBody(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBody() {
-    switch (_step) {
-      case _RegisterStep.idle:
-        return _buildIdle();
-      case _RegisterStep.acquiring:
-        return _buildAcquiring();
-      case _RegisterStep.confirm:
-        return _buildConfirm();
-      case _RegisterStep.addressInput:
-        return _buildAddressInput();
-      case _RegisterStep.ready:
-        return _buildReady();
-    }
-  }
-
-  // ── 초기 화면 ──────────────────────────────────────────────────────────────
-
-  Widget _buildIdle() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: Colors.white,
+      body: Stack(
         children: [
-          Text(
-            '이벤트를 등록하려면\n현재 위치가 필요합니다.',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.6),
-              fontSize: 15,
-              height: 1.75,
-            ),
-          ),
-          const Spacer(),
-          FilledButton(
-            onPressed: _startLocationAcquire,
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF16213E),
-              minimumSize: const Size(double.infinity, 52),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
-            ),
-            child: const Text(
-              '이벤트 등록 시작',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── 위치 획득 중 ────────────────────────────────────────────────────────────
-
-  Widget _buildAcquiring() {
-    return const Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircularProgressIndicator(color: Colors.white),
-          SizedBox(height: 20),
-          Text(
-            '위치를 확인하는 중...',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── 주변 장소 확인 ──────────────────────────────────────────────────────────
-
-  Widget _buildConfirm() {
-    final result = _locationResult;
-    final stepLabel = result?.step == LocationStep.lastKnown
-        ? '이전 위치 기준'
-        : result?.step == LocationStep.network
-            ? '대략적인 위치'
-            : 'GPS 위치';
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.my_location,
-                    size: 13, color: Colors.white70),
-                const SizedBox(width: 6),
-                Text(
-                  stepLabel,
-                  style: const TextStyle(
-                      color: Colors.white70, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            '이 위치가 맞습니까?',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: ListView.separated(
-              itemCount: _nearbyPlaces.length,
-              separatorBuilder: (_, __) => const Divider(
-                  color: Colors.white12, height: 1),
-              itemBuilder: (_, i) {
-                final place = _nearbyPlaces[i];
-                return ListTile(
-                  onTap: () => _confirmPlace(place),
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.place_outlined,
-                      color: Colors.white54, size: 20),
-                  title: Text(
-                    place.name,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 14),
-                  ),
-                  subtitle: place.address.isNotEmpty
-                      ? Text(place.address,
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 12))
-                      : null,
-                  trailing: const Icon(Icons.chevron_right,
-                      color: Colors.white30, size: 20),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _retry,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white70,
-                    side: const BorderSide(color: Colors.white30),
-                    minimumSize: const Size(double.infinity, 48),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('위치 다시 잡기'),
+              SizedBox(height: topPad + 20),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 20, 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        '이벤트',
+                        style: TextStyle(
+                          color: Color(0xFF1A1A2E),
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ),
+                    if (_myEvents.isNotEmpty) ...[
+                      GestureDetector(
+                        onTap: () =>
+                            setState(() => _newestFirst = !_newestFirst),
+                        child: Text(
+                          _newestFirst ? '최신순' : '과거순',
+                          style: const TextStyle(
+                              color: Color(0xFFAAAAAA), fontSize: 13),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                    ],
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        CupertinoPageRoute(
+                            builder: (_) => const PartnerDashboardScreen()),
+                      ),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF4F4F7),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFEEEEEE)),
+                        ),
+                        child: const Icon(
+                          Icons.bar_chart_outlined,
+                          size: 20,
+                          color: Color(0xFFAAAAAA),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () =>
-                      setState(() => _showAddressInput = true),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white70,
-                    side: const BorderSide(color: Colors.white30),
-                    minimumSize: const Size(double.infinity, 48),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+              if (sorted.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 24),
+                  child: Column(
+                    children: [
+                      const Center(
+                        child: Text(
+                          '등록된 이벤트가 없습니다',
+                          style: TextStyle(
+                              color: Color(0xFFCCCCCC), fontSize: 13),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Center(
+                        child: GestureDetector(
+                          onTap: _seedPreviewData,
+                          child: const Text(
+                            '미리보기 데이터 채우기',
+                            style: TextStyle(
+                              color: Color(0xFFBBBBBB),
+                              fontSize: 12,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  child: const Text('주소 직접 입력'),
+                )
+              else
+                Expanded(
+                  child: GridView.builder(
+                    padding: EdgeInsets.fromLTRB(4, 0, 4, botPad + 88),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisExtent: 200,
+                      mainAxisSpacing: 4,
+                      crossAxisSpacing: 4,
+                    ),
+                    itemCount: sorted.length,
+                    itemBuilder: (context, index) => _EventTile(
+                      event: sorted[index],
+                    ),
+                  ),
                 ),
-              ),
             ],
           ),
-          if (_showAddressInput) ...[
-            const SizedBox(height: 16),
-            _buildAddressField(),
-          ],
-        ],
-      ),
-    );
-  }
 
-  // ── 주소 직접 입력 ──────────────────────────────────────────────────────────
+          // 지금 버튼 → ShellScreen 공통 하단 탭으로 통합 예정, 임시 숨김
 
-  Widget _buildAddressInput() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '위치를 찾지 못했습니다.\n주소를 직접 입력해 주세요.',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7),
-              fontSize: 15,
-              height: 1.75,
-            ),
-          ),
-          const SizedBox(height: 24),
-          _buildAddressField(),
-          const Spacer(),
-          OutlinedButton(
-            onPressed: _retry,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white70,
-              side: const BorderSide(color: Colors.white30),
-              minimumSize: const Size(double.infinity, 48),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('위치 다시 잡기'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAddressField() {
-    return TextField(
-      controller: _addressCtrl,
-      style: const TextStyle(color: Colors.white, fontSize: 14),
-      cursorColor: Colors.white,
-      decoration: InputDecoration(
-        hintText: '예) 서울 마포구 홍대입구',
-        hintStyle: TextStyle(
-            color: Colors.white.withValues(alpha: 0.3), fontSize: 14),
-        filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.08),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.search, color: Colors.white54, size: 20),
-          onPressed: () {
-            if (_addressCtrl.text.trim().isNotEmpty) {
-              setState(() => _step = _RegisterStep.ready);
-            }
-          },
-        ),
-      ),
-    );
-  }
-
-  // ── 등록 준비 완료 ──────────────────────────────────────────────────────────
-
-  Widget _buildReady() {
-    final label = _selectedPlace?.name.isNotEmpty == true
-        ? _selectedPlace!.name
-        : _addressCtrl.text.trim();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.check_circle_outline,
-                    color: Colors.white, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: _startLocationAcquire,
-                  child: const Icon(Icons.edit_outlined,
-                      color: Colors.white54, size: 18),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            '이벤트 등록 기능은\n준비 중입니다.',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.45),
-              fontSize: 15,
-              height: 1.75,
-            ),
-          ),
-          const Spacer(),
-          FilledButton(
-            onPressed: null,
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.white.withValues(alpha: 0.2),
-              minimumSize: const Size(double.infinity, 52),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
-            ),
-            child: const Text(
-              '이벤트 정보 입력 →',
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white54),
-            ),
-          ),
         ],
       ),
     );
   }
 }
 
-enum _RegisterStep { idle, acquiring, confirm, addressInput, ready }
+// ── 이벤트 그리드 타일 ─────────────────────────────────────────────────────────
 
-class _NearbyPlace {
-  final String name;
-  final String address;
-  const _NearbyPlace({required this.name, required this.address});
+class _EventTile extends ConsumerWidget {
+  final PartnerEvent event;
+  const _EventTile({required this.event});
+
+  void _openDetail(BuildContext context, EventStats? stats) {
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (dialogContext, __, ___) => GestureDetector(
+        onTap: () => Navigator.of(dialogContext).pop(),
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: GestureDetector(
+            onTap: () {},
+            child: Material(
+              color: Colors.transparent,
+              child: _EventDetailPopup(event: event, stats: stats),
+            ),
+          ),
+        ),
+      ),
+      transitionBuilder: (_, animation, __, child) => ScaleTransition(
+        scale: Tween<double>(begin: 0.88, end: 1.0).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+        ),
+        child: FadeTransition(opacity: animation, child: child),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stats = ref.watch(eventStatsProvider)[event.id];
+    final repPhoto = event.representativePhotoPath;
+    final hasStats = stats != null &&
+        (stats.visitorCount > 0 || stats.traceCount > 0);
+
+    return GestureDetector(
+      onTap: () => _openDetail(context, stats),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: repPhoto != null
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.file(
+                    File(repPhoto),
+                    width: double.infinity,
+                    height: 200,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _textTile(hasStats, stats),
+                  ),
+                  if (hasStats)
+                    Positioned(
+                      bottom: 10,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '방문 ${stats.visitorCount}  |  흔적 ${stats.traceCount}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              )
+            : _textTile(hasStats, stats),
+      ),
+    );
+  }
+
+
+  Widget _textTile(bool hasStats, EventStats? stats) {
+    return Container(
+      width: double.infinity,
+      height: 200,
+      color: const Color(0xFF16213E),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            event.title,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              height: 1.4,
+            ),
+          ),
+          if (hasStats && stats != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              '방문 ${stats.visitorCount}  |  흔적 ${stats.traceCount}',
+              style: const TextStyle(
+                fontSize: 11,
+                color: Colors.white60,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── 이벤트 상세 팝업 ────────────────────────────────────────────────────────────
+
+class _EventDetailPopup extends StatelessWidget {
+  final PartnerEvent event;
+  final EventStats? stats;
+  const _EventDetailPopup({required this.event, this.stats});
+
+  String _formatDateTime(DateTime dt) =>
+      '${dt.year}년 ${dt.month}월 ${dt.day}일  '
+      '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+
+  String _durationLabel() {
+    final hours = event.expiresAt.difference(event.startsAt).inHours;
+    return '$hours시간';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final isExpired = DateTime.now().isAfter(event.expiresAt);
+    final repPhoto = event.representativePhotoPath;
+
+    return Container(
+      width: double.infinity,
+      height: screenHeight * 0.72,
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x38000000),
+            blurRadius: 24,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 200,
+            width: double.infinity,
+            child: repPhoto != null
+                ? Image.file(
+                    File(repPhoto),
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    errorBuilder: (_, __, ___) => _noPhotoHeader(),
+                  )
+                : _noPhotoHeader(),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isExpired
+                              ? const Color(0xFFEEEEEE)
+                              : const Color(0xFF16213E),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isExpired ? '종료' : '진행 중',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: isExpired
+                                ? const Color(0xFF888888)
+                                : Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF4F4F7),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          _durationLabel(),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF888888),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    event.title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1A1A2E),
+                      height: 1.3,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    event.venue,
+                    style: const TextStyle(
+                        fontSize: 13, color: Color(0xFFAAAAAA)),
+                  ),
+                  if (stats != null &&
+                      (stats!.visitorCount > 0 || stats!.traceCount > 0)) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        _statChip('방문', stats!.visitorCount),
+                        const SizedBox(width: 8),
+                        _statChip('흔적', stats!.traceCount),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  _infoRow('시작', _formatDateTime(event.startsAt)),
+                  const SizedBox(height: 6),
+                  _infoRow('종료', _formatDateTime(event.expiresAt)),
+                  if (event.message != null) ...[
+                    const SizedBox(height: 24),
+                    Text(
+                      event.message!,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFF333333),
+                        height: 1.85,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 36,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: Color(0xFFBBBBBB)),
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 13, color: Color(0xFF555555)),
+        ),
+      ],
+    );
+  }
+
+  Widget _statChip(String label, int count) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F4F7),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        '$label $count',
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF555555),
+        ),
+      ),
+    );
+  }
+
+  Widget _noPhotoHeader() {
+    return Container(
+      color: const Color(0xFF16213E),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(24),
+      child: Text(
+        event.title,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+          height: 1.4,
+        ),
+      ),
+    );
+  }
+}
+
+// ── 이벤트 등록 팝업 ────────────────────────────────────────────────────────────
+
+class _PartnerEventSheet {
+  const _PartnerEventSheet._();
+
+  static Future<void> show(
+    BuildContext context, {
+    required void Function(PartnerEvent) onSubmit,
+    bool isFreeUse = false,
+    required LatLng registerLocation,
+  }) {
+    return showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (dialogContext, __, ___) => GestureDetector(
+        onTap: () => Navigator.of(dialogContext).pop(),
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: GestureDetector(
+            onTap: () {},
+            child: Material(
+              color: Colors.transparent,
+              child: _RegisterContent(
+                onSubmit: onSubmit,
+                isFreeUse: isFreeUse,
+                initialLocation: registerLocation,
+              ),
+            ),
+          ),
+        ),
+      ),
+      transitionBuilder: (_, animation, __, child) => ScaleTransition(
+        scale: Tween<double>(begin: 0.88, end: 1.0).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+        ),
+        child: FadeTransition(opacity: animation, child: child),
+      ),
+    );
+  }
+}
+
+class _RegisterContent extends StatefulWidget {
+  final void Function(PartnerEvent) onSubmit;
+  final bool isFreeUse;
+  final LatLng initialLocation;
+  const _RegisterContent({
+    required this.onSubmit,
+    required this.initialLocation,
+    this.isFreeUse = false,
+  });
+
+  @override
+  State<_RegisterContent> createState() => _RegisterContentState();
+}
+
+class _RegisterContentState extends State<_RegisterContent> {
+  final _titleCtrl = TextEditingController();
+  final _picker = ImagePicker();
+  int _selectedMinutes = 60;
+  final List<File> _photos = [];
+  final List<TextEditingController> _photoCtrls = [];
+  int _repIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _takePhoto());
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    for (final c in _photoCtrls) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _takePhoto() async {
+    final picked = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
+      maxWidth: 1080,
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _photos.add(File(picked.path));
+      _photoCtrls.add(TextEditingController());
+    });
+  }
+
+  void _deletePhoto(int index) {
+    setState(() {
+      _photoCtrls[index].dispose();
+      _photos.removeAt(index);
+      _photoCtrls.removeAt(index);
+      if (_photos.isEmpty) {
+        _repIndex = 0;
+      } else if (index == _repIndex) {
+        _repIndex = 0;
+      } else if (index < _repIndex) {
+        _repIndex--;
+      }
+    });
+  }
+
+  void _submit() {
+    final title = _titleCtrl.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('제목을 입력해주세요')),
+      );
+      return;
+    }
+    if (_photos.isEmpty) return;
+
+    final photoList = List.generate(
+      _photos.length,
+      (i) => PartnerPhoto(
+        path: _photos[i].path,
+        title: _photoCtrls[i].text.trim().isEmpty
+            ? null
+            : _photoCtrls[i].text.trim(),
+      ),
+    );
+
+    final now = DateTime.now();
+    final orderId = 'order-${now.millisecondsSinceEpoch}';
+    final event = PartnerEvent(
+      id: now.millisecondsSinceEpoch.toString(),
+      partnerId: 'local-device',
+      title: title,
+      venue: title,
+      message: null,
+      // TEST: GPS 위치 사용. 획득 실패 시 LocationService가 fallback 반환
+      location: widget.initialLocation,
+      geoHash: 'mock',
+      startsAt: now,
+      expiresAt: now.add(Duration(minutes: _selectedMinutes)),
+      photos: photoList,
+      representativeIndex: _repIndex.clamp(0, photoList.length - 1),
+      orderId: orderId,
+      paymentStatus: PaymentStatus.pending,
+    );
+
+    Navigator.pop(context);
+    widget.onSubmit(event);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+      width: double.infinity,
+      height: screenHeight * 0.72,
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x38000000),
+            blurRadius: 24,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 40, 24, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── 현장 사진 (최소 1장, 최대 3장) ────────────────────────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (int i = 0; i < 3; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  Expanded(
+                    child: AspectRatio(
+                      aspectRatio: 1,
+                      child: _buildPartnerCell(i),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                for (int i = 0; i < 3; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  Expanded(
+                    child: SizedBox(
+                      height: 40,
+                      child: i < _photos.length
+                          ? _buildPhotoTitleField(i)
+                          : const SizedBox(),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // ── 기간 선택 (무료이용은 1시간 고정, 나머지는 비활성 표시) ──
+            const Text(
+              '노출시간',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF555555),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [60, 120, 180].map((min) {
+                final isLocked = widget.isFreeUse && min != 60;
+                final selected = _selectedMinutes == min;
+                final label = '${min ~/ 60}시간';
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: isLocked ? null : () => setState(() => _selectedMinutes = min),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: isLocked
+                            ? const Color(0xFFF4F4F7)
+                            : selected
+                                ? const Color(0xFF16213E)
+                                : const Color(0xFFF4F4F7),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isLocked
+                              ? const Color(0xFFDDDDDD)
+                              : selected
+                                  ? Colors.white
+                                  : const Color(0xFF888888),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            // ── 제목 (필수) ────────────────────────────────────────────
+            const Text(
+              '제목',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF555555),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildField(_titleCtrl, '필수'),
+            const SizedBox(height: 28),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF888888),
+                      side: const BorderSide(color: Color(0xFFDDDDDD)),
+                      minimumSize: const Size(double.infinity, 52),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text(
+                      '취소',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _submit,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF16213E),
+                      minimumSize: const Size(double.infinity, 52),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text(
+                      '등록',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+    );
+  }
+
+  Widget _buildField(
+    TextEditingController ctrl,
+    String hint, {
+    int maxLines = 1,
+  }) {
+    return TextField(
+      controller: ctrl,
+      maxLines: maxLines,
+      style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
+      cursorColor: const Color(0xFF16213E),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle:
+            const TextStyle(color: Color(0xFFCCCCCC), fontSize: 14),
+        filled: true,
+        fillColor: const Color(0xFFF8F8F8),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+    );
+  }
+
+  Widget _buildPartnerCell(int i) {
+    if (i < _photos.length) {
+      final isRep = i == _repIndex;
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.file(_photos[i], fit: BoxFit.cover),
+            Positioned(
+              top: 6,
+              left: 6,
+              child: GestureDetector(
+                onTap: () => setState(() => _repIndex = i),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: isRep
+                        ? const Color(0xFF16213E)
+                        : Colors.black.withValues(alpha: 0.45),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isRep ? Icons.star : Icons.star_border,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: GestureDetector(
+                onTap: () => _deletePhoto(i),
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    if (i == _photos.length && _photos.length < 3) {
+      return GestureDetector(
+        onTap: _takePhoto,
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF4F4F7),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFDDDDDD), width: 1.5),
+          ),
+          child: const Center(
+            child: Icon(Icons.add_a_photo_outlined,
+                size: 20, color: Color(0xFFAAAAAA)),
+          ),
+        ),
+      );
+    }
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F4F7),
+        borderRadius: BorderRadius.circular(10),
+      ),
+    );
+  }
+
+  Widget _buildPhotoTitleField(int i) {
+    return TextField(
+      controller: _photoCtrls[i],
+      maxLength: 12,
+      style: const TextStyle(fontSize: 11, color: Color(0xFF333333)),
+      decoration: InputDecoration(
+        hintText: '사진 제목',
+        hintStyle: const TextStyle(fontSize: 11, color: Color(0xFFCCCCCC)),
+        filled: true,
+        fillColor: const Color(0xFFF8F8F8),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        counterStyle:
+            const TextStyle(fontSize: 9, color: Color(0xFFCCCCCC)),
+      ),
+    );
+  }
+}
+
+// ── 가상 결제 팝업 ──────────────────────────────────────────────────────────────
+
+class _MockPaymentSheet {
+  const _MockPaymentSheet._();
+
+  static Future<bool> show(BuildContext context, PartnerEvent event) async {
+    return await showGeneralDialog<bool>(
+          context: context,
+          barrierDismissible: true,
+          barrierLabel: '',
+          barrierColor: Colors.black54,
+          transitionDuration: const Duration(milliseconds: 280),
+          pageBuilder: (dialogContext, __, ___) => GestureDetector(
+            onTap: () => Navigator.of(dialogContext).pop(),
+            behavior: HitTestBehavior.opaque,
+            child: Center(
+              child: GestureDetector(
+                onTap: () {},
+                child: Material(
+                  color: Colors.transparent,
+                  child: _MockPaymentContent(event: event),
+                ),
+              ),
+            ),
+          ),
+          transitionBuilder: (_, animation, __, child) => ScaleTransition(
+            scale: Tween<double>(begin: 0.88, end: 1.0).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+            ),
+            child: FadeTransition(opacity: animation, child: child),
+          ),
+        ) ??
+        false;
+  }
+}
+
+class _MockPaymentContent extends StatelessWidget {
+  final PartnerEvent event;
+  const _MockPaymentContent({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final hours = event.expiresAt.difference(event.startsAt).inHours;
+    const unitPrice = 5000;
+    final totalPrice = hours * unitPrice;
+
+    return Container(
+      width: double.infinity,
+      height: screenHeight * 0.72,
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x38000000),
+            blurRadius: 24,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── 헤더 ──────────────────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Color(0xFFF0F0F0)),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '결제',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  event.orderId ?? '',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFFCCCCCC),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // ── 주문 요약 ────────────────────────────────────────────────
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _row('이벤트', event.title),
+                  const SizedBox(height: 12),
+                  _row('장소', event.venue),
+                  const SizedBox(height: 12),
+                  _row('노출시간', '$hours시간'),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Divider(color: Color(0xFFF0F0F0)),
+                  ),
+                  _row('단가', '$unitPrice원 / 시간'),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          '총 결제금액',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1A1A2E),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${_formatPrice(totalPrice)}원',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF16213E),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3CD),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      '테스트 모드 — 실제 결제가 발생하지 않습니다',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF996600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // ── 버튼 ──────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF888888),
+                      side: const BorderSide(color: Color(0xFFDDDDDD)),
+                      minimumSize: const Size(double.infinity, 52),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text(
+                      '취소',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF16213E),
+                      minimumSize: const Size(double.infinity, 52),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text(
+                      '결제하기',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(String label, String value) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 64,
+          child: Text(
+            label,
+            style: const TextStyle(
+                fontSize: 13, color: Color(0xFFAAAAAA)),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF333333),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatPrice(int price) {
+    final s = price.toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+      buf.write(s[i]);
+    }
+    return buf.toString();
+  }
 }

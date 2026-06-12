@@ -17,8 +17,8 @@ dependencies:
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
 
-  # 지도 — 카카오 (WebView 기반, JS 키만 필요, 심사 불필요)
-  kakao_map_plugin: ^0.4.0
+  # 지도 — 카카오 (네이티브 SDK, 네이티브 앱 키 + 키 해시 필요)
+  kakao_map_sdk: ^1.2.2
 
   # 위치
   geolocator: ^11.0.0
@@ -39,6 +39,9 @@ dependencies:
 
   # 사진 — 카메라/갤러리 (추후 firebase_storage 등으로 업로드 레이어 추가)
   image_picker: ^1.1.2
+
+  # 기기 인증 — 지문/얼굴/PIN/패턴 (앱 진입 시 잠금)
+  local_auth: ^2.3.0
 
   # 로컬 알림 — 사용자가 지정한 이벤트에만 알림 예약 (추후 FCM 푸시로 확장 가능)
   flutter_local_notifications: ^18.0.1

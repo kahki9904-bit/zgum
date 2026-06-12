@@ -9,7 +9,8 @@ class FriendRequest {
   final DateTime createdAt;
   final DateTime expiresAt;
   final FriendDuration duration;
-  final String? responseToken; // B가 수락 시 생성, A에게 구두로 알려줌
+  final FriendDuration? acceptorDuration; // B가 선택한 기간
+  final String? responseCode; // B가 기간 선택 후 생성하는 1회용 2자리 코드
 
   const FriendRequest({
     required this.id,
@@ -18,19 +19,25 @@ class FriendRequest {
     required this.createdAt,
     required this.expiresAt,
     required this.duration,
-    this.responseToken,
+    this.acceptorDuration,
+    this.responseCode,
   });
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);
 
-  FriendRequest copyWith({String? responseToken}) => FriendRequest(
+  FriendRequest copyWith({
+    FriendDuration? acceptorDuration,
+    String? responseCode,
+  }) =>
+      FriendRequest(
         id: id,
         requesterId: requesterId,
         requesterLocation: requesterLocation,
         createdAt: createdAt,
         expiresAt: expiresAt,
         duration: duration,
-        responseToken: responseToken ?? this.responseToken,
+        acceptorDuration: acceptorDuration ?? this.acceptorDuration,
+        responseCode: responseCode ?? this.responseCode,
       );
 
   Map<String, dynamic> toJson() => {
@@ -41,7 +48,8 @@ class FriendRequest {
         'createdAt': createdAt.toIso8601String(),
         'expiresAt': expiresAt.toIso8601String(),
         'duration': duration.name,
-        'responseToken': responseToken,
+        'acceptorDuration': acceptorDuration?.name,
+        'responseCode': responseCode,
       };
 
   factory FriendRequest.fromJson(Map<String, dynamic> j) => FriendRequest(
@@ -54,7 +62,10 @@ class FriendRequest {
         createdAt: DateTime.parse(j['createdAt'] as String),
         expiresAt: DateTime.parse(j['expiresAt'] as String),
         duration: FriendDuration.values.byName(j['duration'] as String),
-        responseToken: j['responseToken'] as String?,
+        acceptorDuration: j['acceptorDuration'] != null
+            ? FriendDuration.values.byName(j['acceptorDuration'] as String)
+            : null,
+        responseCode: j['responseCode'] as String?,
       );
 
   static List<FriendRequest> listFromJson(String raw) {

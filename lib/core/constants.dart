@@ -11,8 +11,8 @@ class AppConstants {
   /// 기본 탐색 반경 (km)
   static const double defaultRadiusKm = 20.0;
 
-  /// flutter_map 기본 줌 레벨 (1=가장 축소, 18=가장 확대 / 15 = 동네 단위)
-  static const double defaultZoom = 15.0;
+  /// 카카오맵 기본 줌 레벨 (6=가장 축소, 21=가장 확대 / 18 = 반경 250m)
+  static const double defaultZoom = 18.0;
 
   /// 앱 이름
   static const String appName = 'Z:GUM';

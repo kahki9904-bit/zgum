@@ -135,29 +135,24 @@ class FlutterMapEngine extends MapEngine {
         ? (EventFade.negativeLabel(deadline, now) ?? '')
         : '';
     final highlighted = marker.isHighlighted;
-    final isPulse = marker.isPartner && !expired;
 
     return Marker(
       point: marker.location.toLatLng(),
-      width: isPulse ? 80 : (highlighted ? 88 : 72),
-      height: isPulse ? 56 : (highlighted ? 40 : 32),
+      width: highlighted ? 88 : 72,
+      height: highlighted ? 40 : 32,
       alignment: Alignment.bottomCenter,
-      child: GestureDetector(
-        onTap: () => onTap(marker),
-        child: isPulse
-            ? _PulseMarkerWidget(
-                key: ValueKey(marker.id),
-                color: color,
-                highlighted: highlighted,
-                deadline: deadline,
-              )
-            : _MarkerPin(
-                key: ValueKey(marker.id),
-                color: color,
-                label: label,
-                highlighted: highlighted,
-                deadline: deadline,
-              ),
+      child: Opacity(
+        opacity: marker.isDimmed ? 0.22 : 1.0,
+        child: GestureDetector(
+          onTap: () => onTap(marker),
+          child: _MarkerPin(
+            key: ValueKey(marker.id),
+            color: color,
+            label: label,
+            highlighted: highlighted,
+            deadline: deadline,
+          ),
+        ),
       ),
     );
   }
@@ -240,7 +235,7 @@ class _MarkerPinState extends State<_MarkerPin> {
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.3,
-                height: 1.0,
+                height: 1.2,
               ),
             ),
           ),
@@ -276,125 +271,3 @@ class _PinTipPainter extends CustomPainter {
   bool shouldRepaint(_PinTipPainter old) => old.color != color;
 }
 
-// ── 파트너 이벤트 펄스 마커 ────────────────────────────────────────────────────
-
-class _PulseMarkerWidget extends StatefulWidget {
-  final Color color;
-  final bool highlighted;
-  final DateTime? deadline;
-
-  const _PulseMarkerWidget({
-    super.key,
-    required this.color,
-    this.highlighted = false,
-    this.deadline,
-  });
-
-  @override
-  State<_PulseMarkerWidget> createState() => _PulseMarkerWidgetState();
-}
-
-class _PulseMarkerWidgetState extends State<_PulseMarkerWidget>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    const selectedColor = Color(0xFF16213E);
-
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (_, __) {
-        final now = DateTime.now();
-        final deadline = widget.deadline;
-        final fade = deadline != null ? EventFade.opacity(deadline, now) : 1.0;
-        final isGrayed =
-            deadline != null && EventFade.isGrayed(deadline, now);
-        final activeColor = isGrayed
-            ? const Color(0xFF9E9E9E)
-            : (widget.highlighted ? selectedColor : widget.color);
-
-        return Opacity(
-          opacity: fade,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 48,
-                height: 36,
-                child: Stack(
-                  alignment: Alignment.center,
-                  clipBehavior: Clip.none,
-                  children: [
-                    Opacity(
-                      opacity: (1.0 - _ctrl.value).clamp(0.0, 1.0),
-                      child: Transform.scale(
-                        scale: 0.5 + _ctrl.value,
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: activeColor,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: activeColor,
-                        borderRadius: BorderRadius.circular(7),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(
-                                alpha: widget.highlighted ? 0.35 : 0.20),
-                            blurRadius: widget.highlighted ? 6 : 3,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: const Text(
-                        '지금',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.3,
-                          height: 1.0,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              CustomPaint(
-                painter: _PinTipPainter(color: activeColor),
-                size: const Size(14, 8),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}

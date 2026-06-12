@@ -1,6 +1,5 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
-import '../../../core/geo_utils.dart';
 import '../../../data/models/cinema_model.dart';
 
 /// 영화관 상세 바텀 시트 — 현재 시각 이후 상영 시간표를 보여줍니다.
@@ -50,7 +49,6 @@ class _CinemaSheet extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final now = DateTime.now();
-    final walkMins = walkingMinutes(userLocation, cinema.location);
     final schedule = cinema.upcomingScreenings(now: now, hideEnded: true);
 
     return DraggableScrollableSheet(
@@ -120,19 +118,6 @@ class _CinemaSheet extends StatelessWidget {
                                             color: cs.onSurface
                                                 .withValues(alpha: 0.5)),
                                     overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(Icons.directions_walk_outlined,
-                                    size: 12,
-                                    color: Color(0xFF4ECDC4)),
-                                const SizedBox(width: 2),
-                                Text(
-                                  '도보 $walkMins분',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF4ECDC4),
                                   ),
                                 ),
                               ],

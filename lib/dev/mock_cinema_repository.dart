@@ -1,7 +1,7 @@
 ﻿import 'package:latlong2/latlong.dart';
-import '../../core/geo_utils.dart';
-import '../models/cinema_model.dart';
-import 'cinema_repository.dart';
+import '../core/geo_utils.dart';
+import '../data/models/cinema_model.dart';
+import '../data/repositories/cinema_repository.dart';
 
 /// 테스트용 영화관 Mock 데이터.
 ///

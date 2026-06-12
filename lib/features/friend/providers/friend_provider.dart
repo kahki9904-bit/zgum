@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/friend.dart';
 import '../data/repositories/friend_repository.dart';
-import '../data/repositories/mock_friend_repository.dart';
+import '../../../dev/mock_friend_repository.dart';
 
 // 나중에 FirebaseFriendRepository로 교체만 하면 됨
 final friendRepositoryProvider = Provider<FriendRepository>(

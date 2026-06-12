@@ -34,7 +34,7 @@ class LocationResult {
 class LocationService {
   static const _kLastLatKey = 'zgum_last_lat';
   static const _kLastLngKey = 'zgum_last_lng';
-  static const _accuracyThreshold = 30.0; // 미터
+  static const _accuracyThreshold = 50.0; // 미터
 
   // ── 위치 권한 확인 ─────────────────────────────────────────────────────────
 
@@ -88,11 +88,11 @@ class LocationService {
           step: LocationStep.manual);
     }
 
-    // 1단계: 정확한 GPS (오차 30m 이하)
+    // 1단계: 정확한 GPS. 앱 진입 지연을 줄이기 위해 오래 붙잡지 않는다.
     try {
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
+        timeLimit: const Duration(seconds: 4),
       );
       final result = LatLng(pos.latitude, pos.longitude);
       if (pos.accuracy <= _accuracyThreshold) {
@@ -110,7 +110,7 @@ class LocationService {
       try {
         final netPos = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.medium,
-          timeLimit: const Duration(seconds: 5),
+          timeLimit: const Duration(seconds: 3),
         );
         final netResult = LatLng(netPos.latitude, netPos.longitude);
         if (netPos.accuracy <= gpsCandidate.accuracy) {
@@ -145,7 +145,7 @@ class LocationService {
     try {
       final netPos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 5),
+        timeLimit: const Duration(seconds: 3),
       );
       final netResult = LatLng(netPos.latitude, netPos.longitude);
       await saveLastKnown(netResult);

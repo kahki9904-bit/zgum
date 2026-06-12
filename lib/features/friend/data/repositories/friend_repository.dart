@@ -7,9 +7,9 @@ abstract class FriendRepository {
   static const double proximityMeters = 100.0;
   static const double maxAccuracyMeters = 50.0;
   static const Duration notificationCooldown = Duration(hours: 12);
-  static const Duration requestTtl = Duration(minutes: 5);
+  static const Duration requestTtl = Duration(seconds: 90);
 
-  // A: 신청 브로드캐스트
+  // A: 신청 브로드캐스트 (기간 선택 포함)
   Future<FriendRequest> broadcastRequest({
     required String myUserId,
     required LatLng myLocation,
@@ -22,18 +22,19 @@ abstract class FriendRepository {
     required String myUserId,
   });
 
-  // B: 수락 → 코드 생성 → 반환 (B가 A에게 구두로 알려줌)
+  // B: 기간 선택 후 1회용 코드 생성 → 반환 (B가 A에게 구두로 알려줌)
   Future<String?> respondToRequest({
     required String requestId,
     required String myUserId,
     required LatLng myLocation,
+    required FriendDuration duration,
     bool skipProximityCheck = false,
   });
 
-  // A: B의 코드 입력 → 친구 생성
+  // A: B의 코드 입력 → 이음 생성
   Future<Friend?> confirmRequest({
     required String requestId,
-    required String responseToken,
+    required String responseCode,
     required String myUserId,
     required LatLng myLocation,
   });

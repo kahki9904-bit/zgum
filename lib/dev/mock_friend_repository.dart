@@ -1,10 +1,10 @@
 import 'dart:math';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/friend.dart';
-import '../models/friend_duration.dart';
-import '../models/friend_request.dart';
-import 'friend_repository.dart';
+import '../features/friend/data/models/friend.dart';
+import '../features/friend/data/models/friend_duration.dart';
+import '../features/friend/data/models/friend_request.dart';
+import '../features/friend/data/repositories/friend_repository.dart';
 
 class MockFriendRepository implements FriendRepository {
   static const _friendsKey = 'zgum_mock_friends';
@@ -12,7 +12,8 @@ class MockFriendRepository implements FriendRepository {
 
   final _rand = Random();
 
-  String _generateToken() => (10 + _rand.nextInt(90)).toString();
+  // 1회용 2자리 랜덤 코드 (00~99)
+  String _generateCode() => _rand.nextInt(100).toString().padLeft(2, '0');
 
   // ── A: 신청 ───────────────────────────────────────────────────────────────
 
@@ -50,13 +51,14 @@ class MockFriendRepository implements FriendRepository {
     return requests.where((r) => r.requesterId != myUserId).toList();
   }
 
-  // ── B: 수락 → 코드 생성 ───────────────────────────────────────────────────
+  // ── B: 기간 선택 → 1회용 코드 생성 ───────────────────────────────────────
 
   @override
   Future<String?> respondToRequest({
     required String requestId,
     required String myUserId,
     required LatLng myLocation,
+    required FriendDuration duration,
     bool skipProximityCheck = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -74,18 +76,21 @@ class MockFriendRepository implements FriendRepository {
       if (dist > FriendRepository.proximityMeters) return null;
     }
 
-    final token = _generateToken();
-    requests[idx] = requests[idx].copyWith(responseToken: token);
+    final code = _generateCode();
+    requests[idx] = requests[idx].copyWith(
+      acceptorDuration: duration,
+      responseCode: code,
+    );
     await _saveRequests(prefs, requests);
-    return token;
+    return code;
   }
 
-  // ── A: B 코드 확인 → 친구 생성 ────────────────────────────────────────────
+  // ── A: B 코드 확인 → 이음 생성 ────────────────────────────────────────────
 
   @override
   Future<Friend?> confirmRequest({
     required String requestId,
-    required String responseToken,
+    required String responseCode,
     required String myUserId,
     required LatLng myLocation,
   }) async {
@@ -94,20 +99,28 @@ class MockFriendRepository implements FriendRepository {
     final request = requests.where((r) => r.id == requestId).firstOrNull;
 
     if (request == null) return null;
-    if (request.responseToken != responseToken) return null;
+    if (request.isExpired) return null;
+    if (request.responseCode == null) return null;
+    if (request.responseCode != responseCode) return null;
 
     final now = DateTime.now();
+    // 유효기간 = min(A 기간, B 기간)
+    final aDur = request.duration.duration;
+    final bDur = (request.acceptorDuration ?? request.duration).duration;
+    final effectiveDur = aDur.compareTo(bDur) <= 0 ? aDur : bDur;
+
     final friend = Friend(
       id: '${request.requesterId}_${myUserId}_${now.millisecondsSinceEpoch}',
       friendUserId: request.requesterId,
       createdAt: now,
-      expiresAt: now.add(request.duration.duration),
+      expiresAt: now.add(effectiveDur),
     );
 
     final friends = await _loadFriends(prefs);
     friends.add(friend);
     await _saveFriends(prefs, friends);
 
+    // 사용된 코드 폐기 (요청 삭제)
     await _saveRequests(
       prefs,
       requests.where((r) => r.id != requestId).toList(),
@@ -116,7 +129,7 @@ class MockFriendRepository implements FriendRepository {
     return friend;
   }
 
-  // ── 활성 친구 ──────────────────────────────────────────────────────────────
+  // ── 활성 이음 ──────────────────────────────────────────────────────────────
 
   @override
   Future<List<Friend>> getActiveFriends(String userId) async {
@@ -150,35 +163,6 @@ class MockFriendRepository implements FriendRepository {
     final prefs = await SharedPreferences.getInstance();
     final all = await _loadFriends(prefs);
     await _saveFriends(prefs, all.where((f) => f.isActive).toList());
-  }
-
-  // ── 테스트 데이터 ──────────────────────────────────────────────────────────
-
-  Future<void> seedTestFriends() async {
-    final now = DateTime.now();
-    final friends = [
-      Friend(
-        id: 'test_001',
-        friendUserId: 'user_abc12345',
-        createdAt: now.subtract(const Duration(hours: 2)),
-        expiresAt: now.add(const Duration(hours: 22)),
-      ),
-      Friend(
-        id: 'test_002',
-        friendUserId: 'user_def67890',
-        createdAt: now.subtract(const Duration(days: 3)),
-        expiresAt: now.add(const Duration(days: 177)),
-        lastNotifiedAt: now.subtract(const Duration(hours: 2)),
-      ),
-      Friend(
-        id: 'test_003',
-        friendUserId: 'user_ghi11111',
-        createdAt: now.subtract(const Duration(days: 10)),
-        expiresAt: now.add(const Duration(days: 355)),
-      ),
-    ];
-    final prefs = await SharedPreferences.getInstance();
-    await _saveFriends(prefs, friends);
   }
 
   // ── 내부 헬퍼 ─────────────────────────────────────────────────────────────

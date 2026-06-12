@@ -1,5 +1,6 @@
 ﻿import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/app_config.dart';
 import '../../core/constants.dart';
@@ -39,6 +40,21 @@ class ApiCulturalEventRepository implements CulturalEventRepository {
     required double radiusKm,
     required bool isIdentityVerified,
   }) async {
+    final key = AppConfig.tourApiKey.trim();
+
+    // 키 상태 로그 (전체 출력 금지 — 앞 4자리/뒤 4자리만)
+    if (kDebugMode) {
+      if (key.isEmpty) {
+        debugPrint('[TourAPI] 키 없음 — 건너뜀');
+      } else {
+        final masked = '${key.substring(0, key.length.clamp(0, 4))}...'
+            '${key.substring((key.length - 4).clamp(0, key.length))}';
+        debugPrint('[TourAPI] 키 길이: ${key.length}, $masked');
+      }
+    }
+
+    if (key.isEmpty) return [];
+
     // Tour API radius 파라미터: m 단위, 상한 20,000m
     final radiusM = (radiusKm * 1000).round().clamp(1000, 20000);
 
@@ -46,7 +62,7 @@ class ApiCulturalEventRepository implements CulturalEventRepository {
     // Dio의 queryParameters를 쓰면 serviceKey가 이중 인코딩되므로
     // StringBuffer로 전체 URL을 직접 구성합니다.
     final url = StringBuffer('${AppConfig.tourApiBaseUrl}/locationBasedList1')
-      ..write('?serviceKey=${AppConfig.tourApiKey}')
+      ..write('?serviceKey=$key')
       ..write('&MobileOS=ETC')
       ..write('&MobileApp=${Uri.encodeComponent(AppConstants.appName)}')
       ..write('&_type=json')

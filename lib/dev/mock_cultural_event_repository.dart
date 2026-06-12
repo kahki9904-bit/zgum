@@ -1,7 +1,7 @@
 ﻿import 'dart:math';
 import 'package:latlong2/latlong.dart';
-import '../models/cultural_event.dart';
-import 'cultural_event_repository.dart';
+import '../data/models/cultural_event.dart';
+import '../data/repositories/cultural_event_repository.dart';
 
 /// 공공데이터포털 API 연동 전 사용하는 Mock 구현체.
 /// 실제 API Repository로 교체 시 이 파일 대신 [ApiCulturalEventRepository]를 주입하세요.
@@ -273,7 +273,7 @@ class MockCulturalEventRepository implements CulturalEventRepository {
         category: EventCategory.partner,
         isFree: false,
         source: EventSource.partner,
-        partnerMessage: '지금 자리 여유 있습니다. 줄 없이 바로 오세요.',
+        partnerMessage: '지금 이 순간, 광화문에서 잠깐 쉬어가세요.',
       ),
       CulturalEvent(
         id: 'par-002',
@@ -300,7 +300,7 @@ class MockCulturalEventRepository implements CulturalEventRepository {
         category: EventCategory.partner,
         isFree: false,
         source: EventSource.partner,
-        partnerMessage: '오늘 오픈 기념 첫 방문 고객께 추가 혜택 드립니다.',
+        partnerMessage: '오늘 처음 문을 여는 공간입니다.',
       ),
 
       // ── 성인 전용 이벤트 (isAdultOnly: true) ────────────────────────────
@@ -334,12 +334,13 @@ class MockCulturalEventRepository implements CulturalEventRepository {
       ),
 
       // ── 테스트용 가상 이벤트 (현재 위치 주변 고정 배치) ──────────────────────
+      // 10분 도보 경계(약 667m) 안쪽
       CulturalEvent(
         id: 'test-001',
-        title: '[테스트] 근처 전시 행사',
+        title: '[테스트] 근처 전시 (5분)',
         venue: '테스트 갤러리',
         address: '현재 위치 북동쪽 약 350m',
-        description: '테스트용 가상 이벤트입니다. 현재 위치 기준 북동쪽에 배치됩니다.',
+        description: '테스트용. 현재 위치 기준 북동쪽 350m (도보 5분 이내)',
         startDate: now,
         endDateTime: now.add(const Duration(hours: 6)),
         location: LatLng(center.latitude + 0.003, center.longitude + 0.002),
@@ -349,10 +350,10 @@ class MockCulturalEventRepository implements CulturalEventRepository {
       ),
       CulturalEvent(
         id: 'test-002',
-        title: '[테스트] 근처 콘서트',
+        title: '[테스트] 근처 콘서트 (7분)',
         venue: '테스트 공연장',
         address: '현재 위치 북서쪽 약 450m',
-        description: '테스트용 가상 이벤트입니다. 현재 위치 기준 북서쪽에 배치됩니다.',
+        description: '테스트용. 현재 위치 기준 북서쪽 450m (도보 7분 이내)',
         startDate: now,
         endDateTime: now.add(const Duration(hours: 6)),
         location: LatLng(center.latitude + 0.002, center.longitude - 0.004),
@@ -362,14 +363,54 @@ class MockCulturalEventRepository implements CulturalEventRepository {
       ),
       CulturalEvent(
         id: 'test-003',
-        title: '[테스트] 근처 영화 상영',
+        title: '[테스트] 근처 영화 (8분)',
         venue: '테스트 영화관',
         address: '현재 위치 남동쪽 약 500m',
-        description: '테스트용 가상 이벤트입니다. 현재 위치 기준 남동쪽에 배치됩니다.',
+        description: '테스트용. 현재 위치 기준 남동쪽 500m (도보 8분 이내)',
         startDate: now,
         endDateTime: now.add(const Duration(hours: 6)),
         location: LatLng(center.latitude - 0.004, center.longitude + 0.003),
         category: EventCategory.movie,
+        isFree: false,
+        source: EventSource.public,
+      ),
+      // 10분 도보 경계(약 667m) 바깥쪽 — 흐리게 표시되어야 함
+      CulturalEvent(
+        id: 'test-004',
+        title: '[테스트] 원거리 공연 (흐림)',
+        venue: '테스트 원거리 공연장',
+        address: '현재 위치 북쪽 약 900m',
+        description: '테스트용. 현재 위치 기준 북쪽 900m (도보 10분 초과 → 흐리게)',
+        startDate: now,
+        endDateTime: now.add(const Duration(hours: 6)),
+        location: LatLng(center.latitude + 0.008, center.longitude),
+        category: EventCategory.theater,
+        isFree: false,
+        source: EventSource.public,
+      ),
+      CulturalEvent(
+        id: 'test-005',
+        title: '[테스트] 원거리 전시 (흐림)',
+        venue: '테스트 원거리 갤러리',
+        address: '현재 위치 동쪽 약 950m',
+        description: '테스트용. 현재 위치 기준 동쪽 950m (도보 10분 초과 → 흐리게)',
+        startDate: now,
+        endDateTime: now.add(const Duration(hours: 6)),
+        location: LatLng(center.latitude, center.longitude + 0.010),
+        category: EventCategory.exhibition,
+        isFree: true,
+        source: EventSource.public,
+      ),
+      CulturalEvent(
+        id: 'test-006',
+        title: '[테스트] 원거리 콘서트 (흐림)',
+        venue: '테스트 원거리 콘서트홀',
+        address: '현재 위치 남서쪽 약 1km',
+        description: '테스트용. 현재 위치 기준 남서쪽 1km (도보 10분 초과 → 흐리게)',
+        startDate: now,
+        endDateTime: now.add(const Duration(hours: 6)),
+        location: LatLng(center.latitude - 0.007, center.longitude - 0.007),
+        category: EventCategory.concert,
         isFree: false,
         source: EventSource.public,
       ),

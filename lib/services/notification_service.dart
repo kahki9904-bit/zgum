@@ -8,20 +8,31 @@ class NotificationService {
 
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  Future<void>? _initFuture;
 
-  Future<void> init() async {
-    if (_initialized) return;
-    tz_data.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
+  Future<void> init() {
+    if (_initialized) return Future.value();
+    return _initFuture ??= _doInit();
+  }
 
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const settings = InitializationSettings(android: android);
-    await _plugin.initialize(settings);
-    _initialized = true;
+  Future<void> _doInit() async {
+    try {
+      tz_data.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
+
+      const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const settings = InitializationSettings(android: android);
+      await _plugin.initialize(settings);
+      _initialized = true;
+    } catch (_) {
+      _initFuture = null;
+      rethrow;
+    }
   }
 
   // Android 13+ 알림 권한 요청 — true: 허용됨, false: 거부됨
   Future<bool> requestPermission() async {
+    await init();
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     if (android == null) return true;
@@ -35,6 +46,7 @@ class NotificationService {
     required String eventTitle,
     required DateTime notifyAt,
   }) async {
+    await init();
     await _plugin.zonedSchedule(
       eventId.hashCode.abs() % 100000,
       'Z:GUM',
@@ -57,11 +69,13 @@ class NotificationService {
 
   // 이벤트 알림 취소
   Future<void> cancelEventAlarm(String eventId) async {
+    await init();
     await _plugin.cancel(eventId.hashCode.abs() % 100000);
   }
 
   // 친구 근접 알림 — 즉시 표시
   Future<void> showFriendNearbyNotification() async {
+    await init();
     await _plugin.show(
       900001,
       'Z:GUM',
@@ -80,6 +94,7 @@ class NotificationService {
 
   // 친구 등록 완료 알림
   Future<void> showFriendRegisteredNotification() async {
+    await init();
     await _plugin.show(
       900002,
       'Z:GUM',
@@ -98,6 +113,7 @@ class NotificationService {
 
   // 만료 예정 친구 알림
   Future<void> showFriendExpiryNotification() async {
+    await init();
     await _plugin.show(
       900003,
       'Z:GUM',

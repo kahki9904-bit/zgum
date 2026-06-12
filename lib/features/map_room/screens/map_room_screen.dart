@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' show cos, pow;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +8,7 @@ import '../../../core/constants.dart';
 import '../../../core/event_fade.dart';
 import '../../../core/geo_utils.dart';
 import '../../../core/interfaces/map_engine.dart';
+import '../../../core/providers/user_location_provider.dart';
 import '../../../core/models/map_marker_model.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/providers/tick_provider.dart';
@@ -17,16 +17,22 @@ import '../../../data/models/cultural_event.dart';
 import '../../../core/app_config.dart';
 import '../../../data/repositories/api_cultural_event_repository.dart';
 import '../../../data/repositories/cultural_event_repository.dart';
-import '../../../data/repositories/mock_cultural_event_repository.dart';
+import '../../../data/repositories/kopis_repository.dart';
+import '../../../dev/mock_cultural_event_repository.dart';
+import '../../../dev/mock_partner_event_store.dart';
 import '../../../data/repositories/sdsc_store_repository.dart';
 import '../../../services/location_service.dart';
 import '../../../services/time_service.dart';
 import '../../../presentation/widgets/sheets/event_detail_sheet.dart';
-import '../../user_room/providers/auth_provider.dart';
+import '../../../presentation/widgets/sheets/kakao_place_detail_sheet.dart';
 import '../../../data/models/check_in_record.dart';
+import '../../alert/providers/alert_provider.dart';
+import '../../user_room/providers/auth_provider.dart';
 import '../../user_room/providers/check_in_provider.dart';
-import '../engines/flutter_map_engine.dart';
+import '../engines/kakao_map_engine.dart';
+import '../../../core/providers/partner_focus_provider.dart';
 import '../providers/map_filter_provider.dart';
+import '../providers/kakao_search_provider.dart';
 
 class MapRoomScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSwipeToUserRoom;
@@ -43,15 +49,22 @@ class MapRoomScreen extends ConsumerStatefulWidget {
 }
 
 class MapRoomScreenState extends ConsumerState<MapRoomScreen>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   @override
   bool get wantKeepAlive => true;
 
+  late final AnimationController _pulseController;
+  bool _partnerEventSeen = false;
+
   // ── 지도 엔진 (여기만 바꾸면 지도 교체 완료) ─────────────────────────────────
-  final MapEngine _engine = FlutterMapEngine();
+  final MapEngine _engine = KakaoMapEngine();
 
   final _locationService = LocationService();
-  final CulturalEventRepository _publicRepo = MockCulturalEventRepository();
+  final CulturalEventRepository _publicRepo = AppConfig.hasTourApiKey
+      ? ApiCulturalEventRepository()
+      : MockCulturalEventRepository();
+  final CulturalEventRepository? _kopisRepo =
+      AppConfig.hasKopisKey ? KopisRepository() : null;
   final CulturalEventRepository? _partnerRepo =
       AppConfig.hasSdscKey ? SdscStoreRepository() : null;
   final _timeService = const TimeService();
@@ -77,10 +90,12 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   final _searchFocus = FocusNode();
   String _searchQuery = '';
   String? _highlightedEventId;
+  Timer? _searchDebounce;
 
-  // ── 지금 패널 ──────────────────────────────────────────────────────────────
-  bool _nowPanelOpen = false;
-
+  // ── 카카오 장소 핀 ────────────────────────────────────────────────────────────
+  MapCoordinate? _searchFocusCoord;
+  String? _searchFocusName;
+  static const _searchPinId = '__kakao_search_pin__';
   // ── GPS 상태 ───────────────────────────────────────────────────────────────
   bool _locationAcquiring = true;
   bool _needsManualLocation = false;
@@ -93,26 +108,28 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   bool _isNavigating = false;
   bool _isLoadingRoute = false;
 
-  // ── 친구 흔적 mock 데이터 (Firebase 연동 전 임시) ────────────────────────────
-  static const _mockFriendTrace = <String, int>{
-    'test-001': 2,
-    'pub-004': 1,
-    'par-001': 3,
-  };
+  // 파트너 이벤트 포커스: 지도 이동 후 팝업 표시까지 대기 시간 (조정 가능)
+  static const Duration _kPartnerFocusDelay = Duration(milliseconds: 300);
 
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
     _mapCtrl = _engine.createController();
     _init();
   }
 
   @override
   void dispose() {
+    _pulseController.dispose();
     for (final t in _eventTimers.values) {
       t.cancel();
     }
     _eventTimers.clear();
+    _searchDebounce?.cancel();
     _searchCtrl.dispose();
     _searchFocus.dispose();
     super.dispose();
@@ -132,6 +149,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       _locationAcquiring = false;
       _needsManualLocation = result.needsManual;
     });
+    // 전역 위치 Provider 갱신 → GeofenceProvider가 정확한 위치로 비교
+    ref.read(userLocationProvider.notifier).state = result.position;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _mapCtrl.move(_centerCoord, AppConstants.defaultZoom);
     });
@@ -141,56 +160,75 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   void _confirmManualLocation() {
     setState(() => _needsManualLocation = false);
     _locationService.saveLastKnown(_center);
+    ref.read(userLocationProvider.notifier).state = _center;
     _loadEvents();
   }
 
   Future<void> _loadEvents() async {
+    if (!mounted) return;
+    final isIdentityVerified = ref.read(authStateProvider).isIdentityVerified;
+
+    // public / partner 를 각각 독립적으로 호출 — 한 쪽 실패가 다른 쪽을 막지 않음
+    List<CulturalEvent> publicEvents = [];
     try {
-      final isIdentityVerified =
-          ref.read(authStateProvider).isIdentityVerified;
-      final args = (
+      publicEvents = await _publicRepo.fetchNearbyEvents(
         center: _center,
         radiusKm: AppConstants.defaultRadiusKm,
         isIdentityVerified: isIdentityVerified,
       );
-      final results = await Future.wait([
-        _publicRepo.fetchNearbyEvents(
-          center: args.center,
-          radiusKm: args.radiusKm,
-          isIdentityVerified: args.isIdentityVerified,
-        ),
-        if (_partnerRepo != null)
-          _partnerRepo.fetchNearbyEvents(
-            center: args.center,
-            radiusKm: args.radiusKm,
-            isIdentityVerified: args.isIdentityVerified,
-          ),
-      ]);
-      final all = results.expand((list) => list).toList();
-      final now = _timeService.now();
-      final active = all
-          .where((e) => !EventFade.isFullyExpired(e.endDateTime, now))
-          .toList();
-      if (!mounted) return;
-      setState(() {
-        _events = active;
-        _eventById = {for (final e in active) e.id: e};
+    } catch (e, st) {
+      debugPrint('[MapRoom] public API 실패 — 빈 목록으로 계속: $e');
+      debugPrintStack(label: '[MapRoom] public stack', stackTrace: st);
+    }
+
+    List<CulturalEvent> kopisEvents = [];
+    if (_kopisRepo != null) {
+      try {
+        kopisEvents = await _kopisRepo.fetchNearbyEvents(
+          center: _center,
+          radiusKm: AppConstants.defaultRadiusKm,
+          isIdentityVerified: isIdentityVerified,
+        );
+      } catch (e, st) {
+        debugPrint('[MapRoom] KOPIS API 실패 — 빈 목록으로 계속: $e');
+        debugPrintStack(label: '[MapRoom] KOPIS stack', stackTrace: st);
+      }
+    }
+
+    List<CulturalEvent> partnerEvents = [];
+    if (_partnerRepo != null) {
+      try {
+        partnerEvents = await _partnerRepo.fetchNearbyEvents(
+          center: _center,
+          radiusKm: AppConstants.defaultRadiusKm,
+          isIdentityVerified: isIdentityVerified,
+        );
+      } catch (_) {}
+    }
+
+    // DEV/MOCK ONLY: 파트너가 mock 결제 완료한 이벤트를 지도에 즉시 반영
+    // 운영 전환 시 이 줄 삭제 → Firestore 실시간 구독으로 대체
+    if (!mounted) return;
+    final mockRegistered = ref.read(mockPartnerEventStoreProvider);
+    final all = [...publicEvents, ...kopisEvents, ...partnerEvents, ...mockRegistered];
+    final now = _timeService.now();
+    final active = all
+        .where((e) => !EventFade.isFullyExpired(e.endDateTime, now))
+        .toList();
+    setState(() {
+      _events = active;
+      _eventById = {for (final e in active) e.id: e};
+    });
+    _scheduleEventTimers(active);
+    _rebuildMarkers();
+    _updatePartnerPulse();
+    // 파트너 이벤트 등록 완료 후 포커스 요청 처리
+    final focusTarget = ref.read(partnerFocusProvider);
+    if (focusTarget != null) {
+      ref.read(partnerFocusProvider.notifier).state = null;
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) _focusEvent(focusTarget);
       });
-      _scheduleEventTimers(active);
-      _rebuildMarkers();
-    } on CulturalEventApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e.message),
-        duration: const Duration(seconds: 5),
-        action: SnackBarAction(label: '재시도', onPressed: _loadEvents),
-      ));
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('데이터를 불러오지 못했습니다. 잠시 후 다시 시도하세요.'),
-        duration: Duration(seconds: 5),
-      ));
     }
   }
 
@@ -223,71 +261,126 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     _rebuildMarkers();
   }
 
+  // 강조 표시 도보 반경 (분). 이 안 = 일반 마커, 밖 = 흐린 마커.
+  // 데이터 호출 반경(20km)과 별개 개념.
+  static const _displayRadiusMinutes = 10;
+
   // ── 표시 이벤트 필터링 ──────────────────────────────────────────────────────
 
   List<CulturalEvent> _visibleEvents(MapFilterState filter) {
-    return _events.where((e) {
-      // 파트너 이벤트(과금 상태)는 거리 제한 없이 항상 표시
-      if (e.source == EventSource.partner) return filter.passes(e);
-      if (walkingMinutes(_center, e.location) > filter.walkingMinutes) {
-        return false;
-      }
-      return filter.passes(e);
-    }).toList();
+    // 거리 하드 컷오프 제거: 호출된 이벤트 전부 표시 (카테고리·검색 필터만 적용)
+    // 거리 기반 강조/흐림은 _rebuildMarkers 에서 isDimmed 로 처리
+    return _events.where((e) => filter.passes(e)).toList();
   }
 
   void _rebuildMarkers() {
     if (!mounted) return;
     final filter = ref.read(mapFilterProvider);
     final visible = _visibleEvents(filter);
+    final focusCoord = _searchFocusCoord;
+    final checkedInIds = ref.read(checkInProvider.notifier).checkedInEventIds;
 
-    final markers = CulturalEventAdapter.toMarkers(visible)
-        .map((m) {
-          final isHL = m.id == _highlightedEventId;
-          final isCI = ref.read(checkInProvider.notifier).checkedInEventIds.contains(m.id);
-          if (!isHL && !isCI) return m;
-          return MapMarkerModel(
-            id: m.id,
-            location: m.location,
-            category: m.category,
-            deadline: m.deadline,
-            isAdultOnly: m.isAdultOnly,
-            title: m.title,
-            venue: m.venue,
-            isPartner: m.isPartner,
-            isHighlighted: true,
-            payload: m.payload,
-          );
-        })
-        .toList();
+    MapMarkerModel applyState(MapMarkerModel m, {required bool dimmed}) {
+      final isHL = m.id == _highlightedEventId;
+      final isCI = checkedInIds.contains(m.id);
+      return MapMarkerModel(
+        id: m.id,
+        location: m.location,
+        category: m.category,
+        deadline: m.deadline,
+        isAdultOnly: m.isAdultOnly,
+        title: m.title,
+        venue: m.venue,
+        isPartner: m.isPartner,
+        isHighlighted: isHL || isCI,
+        isDimmed: dimmed && !isHL && !isCI,
+        payload: m.payload,
+      );
+    }
+
+    List<MapMarkerModel> markers;
+
+    if (focusCoord != null) {
+      // 포커스 모드: 검색 핀 + 반경 안 강조, 밖 흐림
+      final focusLatLng = LatLng(focusCoord.latitude, focusCoord.longitude);
+      markers = [
+        MapMarkerModel(
+          id: _searchPinId,
+          location: focusCoord,
+          category: MarkerCategory.other,
+          title: _searchFocusName ?? '',
+          isHighlighted: true,
+        ),
+        ...CulturalEventAdapter.toMarkers(visible).map((m) {
+          final event = _eventById[m.id];
+          final mins = event != null
+              ? walkingMinutes(focusLatLng, event.location)
+              : 999;
+          return applyState(m, dimmed: mins > _displayRadiusMinutes);
+        }),
+      ];
+    } else {
+      // 일반 모드: 현재 위치 기준 반경 안 강조, 밖 흐림
+      markers = CulturalEventAdapter.toMarkers(visible).map((m) {
+        final event = _eventById[m.id];
+        final mins = event != null
+            ? walkingMinutes(_center, event.location)
+            : 999;
+        return applyState(m, dimmed: mins > _displayRadiusMinutes);
+      }).toList();
+    }
 
     setState(() => _markers = markers);
+  }
+
+  void _selectKakaoPlace(MapMarkerModel m) {
+    _stopNavigation();
+    setState(() {
+      _searchFocusCoord = m.location;
+      _searchFocusName = m.title;
+    });
+    _mapCtrl.move(m.location, 17.0);
+    _closeSearch();
+    _rebuildMarkers();
+    if (mounted) KakaoPlaceDetailSheet.show(context, m);
   }
 
   // ── 검색 ──────────────────────────────────────────────────────────────────
 
   List<CulturalEvent> get _searchResults {
-    if (_searchQuery.isEmpty) return [];
+    if (_searchQuery.length < 2) return [];
     final q = _searchQuery.toLowerCase();
     return _events
         .where((e) =>
             e.title.toLowerCase().contains(q) ||
             e.venue.toLowerCase().contains(q))
+        .take(5)
         .toList();
   }
 
   void _onSearchChanged(String query) {
     setState(() => _searchQuery = query);
+    _searchDebounce?.cancel();
+    if (query.trim().length >= 2) {
+      _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+        _runKakaoSearch(query);
+      });
+    }
   }
 
   void _selectResult(CulturalEvent event) {
+    _stopNavigation();
     _mapCtrl.move(
       MapCoordinate(event.location.latitude, event.location.longitude),
       AppConstants.defaultZoom,
     );
-    setState(() => _highlightedEventId = event.id);
+    setState(() {
+      _highlightedEventId = event.id;
+      _searchFocusCoord = null;
+    });
     _rebuildMarkers();
     _closeSearch();
+    _showEventSheet(event);
   }
 
   void _closeSearch() {
@@ -297,13 +390,13 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       _searchQuery = '';
       _searchCtrl.clear();
     });
+    ref.read(kakaoSearchProvider.notifier).clear();
   }
 
   void _toggleSearch() {
     if (_searchOpen) {
       _closeSearch();
     } else {
-      if (_nowPanelOpen) setState(() => _nowPanelOpen = false);
       setState(() => _searchOpen = true);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _searchOpen) _searchFocus.requestFocus();
@@ -311,96 +404,117 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     }
   }
 
-  void _toggleNowPanel() {
-    if (_nowPanelOpen) {
-      setState(() => _nowPanelOpen = false);
+  void _updatePartnerPulse() {
+    final hasPartner = _events.any((e) => e.source == EventSource.partner);
+    final hasUnseenAlert = ref.read(hasUnseenAlertProvider);
+    if ((hasPartner && !_partnerEventSeen) || hasUnseenAlert) {
+      _pulseController.repeat(reverse: true);
     } else {
-      if (_searchOpen) _closeSearch();
-      setState(() => _nowPanelOpen = true);
+      _pulseController.stop();
+      _pulseController.reset();
     }
   }
 
-  // ── 지금 패널 ──────────────────────────────────────────────────────────────
+  // TODO: ShellScreen 지금 패널 열림 시 호출 연결 예정
+  void _onNowPanelOpened() {
+    if (_searchOpen) _closeSearch();
+    setState(() => _partnerEventSeen = true);
+    _pulseController.stop();
+    _pulseController.reset();
+    ref.read(partnerAlertProvider.notifier).markAllAsSeen();
 
-  Widget _buildNowPanel(MapFilterState filter) {
+    final filter = ref.read(mapFilterProvider);
     final visible = _visibleEvents(filter);
-    return _NowPanelContent(
-      visible: visible,
-      center: _center,
-      onEventTap: _focusEvent,
+
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (dialogContext, __, ___) => GestureDetector(
+        onTap: () => Navigator.of(dialogContext).pop(),
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: GestureDetector(
+            onTap: () {},
+            child: Material(
+              color: Colors.transparent,
+              child: _NowPanelPopup(
+                visible: visible,
+                center: _center,
+                onEventTap: (event) {
+                  Navigator.pop(context);
+                  _focusEvent(event);
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+      transitionBuilder: (_, animation, __, child) => ScaleTransition(
+        scale: Tween<double>(begin: 0.88, end: 1.0).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+        ),
+        child: FadeTransition(opacity: animation, child: child),
+      ),
     );
   }
 
   void _focusEvent(CulturalEvent event) {
-    // 하단 시트가 화면 약 45%를 가리므로 마커가 시트 위에 보이도록 중심을 남쪽으로 내림
-    final screenHeight = MediaQuery.of(context).size.height;
-    const sheetRatio = 0.45;
-    final offsetPx = screenHeight * sheetRatio / 2;
-    final lat = event.location.latitude;
-    final metersPerPx = 156543.03392 * cos(lat * pi / 180) /
-        pow(2, AppConstants.defaultZoom);
-    final latOffset = offsetPx * metersPerPx / 111320;
-
+    ref.read(partnerFocusPendingProvider.notifier).state = false;
     _mapCtrl.move(
-      MapCoordinate(lat - latOffset, event.location.longitude),
+      MapCoordinate(event.location.latitude, event.location.longitude),
       AppConstants.defaultZoom,
     );
     setState(() {
       _highlightedEventId = event.id;
-      _nowPanelOpen = false;
+      _searchFocusCoord = null;
     });
     _rebuildMarkers();
-    if (mounted) {
-      EventDetailSheet.show(
-        context,
-        event,
-        timeService: _timeService,
-        userLocation: _center,
-        isCheckedIn: ref.read(checkInProvider.notifier).checkedInEventIds.contains(event.id),
-        friendTraceCount: _mockFriendTrace[event.id] ?? 0,
-        onCheckIn: (String? memo, String? photoPath) {
-          final record = CheckInRecord.fromEvent(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            eventId: event.id,
-            eventTitle: event.title,
-            venue: event.venue,
-            category: event.category,
-            checkedInAt: DateTime.now(),
-            memo: memo,
-            photoPath: photoPath,
-          );
-          ref.read(checkInProvider.notifier).save(record);
-          _rebuildMarkers();
-        },
-        onNavigate: (_isNavigating || _isLoadingRoute)
-            ? null
-            : () => _startNavigation(event),
-      );
-    }
+    // 지도가 이동을 처리한 후 팝업 표시 (동시 실행 시 WebView 렌더 충돌 방지)
+    Future.delayed(_kPartnerFocusDelay, () {
+      if (mounted) _showEventSheet(event);
+    });
   }
 
   // ── 검색 패널 ──────────────────────────────────────────────────────────────
 
+  void _runKakaoSearch(String query) {
+    if (query.trim().length < 2) return;
+    ref.read(kakaoSearchProvider.notifier).search(
+          query: query,
+          center: _centerCoord,
+        );
+  }
+
   Widget _buildSearchPanel() {
+    final kakaoState = ref.watch(kakaoSearchProvider);
+    final zgumItems = _searchResults;
+    final remaining = (5 - zgumItems.length).clamp(0, 5);
+    final kakaoItems = remaining > 0
+        ? kakaoState.results.take(remaining).toList()
+        : <MapMarkerModel>[];
+
+    final bool hasAnyResult = zgumItems.isNotEmpty || kakaoItems.isNotEmpty;
+
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
+              color: Colors.white.withValues(alpha: 0.45),
               borderRadius: BorderRadius.circular(12),
             ),
             child: TextField(
               controller: _searchCtrl,
               focusNode: _searchFocus,
-              style:
-                  const TextStyle(color: Color(0xFF1A1A2E), fontSize: 14),
+              style: const TextStyle(color: Color(0xFF1A1A2E), fontSize: 14),
               cursorColor: const Color(0xFF16213E),
+              textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                hintText: '공연명 또는 장소 검색',
-                hintStyle: const TextStyle(
-                    color: Color(0xFFBBBBBB), fontSize: 14),
+                hintText: null,
                 prefixIcon: const Icon(Icons.search,
                     color: Color(0xFFBBBBBB), size: 20),
                 suffixIcon: _searchQuery.isNotEmpty
@@ -410,6 +524,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                         onPressed: () {
                           _searchCtrl.clear();
                           setState(() => _searchQuery = '');
+                          ref.read(kakaoSearchProvider.notifier).clear();
                         },
                       )
                     : null,
@@ -418,68 +533,103 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                     horizontal: 16, vertical: 14),
               ),
               onChanged: _onSearchChanged,
+              onSubmitted: _runKakaoSearch,
             ),
           ),
         ),
-        if (_searchQuery.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Expanded(
-            child: _searchResults.isEmpty
-                ? const Center(
-                    child: Text(
-                      '검색 결과가 없습니다',
-                      style: TextStyle(color: Color(0xFFCCCCCC), fontSize: 13),
-                    ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                    itemCount: _searchResults.length,
-                    separatorBuilder: (_, __) =>
-                        Container(height: 1, color: const Color(0xFFF0F0F0)),
-                    itemBuilder: (_, i) {
-                      final e = _searchResults[i];
-                      return InkWell(
-                        onTap: () => _selectResult(e),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      e.title,
-                                      style: const TextStyle(
-                                        color: Color(0xFF333333),
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      e.venue,
-                                      style: const TextStyle(
-                                        color: Color(0xFFAAAAAA),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(
-                                Icons.chevron_right,
-                                color: Color(0xFFDDDDDD),
-                                size: 18,
-                              ),
-                            ],
+        const SizedBox(height: 8),
+        Flexible(
+          child: _searchQuery.length < 2
+              ? const Center(
+                  child: Text(
+                    '2글자 이상 입력하세요',
+                    style: TextStyle(color: Color(0xFFCCCCCC), fontSize: 13),
+                  ),
+                )
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  children: [
+                    ...zgumItems.map((e) => _searchResultTile(
+                          title: e.title,
+                          subtitle: e.venue,
+                          onTap: () => _selectResult(e),
+                        )),
+                    if (kakaoState.isLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFFBBBBBB),
+                            ),
                           ),
                         ),
-                      );
-                    },
-                  ),
-          ),
-        ],
+                      )
+                    else if (kakaoState.error != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Text(kakaoState.error!,
+                            style: const TextStyle(
+                                fontSize: 12, color: Color(0xFFCCCCCC))),
+                      )
+                    else ...[
+                      ...kakaoItems.map((m) => _searchResultTile(
+                            title: m.title,
+                            subtitle: m.venue,
+                            onTap: () => _selectKakaoPlace(m),
+                          )),
+                      if (!hasAnyResult && kakaoState.hasSearched)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text(
+                            '결과가 없습니다',
+                            style: TextStyle(
+                                fontSize: 12, color: Color(0xFFCCCCCC)),
+                          ),
+                        ),
+                    ],
+                  ],
+                ),
+        ),
       ],
+    );
+  }
+
+  Widget _searchResultTile({
+    required String title,
+    String? subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          color: Color(0xFF333333), fontSize: 14)),
+                  if (subtitle != null && subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(subtitle,
+                        style: const TextStyle(
+                            color: Color(0xFFAAAAAA), fontSize: 12)),
+                  ],
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right,
+                color: Color(0xFFDDDDDD), size: 18),
+          ],
+        ),
+      ),
     );
   }
 
@@ -521,147 +671,192 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     setState(() {
       _routeCoords = [];
       _isNavigating = false;
+      _isLoadingRoute = false;
     });
   }
 
+  void _showEventSheet(CulturalEvent event) {
+    if (!mounted) return;
+    EventDetailSheet.show(
+      context,
+      event,
+      timeService: _timeService,
+      userLocation: _center,
+      isCheckedIn: ref.read(checkInProvider.notifier).checkedInEventIds.contains(event.id),
+      friendTraceCount: 0,
+      onCheckIn: (String? memo, String? photoPath) {
+        final record = CheckInRecord.fromEvent(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          eventId: event.id,
+          eventTitle: event.title,
+          venue: event.venue,
+          category: event.category,
+          checkedInAt: DateTime.now(),
+          memo: memo,
+          photoPath: photoPath,
+        );
+        ref.read(checkInProvider.notifier).save(record);
+        _rebuildMarkers();
+      },
+      onNavigate: (_isNavigating || _isLoadingRoute)
+          ? null
+          : () => _startNavigation(event),
+    );
+  }
+
   void _onMarkerTap(MapMarkerModel marker) {
+    if (marker.id == _searchPinId) return;
     final event = _eventById[marker.id];
-    if (event != null && mounted) {
-      EventDetailSheet.show(
-        context,
-        event,
-        timeService: _timeService,
-        userLocation: _center,
-        isCheckedIn: ref.read(checkInProvider.notifier).checkedInEventIds.contains(event.id),
-        friendTraceCount: _mockFriendTrace[event.id] ?? 0,
-        onCheckIn: (String? memo, String? photoPath) {
-          final record = CheckInRecord.fromEvent(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            eventId: event.id,
-            eventTitle: event.title,
-            venue: event.venue,
-            category: event.category,
-            checkedInAt: DateTime.now(),
-            memo: memo,
-            photoPath: photoPath,
-          );
-          ref.read(checkInProvider.notifier).save(record);
-          _rebuildMarkers();
-        },
-        onNavigate: (_isNavigating || _isLoadingRoute)
-            ? null
-            : () => _startNavigation(event),
-      );
-    }
+    if (event == null) return;
+    _mapCtrl.move(
+      MapCoordinate(event.location.latitude, event.location.longitude),
+      AppConstants.defaultZoom,
+    );
+    _showEventSheet(event);
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    // DEV/MOCK ONLY: 파트너 등록 이벤트 추가 시 마커 갱신
+    ref.listen<List<CulturalEvent>>(
+        mockPartnerEventStoreProvider, (prev, next) {
+      if (next.length != (prev?.length ?? 0)) _loadEvents();
+    });
     ref.listen<MapFilterState>(
         mapFilterProvider, (_, __) => _rebuildMarkers());
     ref.listen<AuthState>(
         authStateProvider, (_, __) => _loadEvents());
-    final filter = ref.watch(mapFilterProvider);
+    ref.listen<bool>(
+        hasUnseenAlertProvider, (_, __) => _updatePartnerPulse());
 
     final safePadding = MediaQuery.paddingOf(context).top;
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final panelHeight = screenHeight * 0.5;
-    const nowPanelHeight = 240.0;
-
+    final maxSearchPanelHeight =
+        (screenHeight - safePadding - bottomPadding - 120)
+            .clamp(220.0, double.infinity)
+            .toDouble();
+    final panelHeight =
+        (screenHeight * 0.48).clamp(220.0, maxSearchPanelHeight).toDouble();
+    final kakaoResults = ref.watch(kakaoSearchProvider).results;
+    final hasResults = _searchQuery.isNotEmpty && (kakaoResults.isNotEmpty || _searchResults.isNotEmpty);
+    final searchPanelHeight = !_searchOpen
+        ? 48.0
+        : hasResults
+            ? panelHeight
+            : 120.0;
     return Scaffold(
       backgroundColor: Colors.black,
       resizeToAvoidBottomInset: false,
       body: Stack(
+        fit: StackFit.expand,
         children: [
           // ── 지도 ──────────────────────────────────────────────────────
-          Listener(
-            behavior: HitTestBehavior.translucent,
-            onPointerDown: (e) => _swipeStart = e.localPosition,
-            onPointerUp: (e) {
-              if (_searchOpen) return;
-              final start = _swipeStart;
-              _swipeStart = null;
-              if (start == null) return;
-              final dx = e.localPosition.dx - start.dx;
-              final dy = e.localPosition.dy - start.dy;
-              if (dx.abs() < dy.abs() * 1.2) return;
-              final sw = MediaQuery.sizeOf(context).width;
-              if (start.dx < 72 && dx > 64) {
-                widget.onSwipeToUserRoom?.call();
-              }
-              if (start.dx > sw - 72 && dx < -64) {
-                widget.onSwipeToPartnerRoom?.call();
-              }
-            },
-            onPointerCancel: (_) => _swipeStart = null,
-            child: _engine.buildWidget(
-              initialCenter: _centerCoord,
-              initialZoom: AppConstants.defaultZoom,
-              markers: _markers,
-              onMarkerTap: _onMarkerTap,
-              controller: _mapCtrl,
-              userLocation: _centerCoord,
-              routePoints:
-                  _routeCoords.isEmpty ? null : _routeCoords,
+          Positioned.fill(
+            child: Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: (e) => _swipeStart = e.localPosition,
+              onPointerUp: (e) {
+                if (_searchOpen) return;
+                final start = _swipeStart;
+                _swipeStart = null;
+                if (start == null) return;
+                final dx = e.localPosition.dx - start.dx;
+                final dy = e.localPosition.dy - start.dy;
+                if (dx.abs() < dy.abs() * 1.2) return;
+                final sw = MediaQuery.sizeOf(context).width;
+                if (start.dx < 72 && dx > 64) {
+                  widget.onSwipeToUserRoom?.call();
+                }
+                if (start.dx > sw - 72 && dx < -64) {
+                  widget.onSwipeToPartnerRoom?.call();
+                }
+              },
+              onPointerCancel: (_) => _swipeStart = null,
+              child: SizedBox.expand(
+                child: _engine.buildWidget(
+                  initialCenter: _centerCoord,
+                  initialZoom: AppConstants.defaultZoom,
+                  markers: _markers,
+                  onMarkerTap: _onMarkerTap,
+                  controller: _mapCtrl,
+                  userLocation: _centerCoord,
+                  routePoints:
+                      _routeCoords.isEmpty ? null : _routeCoords,
+                ),
+              ),
             ),
           ),
 
-          // ── 검색: 빈공간 터치 닫기 ────────────────────────────────────
+          // ── 검색: 빈공간 터치 닫기 (전체 화면 커버, 검색 패널 뒤에 위치) ──
           if (_searchOpen)
-            Positioned(
-              top: safePadding + (_searchQuery.isNotEmpty ? panelHeight : 60.0),
-              left: 0,
-              right: 0,
-              bottom: 0,
+            Positioned.fill(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: _closeSearch,
               ),
             ),
 
-          // ── 검색 패널 (상단 스와이프로 열기) ──────────────────────────
-          Column(
-            children: [
-              SizedBox(height: safePadding),
-              GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onVerticalDragEnd: (details) {
-                  final v = details.primaryVelocity ?? 0;
-                  if (v > 150 && !_searchOpen) _toggleSearch();
-                  if (v < -150 && _searchOpen) _closeSearch();
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 350),
-                  curve: Curves.easeOut,
-                  height: !_searchOpen
-                      ? 28
-                      : _searchQuery.isNotEmpty
-                          ? panelHeight
-                          : 60.0,
-                  clipBehavior: Clip.hardEdge,
-                  decoration: BoxDecoration(
-                    color: _searchOpen ? Colors.white : Colors.transparent,
-                    boxShadow: _searchOpen
-                        ? const [
-                            BoxShadow(
-                              color: Color(0x18000000),
-                              blurRadius: 8,
-                              offset: Offset(0, 4),
-                            ),
-                          ]
-                        : const [],
-                  ),
-                  child: _searchOpen
-                      ? _buildSearchPanel()
-                      : const SizedBox.shrink(),
-                ),
+          // ── 검색 패널 (탭으로 열기) ────────────────────────────────────
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            top: 0,
+            left: 0,
+            right: 0,
+            height: safePadding + searchPanelHeight,
+            child: Container(
+              padding: EdgeInsets.only(top: safePadding),
+              clipBehavior: Clip.hardEdge,
+              decoration: BoxDecoration(
+                color: _searchOpen
+                    ? Colors.white.withValues(alpha: 0.45)
+                    : Colors.transparent,
+                boxShadow: _searchOpen
+                    ? const [
+                        BoxShadow(
+                          color: Color(0x18000000),
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
+                        ),
+                      ]
+                    : const [],
               ),
-            ],
+              child: _searchOpen
+                  ? LayoutBuilder(
+                      builder: (ctx, constraints) {
+                        if (constraints.maxHeight < 100) {
+                          return const SizedBox.shrink();
+                        }
+                        return _buildSearchPanel();
+                      },
+                    )
+                  : GestureDetector(
+                      onTap: _toggleSearch,
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        width: double.infinity,
+                        height: 48,
+                        alignment: Alignment.center,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: const Icon(
+                            Icons.keyboard_arrow_down,
+                            color: Color(0xFF16213E),
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
           ),
 
-          // ── 경로 탐색 중 / 안내 종료 버튼 ─────────────────────────────
           if (_isLoadingRoute || _isNavigating)
             Positioned(
               bottom: bottomPadding + 48,
@@ -856,61 +1051,50 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
             ),
           ],
 
-          // ── 지금 패널: 빈공간 터치 닫기 ──────────────────────────────
-          if (_nowPanelOpen)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: nowPanelHeight + bottomPadding + 32,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _toggleNowPanel,
-              ),
-            ),
+          // 지금 버튼 → ShellScreen 공통 하단 탭으로 이전됨
 
-          // ── 지금 패널 (하단 스와이프로 열기) ────────────────────────────
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onVerticalDragEnd: (details) {
-                    if ((details.primaryVelocity ?? 0) > 200 &&
-                        _nowPanelOpen) {
-                      _toggleNowPanel();
-                    }
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeOut,
-                    height: _nowPanelOpen ? nowPanelHeight : 0,
-                    color: Colors.white,
-                    child: _nowPanelOpen
-                        ? _buildNowPanel(filter)
-                        : const SizedBox.shrink(),
-                  ),
-                ),
-                GestureDetector(
-                  onVerticalDragEnd: (details) {
-                    final v = details.primaryVelocity ?? 0;
-                    if (v < -200 && !_nowPanelOpen) _toggleNowPanel();
-                    if (v > 200 && _nowPanelOpen) _toggleNowPanel();
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    height: 32,
-                    color: Colors.transparent,
-                  ),
-                ),
-                SizedBox(height: bottomPadding),
-              ],
-            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 지금 패널 팝업 래퍼 ───────────────────────────────────────────────────────
+
+class _NowPanelPopup extends StatelessWidget {
+  final List<CulturalEvent> visible;
+  final LatLng center;
+  final void Function(CulturalEvent) onEventTap;
+
+  const _NowPanelPopup({
+    required this.visible,
+    required this.center,
+    required this.onEventTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    return Container(
+      width: double.infinity,
+      constraints: BoxConstraints(maxHeight: screenHeight * 0.72),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x38000000),
+            blurRadius: 24,
+            offset: Offset(0, 8),
           ),
         ],
+      ),
+      child: _NowPanelContent(
+        visible: visible,
+        center: center,
+        onEventTap: onEventTap,
       ),
     );
   }
@@ -954,6 +1138,7 @@ class _NowPanelContent extends ConsumerWidget {
     });
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -980,7 +1165,8 @@ class _NowPanelContent extends ConsumerWidget {
           ),
         ),
         if (sorted.isEmpty)
-          Expanded(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
             child: Center(
               child: Text(
                 context.l10n.noMomentsNearby,
@@ -989,15 +1175,16 @@ class _NowPanelContent extends ConsumerWidget {
             ),
           )
         else
-          Expanded(
+          Flexible(
             child: ListView.separated(
+              shrinkWrap: true,
+              physics: const ClampingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
               itemCount: sorted.length,
               separatorBuilder: (_, __) =>
                   Container(height: 1, color: const Color(0xFFF5F5F5)),
               itemBuilder: (_, i) {
                 final event = sorted[i];
-                final mins = walkingMinutes(center, event.location);
                 final isPartner = event.source == EventSource.partner;
                 final isPostEnd =
                     now.isAfter(event.endDateTime);
@@ -1051,21 +1238,19 @@ class _NowPanelContent extends ConsumerWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            isPartner ? context.l10n.partnerBadge : context.l10n.walkingMinutes(mins),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isGrayed
-                                  ? const Color(0xFFCCCCCC)
-                                  : isPartner
-                                      ? const Color(0xFFFF8C00)
-                                      : const Color(0xFFBBBBBB),
-                              fontWeight: isPartner
-                                  ? FontWeight.w700
-                                  : FontWeight.normal,
+                          if (isPartner) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              context.l10n.partnerBadge,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isGrayed
+                                    ? const Color(0xFFCCCCCC)
+                                    : const Color(0xFFFF8C00),
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                          ),
+                          ],
                           const SizedBox(width: 8),
                           Text(
                             timeLabel,
@@ -1087,3 +1272,4 @@ class _NowPanelContent extends ConsumerWidget {
     );
   }
 }
+

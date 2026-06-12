@@ -1,9 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kakao_map_plugin/kakao_map_plugin.dart';
+import 'package:kakao_map_sdk/kakao_map_sdk.dart';
 import 'app.dart';
-import 'core/app_config.dart';
 import 'services/notification_service.dart';
 
 void main() async {
@@ -13,14 +14,8 @@ void main() async {
     DeviceOrientation.portraitUp,
   ]);
 
-  await NotificationService.instance.init();
-
-  if (AppConfig.hasKakaoKey) {
-    AuthRepository.initialize(
-      appKey: AppConfig.kakaoApiKey,
-      baseUrl: 'http://localhost',
-    );
-  }
+  await KakaoMapSdk.instance.initialize('433d2724092434b5642227386bcd2f13');
 
   runApp(const ProviderScope(child: ZGumApp()));
+  unawaited(NotificationService.instance.init());
 }

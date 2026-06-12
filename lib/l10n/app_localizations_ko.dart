@@ -37,7 +37,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get partnerBadge => '지금';
 
   @override
-  String get checkInButton => '지금';
+  String get checkInButton => '흔적';
 
   @override
   String get alarmSet => '알림 설정';

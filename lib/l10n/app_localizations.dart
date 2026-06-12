@@ -153,7 +153,7 @@ abstract class AppLocalizations {
   /// No description provided for @checkInButton.
   ///
   /// In ko, this message translates to:
-  /// **'지금'**
+  /// **'흔적'**
   String get checkInButton;
 
   /// No description provided for @alarmSet.

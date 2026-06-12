@@ -62,8 +62,18 @@ class MapMarkerModel {
   final bool isPartner;
   final bool isHighlighted;
 
+  /// 강조 반경 밖 마커: 시각적으로 흐리게 표시. 데이터는 유지됨.
+  final bool isDimmed;
+
   /// 원본 도메인 객체 (CulturalEvent, CinemaModel 등).
   final Object? payload;
+
+  // ── 카카오 로컬 API 전용 필드 ─────────────────────────────────────────────────
+  final String? roadAddress;
+  final String? categoryName;
+  final String? phone;
+  final String? placeUrl;
+  final String? distance;
 
   const MapMarkerModel({
     required this.id,
@@ -75,7 +85,13 @@ class MapMarkerModel {
     this.venue,
     this.isPartner = false,
     this.isHighlighted = false,
+    this.isDimmed = false,
     this.payload,
+    this.roadAddress,
+    this.categoryName,
+    this.phone,
+    this.placeUrl,
+    this.distance,
   });
 
   bool isExpired({DateTime? now}) {

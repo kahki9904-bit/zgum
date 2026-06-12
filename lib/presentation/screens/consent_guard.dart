@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -22,49 +21,42 @@ class ConsentGuard extends ConsumerStatefulWidget {
 }
 
 class _ConsentGuardState extends ConsumerState<ConsentGuard> {
-  _Step _step = _Step.location;
+  _Step _step = _Step.identity;
+
+  Future<void> _confirmIdentity() async {
+    await ref.read(authStateProvider.notifier).adminVerify();
+    if (mounted) setState(() => _step = _Step.location);
+  }
+
+  void _skipIdentity() => setState(() => _step = _Step.location);
 
   Future<void> _requestLocation() async {
     await Permission.locationWhenInUse.request();
     if (!mounted) return;
-    setState(() => _step = _Step.identity);
+    setState(() => _step = _Step.done);
   }
 
-  void _denyLocation() => setState(() => _step = _Step.identity);
-
-  Future<void> _confirmIdentity() async {
-    await ref.read(authStateProvider.notifier).adminVerify();
-    if (mounted) setState(() => _step = _Step.done);
-  }
-
-  void _skipIdentity() => setState(() => _step = _Step.done);
+  void _denyLocation() => setState(() => _step = _Step.done);
 
   @override
   Widget build(BuildContext context) {
     if (_step == _Step.done) return widget.child;
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        widget.child,
-        BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-          child: Container(color: Colors.black.withValues(alpha: 0.30)),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: _step == _Step.identity
+              ? _IdentityCard(
+                  onConfirm: _confirmIdentity,
+                  onSkip: _skipIdentity,
+                )
+              : _LocationCard(
+                  onAllow: _requestLocation,
+                  onDeny: _denyLocation,
+                ),
         ),
-        SafeArea(
-          child: Center(
-            child: _step == _Step.location
-                ? _LocationCard(
-                    onAllow: _requestLocation,
-                    onDeny: _denyLocation,
-                  )
-                : _IdentityCard(
-                    onConfirm: _confirmIdentity,
-                    onSkip: _skipIdentity,
-                  ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

@@ -304,7 +304,6 @@ class _CinemaCard extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final now = DateTime.now();
-    final walkMins = walkingMinutes(userLocation, match.cinema.location);
     final minsUntil = match.screening.minutesUntilStart(now: now);
     final isUrgent = minsUntil <= 60;
 
@@ -394,15 +393,8 @@ class _CinemaCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              // 도보 + 시작까지 남은 시간
               Row(
                 children: [
-                  _PillTag(
-                    icon: Icons.directions_walk_outlined,
-                    label: '도보 $walkMins분',
-                    color: const Color(0xFF4ECDC4),
-                  ),
-                  const SizedBox(width: 8),
                   _PillTag(
                     icon: Icons.movie_outlined,
                     label: '$minsUntil분 후 시작',
@@ -537,7 +529,6 @@ class _EventCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final walkMins = walkingMinutes(userLocation, event.location);
     final remaining = timeService.remainingLabel(event.endDateTime);
     final isUrgent = timeService.isUrgentPulse(event.endDateTime);
 
@@ -614,12 +605,6 @@ class _EventCard extends StatelessWidget {
 
               Row(
                 children: [
-                  _PillTag(
-                    icon: Icons.directions_walk_outlined,
-                    label: '도보 $walkMins분',
-                    color: const Color(0xFF4ECDC4),
-                  ),
-                  const SizedBox(width: 8),
                   _PillTag(
                     icon: Icons.timer_outlined,
                     label: remaining,
