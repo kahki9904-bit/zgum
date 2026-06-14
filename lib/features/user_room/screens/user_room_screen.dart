@@ -43,8 +43,8 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
                         '흔적',
                         style: TextStyle(
                           color: Color(0xFF1A1A2E),
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
                           letterSpacing: -0.5,
                         ),
                       ),
@@ -66,41 +66,19 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
                 ),
               ),
               if (records.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 24),
-                  child: Column(
-                    children: [
-                      const Center(
-                        child: Text(
-                          '아직 기록한 순간이 없습니다',
-                          style: TextStyle(
-                              color: Color(0xFFCCCCCC), fontSize: 13),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Center(
-                        child: GestureDetector(
-                          onTap: () => ref
-                              .read(checkInProvider.notifier)
-                              .seedPreviewData(),
-                          child: const Text(
-                            '미리보기 데이터 채우기',
-                            style: TextStyle(
-                              color: Color(0xFFBBBBBB),
-                              fontSize: 12,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: Center(
+                    child: Text(
+                      '아직 기록한 순간이 없습니다',
+                      style: TextStyle(color: Color(0xFFCCCCCC), fontSize: 13),
+                    ),
                   ),
                 )
               else
                 Expanded(
                   child: GridView.builder(
-                    padding: EdgeInsets.fromLTRB(4, 0, 4, botPad + 88),
+                    padding: EdgeInsets.fromLTRB(4, 0, 4, botPad + 16),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,

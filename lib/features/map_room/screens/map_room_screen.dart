@@ -33,15 +33,18 @@ import '../engines/kakao_map_engine.dart';
 import '../../../core/providers/partner_focus_provider.dart';
 import '../providers/map_filter_provider.dart';
 import '../providers/kakao_search_provider.dart';
+import '../../../core/providers/partner_my_events_provider.dart';
 
 class MapRoomScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSwipeToUserRoom;
   final VoidCallback? onSwipeToPartnerRoom;
+  final VoidCallback? onMapReady;
 
   const MapRoomScreen({
     super.key,
     this.onSwipeToUserRoom,
     this.onSwipeToPartnerRoom,
+    this.onMapReady,
   });
 
   @override
@@ -82,7 +85,6 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   // ── 이벤트별 만료 타이머 (4번: 즉시 삭제) ────────────────────────────────────
   final Map<String, Timer> _eventTimers = {};
 
-  Offset? _swipeStart;
 
   // ── 검색 ──────────────────────────────────────────────────────────────────
   bool _searchOpen = false;
@@ -95,6 +97,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   // ── 카카오 장소 핀 ────────────────────────────────────────────────────────────
   MapCoordinate? _searchFocusCoord;
   String? _searchFocusName;
+  MapMarkerModel? _searchFocusPlace;
   static const _searchPinId = '__kakao_search_pin__';
   // ── GPS 상태 ───────────────────────────────────────────────────────────────
   bool _locationAcquiring = true;
@@ -338,6 +341,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     setState(() {
       _searchFocusCoord = m.location;
       _searchFocusName = m.title;
+      _searchFocusPlace = m;
     });
     _mapCtrl.move(m.location, 17.0);
     _closeSearch();
@@ -377,6 +381,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     setState(() {
       _highlightedEventId = event.id;
       _searchFocusCoord = null;
+      _searchFocusPlace = null;
     });
     _rebuildMarkers();
     _closeSearch();
@@ -470,6 +475,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     setState(() {
       _highlightedEventId = event.id;
       _searchFocusCoord = null;
+      _searchFocusPlace = null;
     });
     _rebuildMarkers();
     // 지도가 이동을 처리한 후 팝업 표시 (동시 실행 시 WebView 렌더 충돌 방지)
@@ -677,6 +683,9 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
 
   void _showEventSheet(CulturalEvent event) {
     if (!mounted) return;
+    final myEventIds =
+        ref.read(partnerMyEventsProvider).map((e) => e.id).toSet();
+    final isMyEvent = myEventIds.contains(event.id);
     EventDetailSheet.show(
       context,
       event,
@@ -684,20 +693,22 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       userLocation: _center,
       isCheckedIn: ref.read(checkInProvider.notifier).checkedInEventIds.contains(event.id),
       friendTraceCount: 0,
-      onCheckIn: (String? memo, String? photoPath) {
-        final record = CheckInRecord.fromEvent(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          eventId: event.id,
-          eventTitle: event.title,
-          venue: event.venue,
-          category: event.category,
-          checkedInAt: DateTime.now(),
-          memo: memo,
-          photoPath: photoPath,
-        );
-        ref.read(checkInProvider.notifier).save(record);
-        _rebuildMarkers();
-      },
+      onCheckIn: isMyEvent
+          ? null
+          : (String? memo, String? photoPath) {
+              final record = CheckInRecord.fromEvent(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                eventId: event.id,
+                eventTitle: event.title,
+                venue: event.venue,
+                category: event.category,
+                checkedInAt: DateTime.now(),
+                memo: memo,
+                photoPath: photoPath,
+              );
+              ref.read(checkInProvider.notifier).save(record);
+              _rebuildMarkers();
+            },
       onNavigate: (_isNavigating || _isLoadingRoute)
           ? null
           : () => _startNavigation(event),
@@ -705,14 +716,20 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   }
 
   void _onMarkerTap(MapMarkerModel marker) {
-    if (marker.id == _searchPinId) return;
+    if (marker.id == _searchPinId) {
+      final place = _searchFocusPlace;
+      if (place != null && mounted) KakaoPlaceDetailSheet.show(context, place);
+      return;
+    }
     final event = _eventById[marker.id];
     if (event == null) return;
     _mapCtrl.move(
       MapCoordinate(event.location.latitude, event.location.longitude),
       AppConstants.defaultZoom,
     );
-    _showEventSheet(event);
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (mounted) _showEventSheet(event);
+    });
   }
 
   @override
@@ -722,6 +739,14 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     ref.listen<List<CulturalEvent>>(
         mockPartnerEventStoreProvider, (prev, next) {
       if (next.length != (prev?.length ?? 0)) _loadEvents();
+    });
+    ref.listen<CulturalEvent?>(partnerFocusProvider, (prev, next) {
+      if (next != null) {
+        ref.read(partnerFocusProvider.notifier).state = null;
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted) _focusEvent(next);
+        });
+      }
     });
     ref.listen<MapFilterState>(
         mapFilterProvider, (_, __) => _rebuildMarkers());
@@ -754,40 +779,47 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
         children: [
           // ── 지도 ──────────────────────────────────────────────────────
           Positioned.fill(
-            child: Listener(
-              behavior: HitTestBehavior.translucent,
-              onPointerDown: (e) => _swipeStart = e.localPosition,
-              onPointerUp: (e) {
-                if (_searchOpen) return;
-                final start = _swipeStart;
-                _swipeStart = null;
-                if (start == null) return;
-                final dx = e.localPosition.dx - start.dx;
-                final dy = e.localPosition.dy - start.dy;
-                if (dx.abs() < dy.abs() * 1.2) return;
-                final sw = MediaQuery.sizeOf(context).width;
-                if (start.dx < 72 && dx > 64) {
-                  widget.onSwipeToUserRoom?.call();
-                }
-                if (start.dx > sw - 72 && dx < -64) {
-                  widget.onSwipeToPartnerRoom?.call();
-                }
-              },
-              onPointerCancel: (_) => _swipeStart = null,
-              child: SizedBox.expand(
-                child: _engine.buildWidget(
-                  initialCenter: _centerCoord,
-                  initialZoom: AppConstants.defaultZoom,
-                  markers: _markers,
-                  onMarkerTap: _onMarkerTap,
-                  controller: _mapCtrl,
-                  userLocation: _centerCoord,
-                  routePoints:
-                      _routeCoords.isEmpty ? null : _routeCoords,
-                ),
-              ),
+            child: _engine.buildWidget(
+              initialCenter: _centerCoord,
+              initialZoom: AppConstants.defaultZoom,
+              markers: _markers,
+              onMarkerTap: _onMarkerTap,
+              controller: _mapCtrl,
+              userLocation: _centerCoord,
+              routePoints: _routeCoords.isEmpty ? null : _routeCoords,
+              onEngineReady: widget.onMapReady,
             ),
           ),
+          if (!_searchOpen) ...[
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 60,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onHorizontalDragEnd: (details) {
+                  if ((details.primaryVelocity ?? 0) > 400) {
+                    widget.onSwipeToUserRoom?.call();
+                  }
+                },
+              ),
+            ),
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: 60,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onHorizontalDragEnd: (details) {
+                  if ((details.primaryVelocity ?? 0) < -400) {
+                    widget.onSwipeToPartnerRoom?.call();
+                  }
+                },
+              ),
+            ),
+          ],
 
           // ── 검색: 빈공간 터치 닫기 (전체 화면 커버, 검색 패널 뒤에 위치) ──
           if (_searchOpen)
@@ -839,18 +871,24 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                         width: double.infinity,
                         height: 48,
                         alignment: Alignment.center,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: const Icon(
-                            Icons.keyboard_arrow_down,
-                            color: Color(0xFF16213E),
-                            size: 22,
-                          ),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: _locationAcquiring
+                              ? const CircularProgressIndicator(
+                                  strokeWidth: 3.5,
+                                  color: Color(0xFF16213E),
+                                )
+                              : Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withValues(alpha: 0.10),
+                                    border: Border.all(
+                                      color: const Color(0xFF16213E).withValues(alpha: 0.70),
+                                      width: 4.0,
+                                    ),
+                                  ),
+                                ),
                         ),
                       ),
                     ),
@@ -916,46 +954,6 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                             ),
                           ],
                         ),
-                ),
-              ),
-            ),
-
-          // ── GPS 획득 중 표시 ───────────────────────────────────────────
-          if (_locationAcquiring)
-            Positioned(
-              top: safePadding + 56,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF16213E).withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 13,
-                        height: 13,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        '위치를 찾는 중...',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),

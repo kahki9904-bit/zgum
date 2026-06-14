@@ -53,6 +53,9 @@ class PartnerEvent extends Equatable {
   /// 결제 완료 시각 (Firebase 결제 연동 후 채워짐)
   final DateTime? paidAt;
 
+  /// 성인 전용 이벤트 여부
+  final bool isAdultOnly;
+
   const PartnerEvent({
     required this.id,
     required this.partnerId,
@@ -70,6 +73,7 @@ class PartnerEvent extends Equatable {
     this.orderId,
     this.paymentStatus = PaymentStatus.pending,
     this.paidAt,
+    this.isAdultOnly = false,
   });
 
   /// 대표사진 경로. photos가 비어 있으면 null.
@@ -85,6 +89,8 @@ class PartnerEvent extends Equatable {
     int? representativeIndex,
     PaymentStatus? paymentStatus,
     DateTime? paidAt,
+    DateTime? expiresAt,
+    bool? isAdultOnly,
   }) {
     return PartnerEvent(
       id: id,
@@ -95,7 +101,7 @@ class PartnerEvent extends Equatable {
       location: location,
       geoHash: geoHash,
       startsAt: startsAt,
-      expiresAt: expiresAt,
+      expiresAt: expiresAt ?? this.expiresAt,
       seen: seen ?? this.seen,
       schemaVersion: schemaVersion,
       photos: photos ?? this.photos,
@@ -103,6 +109,7 @@ class PartnerEvent extends Equatable {
       orderId: orderId,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       paidAt: paidAt ?? this.paidAt,
+      isAdultOnly: isAdultOnly ?? this.isAdultOnly,
     );
   }
 

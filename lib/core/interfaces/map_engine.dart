@@ -36,6 +36,7 @@ abstract class MapEngine {
     required MapEngineController controller,
     MapCoordinate? userLocation,
     List<MapCoordinate>? routePoints,
+    VoidCallback? onEngineReady,
   });
 
   /// 마커 카테고리에 따른 색상 (ARGB int). 엔진별로 오버라이드 가능.

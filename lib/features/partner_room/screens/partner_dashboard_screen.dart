@@ -1,44 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/models/free_use_status.dart';
-import '../../../core/providers/free_use_provider.dart';
-import '../../../core/services/free_use_service.dart';
+import '../../../core/providers/admin_mode_provider.dart';
 import '../../../dev/mock_partner_event_store.dart';
 import '../../../features/alert/providers/event_stats_provider.dart';
 
-class PartnerDashboardScreen extends ConsumerStatefulWidget {
+class PartnerDashboardScreen extends ConsumerWidget {
   const PartnerDashboardScreen({super.key});
 
   @override
-  ConsumerState<PartnerDashboardScreen> createState() =>
-      _PartnerDashboardScreenState();
-}
-
-class _PartnerDashboardScreenState
-    extends ConsumerState<PartnerDashboardScreen> {
-  int _remainingCount = 0;
-
-  // TODO(admin): Firebase/Provider 권한값으로 교체 — ref.watch(adminPermissionProvider)
-  static const bool _adminUnlocked = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCount();
-  }
-
-  Future<void> _loadCount() async {
-    final count = await FreeUseService.instance.canRegisterToday()
-        ? FreeUseService.instance.todayRemainingCount
-        : 0;
-    if (mounted) setState(() => _remainingCount = count);
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final topPad = MediaQuery.paddingOf(context).top;
-    final freeStatus = ref.watch(freeUseProvider);
-    final isFreeActive = freeStatus == FreeUseStatus.active;
+    final isAdmin = ref.watch(adminModeProvider);
     final events = ref.watch(mockPartnerEventStoreProvider);
     final statsMap = ref.watch(eventStatsProvider);
 
@@ -83,31 +55,7 @@ class _PartnerDashboardScreenState
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
               children: [
-                // ── 기본 권한 항목 ─────────────────────────────────────
                 _sectionLabel('기본 현황'),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _infoCard(
-                        label: '무료이용',
-                        value: isFreeActive ? '활성' : '비활성',
-                        valueColor: isFreeActive
-                            ? const Color(0xFF16213E)
-                            : const Color(0xFFAAAAAA),
-                        icon: Icons.card_giftcard_outlined,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _infoCard(
-                        label: '오늘 등록 가능',
-                        value: isFreeActive ? '$_remainingCount회' : '-',
-                        icon: Icons.edit_calendar_outlined,
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -148,7 +96,7 @@ class _PartnerDashboardScreenState
                     ),
                   ],
                 ),
-                if (_adminUnlocked) ...[
+                if (isAdmin) ...[
                   const SizedBox(height: 32),
                   _sectionLabel('확장 데이터'),
                   const SizedBox(height: 12),

@@ -50,6 +50,7 @@ class KakaoMapEngine extends MapEngine {
     required MapEngineController controller,
     MapCoordinate? userLocation,
     List<MapCoordinate>? routePoints,
+    VoidCallback? onEngineReady,
   }) {
     final ctrl = controller as _KakaoNativeController;
     ctrl._center = initialCenter;
@@ -62,6 +63,7 @@ class KakaoMapEngine extends MapEngine {
       routePoints: routePoints,
       onMarkerTap: onMarkerTap,
       colorForMarker: markerColor,
+      onEngineReady: onEngineReady,
     );
   }
 }
@@ -77,6 +79,7 @@ class _KakaoMapView extends StatefulWidget {
   final List<MapCoordinate>? routePoints;
   final void Function(MapMarkerModel) onMarkerTap;
   final int Function(MapMarkerModel) colorForMarker;
+  final VoidCallback? onEngineReady;
 
   const _KakaoMapView({
     required this.controller,
@@ -87,6 +90,7 @@ class _KakaoMapView extends StatefulWidget {
     required this.routePoints,
     required this.onMarkerTap,
     required this.colorForMarker,
+    this.onEngineReady,
   });
 
   @override
@@ -227,6 +231,7 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
         _move(widget.controller._center, widget.initialZoom);
         _syncMarkers(controller);
         _syncRoute(controller);
+        widget.onEngineReady?.call();
       },
     );
   }

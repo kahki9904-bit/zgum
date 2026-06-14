@@ -51,6 +51,7 @@ class FlutterMapEngine extends MapEngine {
     required List<MapMarkerModel> markers,
     required void Function(MapMarkerModel marker) onMarkerTap,
     required MapEngineController controller,
+    VoidCallback? onEngineReady,
     MapCoordinate? userLocation,
     List<MapCoordinate>? routePoints,
   }) {

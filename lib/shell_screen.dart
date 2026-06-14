@@ -1,24 +1,41 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'core/providers/partner_focus_provider.dart';
 import 'core/providers/shell_page_provider.dart';
-import 'core/providers/free_use_provider.dart';
-import 'core/services/free_use_service.dart';
+import 'core/providers/partner_my_events_provider.dart';
+import 'core/providers/user_location_provider.dart';
+import 'data/models/check_in_record.dart';
+import 'data/models/cultural_event.dart';
+import 'dev/mock_partner_event_store.dart';
 import 'features/alert/models/partner_event.dart';
+import 'features/friend/data/models/friend_request.dart';
+import 'features/friend/providers/friend_provider.dart';
+import 'services/location_service.dart';
 import 'features/alert/providers/alert_provider.dart';
 import 'features/alert/providers/geofence_provider.dart';
 import 'features/map_room/screens/map_room_screen.dart';
 import 'features/partner_room/screens/partner_room_screen.dart';
+import 'features/user_room/providers/check_in_provider.dart';
 import 'features/user_room/screens/user_room_screen.dart';
-import 'presentation/widgets/free_use_expiry_popup.dart';
-import 'presentation/widgets/free_use_intro_popup.dart';
 import 'presentation/widgets/trace_checkin_dialog.dart';
+import 'presentation/widgets/dialogs/ieum_accept_dialog.dart';
+import 'presentation/widgets/dialogs/ieum_request_dialog.dart';
 import 'services/gesture_exclusion_service.dart';
+import 'promotions/free_use/free_use_service.dart';
+import 'promotions/free_use/free_use_intro_popup.dart';
+import 'promotions/free_use/free_use_alert_popup.dart';
+import 'features/friend/widgets/ieum_intro_popup.dart';
 
 // 지금 패널/캡슐 크기 상수 (file-level — _NowBundle에서도 사용)
-const double _kPanelHeight = 300.0;
 const double _kCapsuleHeight = 40.0;
 const double _kPanelFloat = 30.0;
+
+// iOS 홈 제스처 충돌 시 이 값을 8~20 사이로 올리세요 (현재 0 = 안전구역만 사용)
+const double _kIosGestureBuffer = 0.0;
 
 class ShellScreen extends ConsumerStatefulWidget {
   const ShellScreen({super.key});
@@ -28,7 +45,7 @@ class ShellScreen extends ConsumerStatefulWidget {
 }
 
 class _ShellScreenState extends ConsumerState<ShellScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final _pc = PageController(initialPage: 1);
   final _mapKey = GlobalKey<MapRoomScreenState>();
   int _page = 1;
@@ -37,29 +54,56 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   final _nowPanelOpen = ValueNotifier<bool>(false);
   // AnimationController: Transform.translate 기반 — 레이아웃 변경 없이 페인트만 이동
   late final AnimationController _panelAnim;
-  late final Animation<double> _panelSlide;
+  double panelHeight = 300.0;
   bool _tabVisible = false;
   bool _showNowTab = false;
 
   void _onRouteAnimationComplete() {
     setState(() => _tabVisible = true);
-    // 지도(WebView) 초기화 완료 후 패널 표시 — 1000ms 대기
-    Future.delayed(const Duration(milliseconds: 1000), () {
-      if (mounted) setState(() => _showNowTab = true);
+    // 지도가 onMapReady 신호를 보내면 _onMapReady()가 먼저 처리.
+    // 6초 안전장치: 신호가 오지 않을 경우 강제 표시.
+    Future.delayed(const Duration(seconds: 6), () {
+      if (mounted && !_showNowTab) setState(() => _showNowTab = true);
     });
+  }
+
+  void _onMapReady() {
+    if (mounted && !_showNowTab) setState(() => _showNowTab = true);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _checkNotificationStatus();
+  }
+
+  Future<void> _checkNotificationStatus() async {
+    final result = await FreeUseService.instance.syncNotificationStatus();
+    if (!mounted) return;
+    if (result == NotificationSyncResult.paused) {
+      showFreeUseAlertPopup(context);
+    } else if (result == NotificationSyncResult.resumed) {
+      showFreeUseResumedPopup(context);
+    }
+  }
+
+  Future<void> _showIntroIfNeeded() async {
+    final shown = await FreeUseService.instance.isIntroShown();
+    if (!shown) {
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (mounted) await showFreeUseIntroPopup(context);
+    }
+    // 인트로 확인 후 현재 알림 상태 체크 → 이미 허용 중이면 크레딧 즉시 시작
+    if (mounted) await _checkNotificationStatus();
   }
 
   @override
   void initState() {
     super.initState();
-    _panelAnim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 320),
-    );
-    _panelSlide =
-        CurvedAnimation(parent: _panelAnim, curve: Curves.easeInOutCubic);
+    WidgetsBinding.instance.addObserver(this);
+    _panelAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _showIntroIfNeeded();
       final animation = ModalRoute.of(context)?.animation;
       if (animation == null || animation.status == AnimationStatus.completed) {
         _onRouteAnimationComplete();
@@ -76,22 +120,12 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _syncExclusionRects();
-      await FreeUseService.instance.initialize();
-      if (!mounted) return;
-      if (FreeUseService.instance.shouldShowIntroPopup) {
-        await showFreeUseIntroPopup(
-          context,
-          onActivated: () =>
-              ref.read(freeUseProvider.notifier).activateFreeUse(),
-        );
-      } else if (FreeUseService.instance.shouldShowExpiryWarning) {
-        await showFreeUseExpiryPopup(context);
-      }
     });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     GestureExclusionService.clearExclusionRects();
     _pc.dispose();
     _nowPanelOpen.dispose();
@@ -129,17 +163,35 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     ], dpr);
   }
 
-  void _openNow() {
-    if (!_nowPanelOpen.value) {
-      _nowPanelOpen.value = true;
-      _panelAnim.forward();
-    }
+  void _closeNow() {
+    if (!_nowPanelOpen.value) return;
+    _nowPanelOpen.value = false;
+    final rem = _panelAnim.value;
+    _panelAnim.animateTo(0.0,
+        duration: Duration(milliseconds: (rem * 280).round().clamp(80, 280)),
+        curve: Curves.easeIn);
   }
 
-  void _closeNow() {
-    if (_nowPanelOpen.value) {
+  void _onNowDragUpdate(DragUpdateDetails d) {
+    final maxDist = panelHeight + _kPanelFloat - 20;
+    _panelAnim.value =
+        (_panelAnim.value - (d.primaryDelta ?? 0) / maxDist).clamp(0.0, 1.0);
+  }
+
+  void _onNowDragEnd(DragEndDetails d) {
+    final vel = d.primaryVelocity ?? 0;
+    if (vel < -300 || (_panelAnim.value >= 0.4 && vel < 300)) {
+      _nowPanelOpen.value = true;
+      final rem = 1.0 - _panelAnim.value;
+      _panelAnim.animateTo(1.0,
+          duration: Duration(milliseconds: (rem * 300).round().clamp(80, 300)),
+          curve: Curves.easeOut);
+    } else {
       _nowPanelOpen.value = false;
-      _panelAnim.reverse();
+      final rem = _panelAnim.value;
+      _panelAnim.animateTo(0.0,
+          duration: Duration(milliseconds: (rem * 280).round().clamp(80, 280)),
+          curve: Curves.easeIn);
     }
   }
 
@@ -165,14 +217,25 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       if (prev != next) _goTo(next);
     });
 
-    final hasAlert = ref.watch(hasUnseenAlertProvider);
-    final bottomPadding = MediaQuery.paddingOf(context).bottom;
 
-    return PopScope(
-      canPop: _page == 1,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _goTo(1);
-      },
+    final hasAlert = ref.watch(hasUnseenAlertProvider);
+    panelHeight = MediaQuery.sizeOf(context).height * 0.65;
+    final bottomPadding = MediaQuery.paddingOf(context).bottom + _kIosGestureBuffer;
+
+    return ValueListenableBuilder<bool>(
+      valueListenable: _nowPanelOpen,
+      builder: (_, panelOpen, child) => PopScope(
+        canPop: !panelOpen && _page == 1,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          if (panelOpen) {
+            _closeNow();
+          } else {
+            _goTo(1);
+          }
+        },
+        child: child!,
+      ),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -198,6 +261,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                   key: _mapKey,
                   onSwipeToUserRoom: () => _goTo(0),
                   onSwipeToPartnerRoom: () => _goTo(2),
+                  onMapReady: _onMapReady,
                 ),
                 _SwipeWrapper(
                   onSwipeLeft: null,
@@ -227,40 +291,38 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                               top: 0,
                               left: 0,
                               right: 0,
-                              bottom: bottomPadding + _kPanelHeight + _kCapsuleHeight + _kPanelFloat,
+                              bottom: bottomPadding + panelHeight,
                               child: GestureDetector(
                                 onTap: _closeNow,
-                                onVerticalDragEnd: (d) {
-                                  if ((d.primaryVelocity ?? 0) > 200) {
-                                    _closeNow();
-                                  }
-                                },
+                                onVerticalDragUpdate: _onNowDragUpdate,
+                                onVerticalDragEnd: _onNowDragEnd,
                                 behavior: HitTestBehavior.opaque,
                               ),
                             ),
 
-                          // Transform.translate: 레이아웃 고정, 페인트만 이동
-                          // AnimatedPositioned와 달리 매 프레임 상위 Stack re-layout 없음
-                          // → PageView/지도 WebView가 애니메이션에 반응하지 않음
                           Positioned(
                             left: 0,
                             right: 0,
                             bottom: bottomPadding,
-                            height: _kPanelHeight + _kCapsuleHeight + _kPanelFloat,
+                            height: panelHeight + _kCapsuleHeight + _kPanelFloat,
                             child: AnimatedBuilder(
-                              animation: _panelSlide,
+                              animation: _panelAnim,
                               builder: (_, child) => Transform.translate(
                                 offset: Offset(
                                   0,
-                                  (1.0 - _panelSlide.value) * (_kPanelHeight + _kPanelFloat),
+                                  (1.0 - _panelAnim.value) * (panelHeight + _kPanelFloat - 20),
                                 ),
                                 child: child,
                               ),
                               child: _NowBundle(
                                 isOpen: isOpen,
                                 hasAlert: hasAlert,
-                                onToggle: isOpen ? _closeNow : _openNow,
-                                onOpen: _openNow,
+                                panelHeight: panelHeight,
+                                panelAnim: _panelAnim,
+                                currentPage: _page,
+                                onDragUpdate: _onNowDragUpdate,
+                                onDragEnd: _onNowDragEnd,
+                                onClose: _closeNow,
                               ),
                             ),
                           ),
@@ -335,159 +397,1155 @@ class _SwipeWrapperState extends State<_SwipeWrapper> {
 }
 
 
-// ── "지금" 캡슐+패널 묶음 ────────────────────────────────────────────────────────
-// Stack 구조: 패널(하단) + 캡슐 손잡이(패널 위)
-// AnimatedPositioned로 통째로 슬라이드 — 닫힘 시 캡슐만 노출, 열림 시 전체 노출
-
-class _NowBundle extends StatefulWidget {
+class _NowBundle extends StatelessWidget {
   final bool isOpen;
   final bool hasAlert;
-  final VoidCallback onToggle;
-  final VoidCallback onOpen;
+  final double panelHeight;
+  final Animation<double> panelAnim;
+  final int currentPage;
+  final GestureDragUpdateCallback onDragUpdate;
+  final GestureDragEndCallback onDragEnd;
+  final VoidCallback onClose;
 
   const _NowBundle({
     required this.isOpen,
     required this.hasAlert,
-    required this.onToggle,
-    required this.onOpen,
+    required this.panelHeight,
+    required this.panelAnim,
+    required this.currentPage,
+    required this.onDragUpdate,
+    required this.onDragEnd,
+    required this.onClose,
   });
 
   @override
-  State<_NowBundle> createState() => _NowBundleState();
+  Widget build(BuildContext context) {
+    final touchWidth = MediaQuery.sizeOf(context).width * 0.80;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onVerticalDragUpdate: onDragUpdate,
+      onVerticalDragEnd: onDragEnd,
+      child: AnimatedBuilder(
+        animation: panelAnim,
+        builder: (_, content) {
+          final capsuleBottom = lerpDouble(
+            panelHeight + _kPanelFloat,
+            panelHeight - _kCapsuleHeight,
+            panelAnim.value,
+          )!;
+          return Stack(
+            children: [
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: panelHeight,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragUpdate: onDragUpdate,
+                  onVerticalDragEnd: onDragEnd,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x14000000),
+                          blurRadius: 8,
+                          offset: Offset(0, -2),
+                        ),
+                      ],
+                    ),
+                    child: content,
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 16,
+                right: 6,
+                width: 4,
+                height: panelHeight - 32,
+                child: FadeTransition(
+                  opacity: panelAnim,
+                  child: LayoutBuilder(
+                    builder: (_, constraints) {
+                      const thumbH = 36.0;
+                      final trackH = constraints.maxHeight;
+                      final thumbTop = (1 - panelAnim.value) * (trackH - thumbH);
+                      return Stack(
+                        children: [
+                          Container(
+                            width: 4,
+                            height: trackH,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE0E0E0).withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          Positioned(
+                            top: thumbTop,
+                            child: Container(
+                              width: 4,
+                              height: thumbH,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1A1A2E).withValues(alpha: 0.22),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: capsuleBottom,
+                left: 0,
+                right: 0,
+                height: _kCapsuleHeight,
+                child: Center(
+                  child: SizedBox(
+                    width: touchWidth,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onVerticalDragUpdate: onDragUpdate,
+                      onVerticalDragEnd: onDragEnd,
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: _NowCapsule(hasAlert: hasAlert, isOpen: isOpen),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          child: Material(
+            color: Colors.white,
+            child: _buildPanelContent(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPanelContent() {
+    switch (currentPage) {
+      case 2: // 이곳 — 열렸을 때만 생성 (initState에서 카메라 트리거)
+        if (!isOpen) return const SizedBox.shrink();
+        return _PartnerPanelContent(onClose: onClose);
+      case 0: // 사용자
+        return _UserPanelContent(onClose: onClose);
+      default: // 지도 — 지금 패널
+        return _MapPanelContent(onClose: onClose);
+    }
+  }
 }
 
-class _NowBundleState extends State<_NowBundle> {
-  // 캡슐 제스처
-  final Set<int> _capActive = {};
-  bool _capMulti = false;
-  Offset? _capsuleStart;
+// 탭별 패널 내용 — 각자 독립적으로 구현
+class _MapPanelContent extends ConsumerWidget {
+  final VoidCallback onClose;
+  const _MapPanelContent({required this.onClose});
 
-  // 패널 본체 제스처 (열린 상태: 아래로 내리기)
-  final Set<int> _panActive = {};
-  bool _panMulti = false;
-  Offset? _panelStart;
-
-  void _handlePanelPointerDown(PointerDownEvent e) {
-    if (!widget.isOpen) return;
-    _panActive.add(e.pointer);
-    if (_panActive.length >= 2 || _panMulti) {
-      _panMulti = true;
-      _panelStart = null;
-      return;
-    }
-    _panelStart = e.localPosition;
+  void _tapEvent(WidgetRef ref, CulturalEvent event) {
+    onClose();
+    ref.read(partnerFocusPendingProvider.notifier).state = true;
+    ref.read(partnerFocusProvider.notifier).state = event;
+    ref.read(shellPageProvider.notifier).state = 1;
   }
 
-  void _handlePanelPointerMove(PointerMoveEvent e) {
-    if (_panMulti || _panelStart == null || !widget.isOpen) return;
-    final dy = e.localPosition.dy - _panelStart!.dy;
-    final dx = (e.localPosition.dx - _panelStart!.dx).abs();
-    if (dy > 25 && dy > dx) {
-      _panelStart = null;
-      widget.onToggle();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final myEvents = (ref.watch(partnerMyEventsProvider)
+          .where((e) => e.expiresAt.isAfter(now))
+          .toList()
+        ..sort((a, b) => b.startsAt.compareTo(a.startsAt)));
+
+    final culturalMap = {
+      for (final e in ref.watch(mockPartnerEventStoreProvider)) e.id: e,
+    };
+
+    if (myEvents.isEmpty) {
+      return const Center(
+        child: Text(
+          'Z:GUM 등록된 이벤트가 없습니다.',
+          style: TextStyle(fontSize: 14, color: Color(0xFFAAAAAA)),
+        ),
+      );
     }
+
+    final featured = myEvents.first;
+    final featuredCultural = culturalMap[featured.id];
+    final rest = myEvents
+        .skip(1)
+        .where((e) => culturalMap.containsKey(e.id))
+        .take(2)
+        .toList();
+
+    String timeLeft(PartnerEvent e) {
+      final remaining = e.expiresAt.difference(now);
+      final h = remaining.inHours;
+      final m = remaining.inMinutes % 60;
+      return h > 0 ? '$h시간 $m분 남음' : '$m분 남음';
+    }
+
+    return LayoutBuilder(
+      builder: (_, constraints) {
+        // 실제 패널 높이 기준으로 5구역 계산
+        final panelH = constraints.maxHeight;
+        const topPad = _kCapsuleHeight + 14.0;
+        const botPad = 16.0;
+        final totalH = panelH - topPad - botPad;
+        final sectionH = totalH / 5;
+        const itemH = 40.0;
+        const itemGap = 8.0;
+        final bottomH = rest.isNotEmpty
+            ? rest.length * (itemH + itemGap)
+            : sectionH;
+        final featuredH =
+            (totalH - bottomH).clamp(sectionH * 2, sectionH * 4);
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, topPad, 16, botPad),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: featuredCultural != null
+                    ? () => _tapEvent(ref, featuredCultural)
+                    : null,
+                child: Container(
+                  height: featuredH,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [
+                      BoxShadow(
+                          color: Color(0x14000000),
+                          blurRadius: 8,
+                          offset: Offset(0, 2)),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              featured.title,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF1A1A2E),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            timeLeft(featured),
+                            style: const TextStyle(
+                                fontSize: 11, color: Color(0xFFAAAAAA)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (featured.representativePhotoPath != null)
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: Image.file(
+                                File(featured.representativePhotoPath!),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        const Spacer(),
+                      const SizedBox(height: 6),
+                      Text(
+                        featured.venue,
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFF888888)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              ...rest.map((e) {
+                final cultural = culturalMap[e.id]!;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _tapEvent(ref, cultural),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: e.representativePhotoPath != null
+                                ? Image.file(
+                                    File(e.representativePhotoPath!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : const ColoredBox(color: Color(0xFFE0E0E0)),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                e.title,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF1A1A2E),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                e.venue,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFFAAAAAA),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _UserPanelContent extends ConsumerStatefulWidget {
+  final VoidCallback onClose;
+  const _UserPanelContent({required this.onClose});
+  @override
+  ConsumerState<_UserPanelContent> createState() => _UserPanelContentState();
+}
+
+class _UserPanelContentState extends ConsumerState<_UserPanelContent> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(checkInProvider.notifier).cleanupExpired();
+      _checkPendingRequest();
+    });
   }
 
-  void _handlePanelPointerUp(PointerUpEvent e) {
-    _panActive.remove(e.pointer);
-    if (_panActive.isEmpty) _panMulti = false;
-    _panelStart = null;
+  Future<void> _checkPendingRequest() async {
+    if (!mounted) return;
+    final repo = ref.read(friendRepositoryProvider);
+    final location = ref.read(userLocationProvider);
+    try {
+      final requests = await repo.getNearbyRequests(
+        myLocation: location,
+        myUserId: 'mock_user',
+      );
+      if (requests.isNotEmpty && mounted) {
+        _showAcceptDialog(requests.first);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _showRequestDialog() async {
+    final introShown = await isIeumIntroShown();
+    if (!mounted) return;
+    if (!introShown) {
+      await showIeumIntroPopup(context);
+      if (!mounted) return;
+    }
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => IeumRequestDialog(
+        location: ref.read(userLocationProvider),
+        repo: ref.read(friendRepositoryProvider),
+      ),
+    );
+  }
+
+  void _showAcceptDialog(FriendRequest request) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => IeumAcceptDialog(
+        request: request,
+        location: ref.read(userLocationProvider),
+        repo: ref.read(friendRepositoryProvider),
+      ),
+    );
+  }
+
+  void _confirmForget(CheckInRecord record) {
+    showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+        content: const Text(
+          '정말 잊어도 될까요?',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소', style: TextStyle(color: Color(0xFFAAAAAA), fontSize: 13)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('확인', style: TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    ).then((confirmed) {
+      if (confirmed == true) ref.read(checkInProvider.notifier).delete(record.id);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final touchWidth = screenWidth * 0.80;
+    final records = ref.watch(checkInProvider);
+    final now = DateTime.now();
+    final latest = records.isNotEmpty &&
+            now.difference(records.first.checkedInAt).inHours < 24
+        ? records.first
+        : null;
+    final friendCount = ref.watch(friendCountProvider);
+    final count = friendCount.whenOrNull(data: (v) => v) ?? 0;
 
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, _kCapsuleHeight + 12, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 흔적 자리 — 항상 고정 높이
+          SizedBox(
+            height: 240,
+            width: double.infinity,
+            child: latest != null
+                ? _RecentTraceCard(record: latest)
+                : Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F8F8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFEEEEEE)),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      '아직 남긴 흔적이 없습니다',
+                      style: TextStyle(fontSize: 13, color: Color(0xFFCCCCCC)),
+                    ),
+                  ),
+          ),
+          const SizedBox(height: 10),
+          if (latest != null)
+            Row(
+              children: [
+                _SmallAction(
+                  label: '남기기',
+                  color: const Color(0xFF1A1A2E),
+                  onTap: () {
+                    widget.onClose();
+                    ref.read(shellPageProvider.notifier).state = 0;
+                  },
+                ),
+                const SizedBox(width: 8),
+                _SmallAction(
+                  label: '잊기',
+                  color: const Color(0xFFAAAAAA),
+                  onTap: () => _confirmForget(latest),
+                ),
+              ],
+            )
+          else
+            const SizedBox(height: 32),
+          const SizedBox(height: 16),
+          Container(height: 1, color: const Color(0xFFF0F0F0)),
+          const SizedBox(height: 14),
+          Text(
+            '$count명과 이어졌습니다.',
+            style: const TextStyle(fontSize: 13, color: Color(0xFFAAAAAA)),
+          ),
+          const SizedBox(height: 12),
+          // 이음 버튼
+          Center(
+            child: SizedBox(
+              width: MediaQuery.sizeOf(context).width * 0.5,
+              child: GestureDetector(
+                onTap: _showRequestDialog,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1A2E),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    '이음',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 2.0,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecentTraceCard extends StatelessWidget {
+  final CheckInRecord record;
+  const _RecentTraceCard({required this.record});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhoto = record.photoPath != null;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        height: 120,
+        width: double.infinity,
+        child: hasPhoto
+            ? Image.file(File(record.photoPath!), fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _textCard())
+            : _textCard(),
+      ),
+    );
+  }
+
+  Widget _textCard() => Container(
+        color: const Color(0xFFF4F6FB),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          record.eventTitle,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF3A5FCD)),
+        ),
+      );
+}
+
+class _SmallAction extends StatelessWidget {
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _SmallAction({required this.label, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w500)),
+      ),
+    );
+  }
+}
+
+// ── 제목 입력 오버레이 바 ────────────────────────────────────────────────────────
+
+class _TitleInputBar extends StatefulWidget {
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final VoidCallback onClose;
+  const _TitleInputBar({required this.controller, required this.focusNode, required this.onClose});
+
+  @override
+  State<_TitleInputBar> createState() => _TitleInputBarState();
+}
+
+class _TitleInputBarState extends State<_TitleInputBar> {
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
     return Stack(
       children: [
-        // 패널 본체 — 열린 상태에서 아래로 쓸면 닫기
+        // 빈 공간 탭 시 닫힘
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onClose,
+            child: const ColoredBox(color: Colors.transparent),
+          ),
+        ),
+        // 입력 바
         Positioned(
-          bottom: 0,
           left: 0,
           right: 0,
-          height: _kPanelHeight,
-          child: Listener(
-            behavior: HitTestBehavior.opaque,
-            onPointerDown: _handlePanelPointerDown,
-            onPointerMove: _handlePanelPointerMove,
-            onPointerUp: _handlePanelPointerUp,
-            onPointerCancel: (e) {
-              _panActive.remove(e.pointer);
-              if (_panActive.isEmpty) _panMulti = false;
-              _panelStart = null;
-            },
+          bottom: bottom,
+          child: Material(
+            color: Colors.white,
+            elevation: 0,
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x14000000),
-                    blurRadius: 8,
-                    offset: Offset(0, -2),
+                border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 10, 12, 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: widget.controller,
+                      focusNode: widget.focusNode,
+                      style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
+                      cursorColor: const Color(0xFF16213E),
+                      decoration: const InputDecoration(
+                        hintText: '이벤트 제목',
+                        hintStyle: TextStyle(color: Color(0xFFCCCCCC), fontSize: 14),
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                      onSubmitted: (_) => widget.onClose(),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: widget.onClose,
+                    child: const Text(
+                      '확인',
+                      style: TextStyle(
+                        color: Color(0xFF1A1A2E),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
         ),
-        // 캡슐 손잡이 — 닫힌 상태: 위로 30px 드래그 → 열기 / 열린 상태: 아래로 25px → 닫기
-        Positioned(
-          bottom: _kPanelHeight + _kPanelFloat,
-          left: 0,
-          right: 0,
-          height: _kCapsuleHeight,
-          child: Center(
-            child: SizedBox(
-              width: touchWidth,
-              child: Listener(
-                behavior: HitTestBehavior.opaque,
-                onPointerDown: (e) {
-                  _capActive.add(e.pointer);
-                  if (_capActive.length >= 2 || _capMulti) {
-                    _capMulti = true;
-                    _capsuleStart = null;
-                    return;
-                  }
-                  _capsuleStart = e.localPosition;
-                },
-                onPointerMove: (e) {
-                  if (_capMulti || _capsuleStart == null) return;
-                  final dy = e.localPosition.dy - _capsuleStart!.dy;
-                  final dx = (e.localPosition.dx - _capsuleStart!.dx).abs();
-                  if (!widget.isOpen && dy < -30 && dy.abs() > dx) {
-                    _capsuleStart = null;
-                    widget.onOpen();
-                    return;
-                  }
-                  if (widget.isOpen && dy > 25 && dy > dx) {
-                    _capsuleStart = null;
-                    widget.onToggle();
-                  }
-                },
-                onPointerUp: (e) {
-                  _capActive.remove(e.pointer);
-                  if (_capActive.isEmpty) _capMulti = false;
-                  _capsuleStart = null;
-                },
-                onPointerCancel: (e) {
-                  _capActive.remove(e.pointer);
-                  if (_capActive.isEmpty) _capMulti = false;
-                  _capsuleStart = null;
-                },
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: EdgeInsets.zero,
-                    child: _NowCapsule(hasAlert: widget.hasAlert, isOpen: widget.isOpen),
+      ],
+    );
+  }
+}
+
+
+class _PartnerPanelContent extends ConsumerStatefulWidget {
+  final VoidCallback onClose;
+  const _PartnerPanelContent({required this.onClose});
+
+  @override
+  ConsumerState<_PartnerPanelContent> createState() => _PartnerPanelContentState();
+}
+
+class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
+  final _titleCtrl = TextEditingController();
+  final _picker = ImagePicker();
+  OverlayEntry? _titleOverlay;
+  FocusNode? _titleFocusNode;
+  OverlayEntry? _descOverlay;
+  FocusNode? _descFocusNode;
+  final List<File> _photos = [];
+  final List<TextEditingController> _photoCtrls = [];
+  int _repIndex = 0;
+  int _selectedMinutes = 60;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  Future<void> _takePhoto() async {
+    final picked = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
+      maxWidth: 1080,
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _photos.add(File(picked.path));
+      _photoCtrls.add(TextEditingController());
+    });
+  }
+
+  void _deletePhoto(int index) {
+    setState(() {
+      _photoCtrls[index].dispose();
+      _photos.removeAt(index);
+      _photoCtrls.removeAt(index);
+      if (_photos.isEmpty) {
+        _repIndex = 0;
+      } else if (index == _repIndex) {
+        _repIndex = 0;
+      } else if (index < _repIndex) {
+        _repIndex--;
+      }
+    });
+  }
+
+  Future<void> _submit() async {
+    if (_submitting) return;
+    final title = _titleCtrl.text.trim();
+    if (title.isEmpty) return;
+    if (_photos.isEmpty) return;
+
+    // 무료이용 시작됐는데 알림이 꺼져있으면 등록 시 안내
+    final isStarted = await FreeUseService.instance.isStarted();
+    if (isStarted) {
+      final notifOn = await FreeUseService.instance.isNotificationEnabled();
+      if (!notifOn && mounted) {
+        await showFreeUseRegisterReminderPopup(context);
+        return;
+      }
+    }
+
+    // 무료이용 일일 한도 체크 (버튼이 비활성화되어 있어도 방어 처리)
+    final isFreeActive = await FreeUseService.instance.isActive();
+    if (isFreeActive) {
+      final canRegister = await FreeUseService.instance.canRegisterToday();
+      if (!canRegister) return;
+    }
+
+    // 19세 이상 여부 확인
+    if (!mounted) return;
+    final isAdultOnly = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          '이벤트 대상',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+        ),
+        content: const Text(
+          '이 이벤트가 19세 이상 대상인가요?',
+          style: TextStyle(fontSize: 14, color: Color(0xFF555555)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('전체 이용가', style: TextStyle(color: Color(0xFF888888))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('19세 이상', style: TextStyle(color: Color(0xFF1A1A2E), fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (isAdultOnly == null || !mounted) return;
+
+    setState(() => _submitting = true);
+
+    final locationResult = await LocationService().acquireLocation();
+    if (!mounted) return;
+
+    final photoList = List.generate(
+      _photos.length,
+      (i) => PartnerPhoto(
+        path: _photos[i].path,
+        title: _photoCtrls[i].text.trim().isEmpty ? null : _photoCtrls[i].text.trim(),
+      ),
+    );
+
+    final now = DateTime.now();
+    final event = PartnerEvent(
+      id: now.millisecondsSinceEpoch.toString(),
+      partnerId: 'local-device',
+      title: title,
+      venue: title,
+      message: null,
+      location: locationResult.position,
+      geoHash: 'mock',
+      startsAt: now,
+      expiresAt: now.add(Duration(minutes: _selectedMinutes)),
+      photos: photoList,
+      representativeIndex: _repIndex.clamp(0, photoList.length - 1),
+      orderId: 'order-${now.millisecondsSinceEpoch}',
+      paymentStatus: PaymentStatus.paid,
+      isAdultOnly: isAdultOnly,
+    );
+
+    if (isFreeActive) await FreeUseService.instance.recordRegistration();
+
+    final paidEvent = event.copyWith(paymentStatus: PaymentStatus.paid, paidAt: now);
+    _applyToMap(paidEvent);
+    ref.read(partnerMyEventsProvider.notifier).update((list) => [paidEvent, ...list]);
+    ref.read(shellPageProvider.notifier).state = 1;
+    widget.onClose();
+  }
+
+  void _applyToMap(PartnerEvent event) {
+    final mockCultural = CulturalEvent(
+      id: event.id,
+      title: event.title,
+      venue: event.venue,
+      address: '현재 위치',
+      description: event.title,
+      startDate: event.startsAt,
+      endDateTime: event.expiresAt,
+      location: event.location,
+      category: EventCategory.partner,
+      isFree: false,
+      source: EventSource.partner,
+      partnerMessage: event.message,
+    );
+    ref.read(mockPartnerEventStoreProvider.notifier).state = [
+      ...ref.read(mockPartnerEventStoreProvider),
+      mockCultural,
+    ];
+    ref.read(partnerFocusPendingProvider.notifier).state = true;
+    ref.read(partnerFocusProvider.notifier).state = mockCultural;
+  }
+
+  void _showDescOverlay(int index) {
+    _descOverlay?.remove();
+    _descFocusNode?.dispose();
+    _descFocusNode = FocusNode();
+    final node = _descFocusNode!;
+    _descOverlay = OverlayEntry(
+      builder: (_) => _TitleInputBar(
+        controller: _photoCtrls[index],
+        focusNode: node,
+        onClose: _closeDescOverlay,
+      ),
+    );
+    Overlay.of(context).insert(_descOverlay!);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) node.requestFocus();
+    });
+  }
+
+  void _closeDescOverlay() {
+    FocusScope.of(context).unfocus();
+    _descOverlay?.remove();
+    _descOverlay = null;
+    setState(() {});
+  }
+
+  void _showTitleOverlay() {
+    _titleFocusNode?.dispose();
+    _titleFocusNode = FocusNode();
+    final node = _titleFocusNode!;
+    _titleOverlay = OverlayEntry(
+      builder: (_) => _TitleInputBar(
+        controller: _titleCtrl,
+        focusNode: node,
+        onClose: _closeTitleOverlay,
+      ),
+    );
+    Overlay.of(context).insert(_titleOverlay!);
+    // 오버레이 빌드 완료 후 키보드 요청 — 동시 실행 방지
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) node.requestFocus();
+    });
+  }
+
+  void _closeTitleOverlay() {
+    FocusScope.of(context).unfocus();
+    _titleOverlay?.remove();
+    _titleOverlay = null;
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _titleOverlay?.remove();
+    _titleFocusNode?.dispose();
+    _descOverlay?.remove();
+    _descFocusNode?.dispose();
+    _titleCtrl.dispose();
+    for (final c in _photoCtrls) c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 제목
+            const Text(
+              '제목',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF555555)),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: _showTitleOverlay,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F8F8),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _titleCtrl,
+                  builder: (_, value, __) => Text(
+                    value.text.isEmpty ? '필수' : value.text,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: value.text.isEmpty
+                          ? const Color(0xFFCCCCCC)
+                          : const Color(0xFF1A1A2E),
+                    ),
                   ),
                 ),
               ),
             ),
+            const Spacer(),
+            // 사진 3슬롯 (세로 비율 0.85로 확대)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (int i = 0; i < 3; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  Expanded(child: AspectRatio(aspectRatio: 0.85, child: _buildPhotoCell(i))),
+                ],
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                for (int i = 0; i < 3; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  Expanded(
+                    child: i < _photos.length ? _buildDescField(i) : const SizedBox(height: 32),
+                  ),
+                ],
+              ],
+            ),
+            const Spacer(),
+            // 노출시간
+            Row(
+              children: [
+                const Text(
+                  '노출시간',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF555555)),
+                ),
+                const SizedBox(width: 12),
+                ...[60, 120, 180].map((min) {
+                  final selected = _selectedMinutes == min;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedMinutes = min),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: selected ? const Color(0xFF16213E) : const Color(0xFFF4F4F7),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: Text(
+                          '${min ~/ 60}시간',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: selected ? Colors.white : const Color(0xFF888888),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+                const Spacer(),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // 등록 버튼 — 무료이용 기간 중 "무료이용"으로 표기, 한도 소진 시 비활성화
+            Center(
+              child: SizedBox(
+                width: MediaQuery.sizeOf(context).width * 0.5,
+                child: FutureBuilder<(bool, bool)>(
+                  future: () async {
+                    final active = await FreeUseService.instance.isActive();
+                    final canRegister = active
+                        ? await FreeUseService.instance.canRegisterToday()
+                        : true;
+                    return (active, canRegister);
+                  }(),
+                  builder: (context, snapshot) {
+                    final isFree = snapshot.data?.$1 == true;
+                    final canRegister = snapshot.data?.$2 != false;
+                    final disabled = _submitting || !canRegister;
+                    return GestureDetector(
+                      onTap: disabled ? null : _submit,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        decoration: BoxDecoration(
+                          color: disabled
+                              ? const Color(0xFFCCCCCC)
+                              : const Color(0xFF1A1A2E),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          isFree ? '무료이용' : '등록',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 2.0,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoCell(int i) {
+    if (i < _photos.length) {
+      final isRep = i == _repIndex;
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.file(_photos[i], fit: BoxFit.cover),
+            Positioned(
+              top: 6, left: 6,
+              child: GestureDetector(
+                onTap: () => setState(() => _repIndex = i),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: isRep ? const Color(0xFF16213E) : Colors.black.withValues(alpha: 0.45),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(isRep ? Icons.star : Icons.star_border, color: Colors.white, size: 14),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 4, right: 4,
+              child: GestureDetector(
+                onTap: () => _deletePhoto(i),
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    if (i == _photos.length && _photos.length < 3) {
+      return GestureDetector(
+        onTap: _takePhoto,
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF4F4F7),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFDDDDDD), width: 1.5),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.add_a_photo_outlined, size: 20, color: Color(0xFFAAAAAA)),
+                if (i == 0) ...[
+                  const SizedBox(height: 4),
+                  const Text('필수', style: TextStyle(fontSize: 11, color: Color(0xFFCC3333))),
+                ],
+              ],
+            ),
           ),
         ),
-      ],
+      );
+    }
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F4F7),
+        borderRadius: BorderRadius.circular(10),
+      ),
+    );
+  }
+
+  Widget _buildDescField(int i) {
+    return GestureDetector(
+      onTap: () => _showDescOverlay(i),
+      child: Container(
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F8F8),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _photoCtrls[i],
+          builder: (_, value, __) => Text(
+            value.text.isEmpty ? '내용' : value.text,
+            style: TextStyle(
+              fontSize: 11,
+              color: value.text.isEmpty ? const Color(0xFFCCCCCC) : const Color(0xFF333333),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -503,9 +1561,14 @@ class _NowCapsule extends StatefulWidget {
 }
 
 class _NowCapsuleState extends State<_NowCapsule>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
+  // 앱 세션 내 첫 진입 시 1회만 재생
+  static bool _hasPlayed = false;
+
   late final AnimationController _blink;
   late final Animation<double> _blinkAnim;
+  late final AnimationController _light;
+  late final Animation<double> _lightAnim;
 
   @override
   void initState() {
@@ -518,6 +1581,21 @@ class _NowCapsuleState extends State<_NowCapsule>
       CurvedAnimation(parent: _blink, curve: Curves.easeInOut),
     );
     if (widget.hasAlert) _blink.repeat(reverse: true);
+
+    _light = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 5500),
+    );
+    _lightAnim = CurvedAnimation(parent: _light, curve: Curves.easeInOut);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_hasPlayed) {
+        _light.value = 1.0; // 이미 재생됐으면 즉시 완료 상태
+      } else {
+        _hasPlayed = true;
+        _light.forward();
+      }
+    });
   }
 
   @override
@@ -535,6 +1613,7 @@ class _NowCapsuleState extends State<_NowCapsule>
   @override
   void dispose() {
     _blink.dispose();
+    _light.dispose();
     super.dispose();
   }
 
@@ -545,58 +1624,80 @@ class _NowCapsuleState extends State<_NowCapsule>
     const alertColor = Color(0xFF2D6BE4);
 
     return AnimatedBuilder(
-      animation: _blinkAnim,
+      animation: Listenable.merge([_blinkAnim, _lightAnim]),
       builder: (_, __) {
         final color = widget.hasAlert ? alertColor : normalColor;
         final opacity = widget.hasAlert ? _blinkAnim.value : 1.0;
-        return Container(
-          width: capsuleWidth,
-          height: 24,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: opacity),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: SizedBox(
-              height: 14,
-              width: capsuleWidth * 0.7,
-              child: CustomPaint(
-                painter: _ChevronPainter(isOpen: widget.isOpen),
-              ),
-            ),
+        final progress = _lightAnim.value;
+        final halfW = capsuleWidth / 2;
+        // 0→0.55: 채우기, 0.55→0.85: 중앙 정지, 0.85→1.0: 시안 페이드아웃, 0.93→1.0: 딥블루 페이드인
+        final fillProgress = (progress / 0.55).clamp(0.0, 1.0);
+        final fillWidth = fillProgress * halfW;
+        final fillOpacity = progress < 0.85
+            ? 1.0
+            : (1.0 - (progress - 0.85) / 0.15).clamp(0.0, 1.0);
+        final baseOpacity = progress < 0.93
+            ? 0.0
+            : ((progress - 0.93) / 0.07).clamp(0.0, 1.0);
+        const fillColor = Color(0xFF00E5FF);
+
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(5),
+          child: SizedBox(
+            width: capsuleWidth,
+            height: 10,
+            child: progress >= 1.0
+                // 완료: 기본 캡슐 유지 (사라지지 않음)
+                ? ColoredBox(color: color.withValues(alpha: opacity * 0.70))
+                : Stack(
+                    children: [
+                      // 베이스 — 처음엔 투명, 페이드아웃 구간에서 딥블루로 교차
+                      Positioned.fill(
+                        child: ColoredBox(color: color.withValues(alpha: baseOpacity * 0.70)),
+                      ),
+                      // 좌측 → 중앙으로 채우기 (선단에 흰빛)
+                      Positioned(
+                        left: 0,
+                        top: 3,
+                        bottom: 3,
+                        width: fillWidth,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                fillColor.withValues(alpha: fillOpacity),
+                                fillColor.withValues(alpha: fillOpacity),
+                                Colors.white.withValues(alpha: fillOpacity),
+                              ],
+                              stops: const [0.0, 0.65, 1.0],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // 우측 → 중앙으로 채우기 (선단에 흰빛)
+                      Positioned(
+                        right: 0,
+                        top: 3,
+                        bottom: 3,
+                        width: fillWidth,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.white.withValues(alpha: fillOpacity),
+                                fillColor.withValues(alpha: fillOpacity),
+                                fillColor.withValues(alpha: fillOpacity),
+                              ],
+                              stops: const [0.0, 0.35, 1.0],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         );
       },
     );
   }
-}
-
-class _ChevronPainter extends CustomPainter {
-  final bool isOpen;
-  const _ChevronPainter({required this.isOpen});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final spread = size.width * 0.45;
-    const depth = 5.0;
-
-    if (isOpen) {
-      canvas.drawLine(Offset(cx - spread, cy - depth / 2), Offset(cx, cy + depth / 2), paint);
-      canvas.drawLine(Offset(cx, cy + depth / 2), Offset(cx + spread, cy - depth / 2), paint);
-    } else {
-      canvas.drawLine(Offset(cx - spread, cy + depth / 2), Offset(cx, cy - depth / 2), paint);
-      canvas.drawLine(Offset(cx, cy - depth / 2), Offset(cx + spread, cy + depth / 2), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_ChevronPainter old) => old.isOpen != isOpen;
 }

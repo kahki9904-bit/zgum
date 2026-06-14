@@ -15,13 +15,13 @@ class AdultVerificationScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          '성인인증',
+          '본인인증',
           style: TextStyle(color: Color(0xFF333333), fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
       body: const Center(
         child: Text(
-          '성인인증 내용이 들어갈 자리입니다.',
+          '본인인증 내용이 들어갈 자리입니다.',
           style: TextStyle(color: Color(0xFFCCCCCC), fontSize: 13),
         ),
       ),

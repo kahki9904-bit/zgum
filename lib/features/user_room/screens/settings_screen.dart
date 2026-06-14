@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
-import '../../../core/models/free_use_status.dart';
-import '../../../core/providers/free_use_provider.dart';
-import '../../../core/services/free_use_service.dart';
-import '../../../presentation/widgets/free_use_intro_popup.dart';
 import '../../../core/providers/locale_provider.dart';
-import '../../friend/providers/friend_provider.dart';
+import '../../../promotions/free_use/free_use_settings_tile.dart';
+import '../../../promotions/free_use/free_use_notification_prompt.dart';
+import '../../../presentation/widgets/icons/zgum_icon.dart';
 import 'adult_verification_screen.dart';
 import 'notification_setting_screen.dart';
 import 'app_info_screen.dart';
@@ -17,10 +15,6 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentLocale = ref.watch(localeProvider);
-    final explorationOn = ref.watch(friendExplorationProvider);
-    final freeStatus = ref.watch(freeUseProvider);
-    final isFreeActive = freeStatus == FreeUseStatus.active;
-
     final currentLangLabel = _kLanguages
         .firstWhere(
           (l) => l.code == currentLocale.languageCode,
@@ -34,31 +28,12 @@ class SettingsScreen extends ConsumerWidget {
         backgroundColor: const Color(0xFFFFFFFF),
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: GestureDetector(
-          onLongPress: () async {
-            await FreeUseService.instance.resetForTesting();
-            ref.read(freeUseProvider.notifier).resetState();
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('[DEV] 초기화 완료'),
-                duration: Duration(seconds: 1),
-              ),
-            );
-            await Future.delayed(const Duration(milliseconds: 600));
-            if (!context.mounted) return;
-            await showFreeUseIntroPopup(
-              context,
-              onActivated: () => ref.read(freeUseProvider.notifier).activateFreeUse(),
-            );
-          },
-          child: Text(
-            context.l10n.settings,
-            style: const TextStyle(
-              color: Color(0xFF1A1A2E),
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
+        title: Text(
+          context.l10n.settings,
+          style: const TextStyle(
+            color: Color(0xFF1A1A2E),
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
           ),
         ),
         centerTitle: true,
@@ -69,6 +44,19 @@ class SettingsScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 아이콘 미리보기 (임시)
+              Center(
+                child: Column(
+                  children: [
+                    ZGumIcon(size: 80),
+                    SizedBox(height: 4),
+                    ZGumIcon(size: 48),
+                    SizedBox(height: 4),
+                    ZGumIcon(size: 24),
+                    SizedBox(height: 24),
+                  ],
+                ),
+              ),
               Container(
                 decoration: BoxDecoration(
                   border: Border.all(color: const Color(0xFFEEEEEE)),
@@ -92,10 +80,24 @@ class SettingsScreen extends ConsumerWidget {
                     _SettingRow(
                       icon: Icons.notifications_outlined,
                       label: context.l10n.settingNotifications,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const NotificationSettingScreen()),
-                      ),
+                      onTap: () async {
+                        await showFreeUseNotificationPrompt(context);
+                        if (!context.mounted) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const NotificationSettingScreen()),
+                        );
+                      },
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(left: 58),
+                      child: _Rule(),
+                    ),
+                    _SettingRowWithTrail(
+                      icon: Icons.language_outlined,
+                      label: context.l10n.settingLanguage,
+                      trailText: currentLangLabel,
+                      onTap: () => _showLanguagePicker(context, ref, currentLocale),
                     ),
                     const Padding(
                       padding: EdgeInsets.only(left: 58),
@@ -109,40 +111,7 @@ class SettingsScreen extends ConsumerWidget {
                         MaterialPageRoute(builder: (_) => const AppInfoScreen()),
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.only(left: 58),
-                      child: _Rule(),
-                    ),
-                    _ToggleRow(
-                      icon: Icons.explore_outlined,
-                      label: '친구탐험 알림',
-                      value: explorationOn,
-                      onToggle: () => ref
-                          .read(friendExplorationProvider.notifier)
-                          .toggle(),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.only(left: 58),
-                      child: _Rule(),
-                    ),
-                    _SettingRowWithTrail(
-                      icon: Icons.language_outlined,
-                      label: context.l10n.settingLanguage,
-                      trailText: currentLangLabel,
-                      onTap: () => _showLanguagePicker(context, ref, currentLocale),
-                    ),
-                    if (isFreeActive) ...[
-                      const Padding(
-                        padding: EdgeInsets.only(left: 58),
-                        child: _Rule(),
-                      ),
-                      _ToggleRow(
-                        icon: Icons.card_giftcard_outlined,
-                        label: '무료이용 알림허용',
-                        value: true,
-                        onToggle: () => _confirmTurnOffFreeUse(context, ref),
-                      ),
-                    ],
+                    const FreeUseSettingsTile(),
                   ],
                 ),
               ),
@@ -152,38 +121,6 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
   }
-}
-
-void _confirmTurnOffFreeUse(BuildContext context, WidgetRef ref) {
-  showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text(
-        '무료이용 알림 끄기',
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
-      ),
-      content: const Text(
-        '알림을 끄면 파트너 무료이용이 즉시 종료됩니다.\n계속하시겠습니까?',
-        style: TextStyle(fontSize: 14, color: Color(0xFF555555), height: 1.6),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('취소', style: TextStyle(color: Color(0xFFAAAAAA))),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('끄기', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
-        ),
-      ],
-    ),
-  ).then((confirmed) {
-    if (confirmed == true) {
-      ref.read(freeUseProvider.notifier).endByNotificationOff();
-    }
-  });
 }
 
 void _showLanguagePicker(BuildContext context, WidgetRef ref, Locale currentLocale) {
@@ -388,54 +325,6 @@ class _SettingRow extends StatelessWidget {
   }
 }
 
-class _ToggleRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool value;
-  final VoidCallback onToggle;
-
-  const _ToggleRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: SizedBox(
-        height: 52,
-        child: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0F0F0),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, size: 17, color: const Color(0xFFAAAAAA)),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(color: Color(0xFF333333), fontSize: 15),
-              ),
-            ),
-            Switch(
-              value: value,
-              onChanged: (_) => onToggle(),
-              activeThumbColor: const Color(0xFF16213E),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _Rule extends StatelessWidget {
   const _Rule();
