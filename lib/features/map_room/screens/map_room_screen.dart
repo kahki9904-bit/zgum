@@ -34,6 +34,7 @@ import '../../../core/providers/partner_focus_provider.dart';
 import '../providers/map_filter_provider.dart';
 import '../providers/kakao_search_provider.dart';
 import '../../../core/providers/partner_my_events_provider.dart';
+import '../../../core/providers/active_partner_event_provider.dart';
 
 class MapRoomScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSwipeToUserRoom;
@@ -690,7 +691,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     if (!mounted) return;
     final myEventIds =
         ref.read(partnerMyEventsProvider).map((e) => e.id).toSet();
-    final isMyEvent = myEventIds.contains(event.id);
+    final activeEvent = ref.read(activePartnerEventProvider);
+    final isMyEvent = myEventIds.contains(event.id) || activeEvent?.id == event.id;
     EventDetailSheet.show(
       context,
       event,

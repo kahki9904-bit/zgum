@@ -145,13 +145,23 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
 
   Future<kakao.KImage> _getMarkerImage() async {
     if (_markerImage != null) return _markerImage!;
-    const double iconSize = 20.0;
+    const double iconSize = 28.0;
     const double tapSize = 44.0;
     const markerWidget = SizedBox(
       width: tapSize,
       height: tapSize,
       child: Center(
-        child: Icon(Icons.location_on, size: iconSize),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+          ),
+          child: SizedBox(
+            width: tapSize,
+            height: tapSize,
+            child: Icon(Icons.location_on, size: iconSize),
+          ),
+        ),
       ),
     );
     _markerImage = await kakao.KImage.fromWidget(markerWidget, const Size(tapSize, tapSize));
