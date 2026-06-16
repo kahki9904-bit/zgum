@@ -10,16 +10,16 @@ import '../../../services/time_service.dart';
 abstract class EventContentBase extends StatelessWidget {
   final CulturalEvent event;
   final TimeService timeService;
-  final bool alarmSet;
-  final VoidCallback? onAlarmTap;
+  final bool interestSet;
+  final VoidCallback? onInterestTap;
   final VoidCallback? onNavigateTap;
 
   const EventContentBase({
     super.key,
     required this.event,
     required this.timeService,
-    this.alarmSet = false,
-    this.onAlarmTap,
+    this.interestSet = false,
+    this.onInterestTap,
     this.onNavigateTap,
   });
 }

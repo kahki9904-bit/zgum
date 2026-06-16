@@ -40,44 +40,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get checkInButton => 'NOW';
 
   @override
-  String get alarmSet => 'Set Alarm';
-
-  @override
-  String get alarmSetDone => 'Alarm Set';
-
-  @override
   String get navigate => 'Go';
-
-  @override
-  String get alarmSheetTitle => 'Set Alarm Time';
-
-  @override
-  String get alarmSheetSubtitle => 'How early before the event ends?';
-
-  @override
-  String get alarmConfirm => 'Set Alarm';
-
-  @override
-  String get alarmMin10 => '10 min';
-
-  @override
-  String alarmBeforeMinutes(int minutes) {
-    return '$minutes min before';
-  }
-
-  @override
-  String alarmBeforeHourMin(int hours, int minutes) {
-    return '${hours}h ${minutes}m before';
-  }
-
-  @override
-  String alarmBeforeHour(int hours) {
-    return '${hours}h before';
-  }
-
-  @override
-  String get alarmPermissionDenied =>
-      'Notification permission required. Please allow it in Settings.';
 
   @override
   String get timerEnded => 'Ended';

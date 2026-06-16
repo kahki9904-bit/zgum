@@ -156,71 +156,11 @@ abstract class AppLocalizations {
   /// **'흔적'**
   String get checkInButton;
 
-  /// No description provided for @alarmSet.
-  ///
-  /// In ko, this message translates to:
-  /// **'알림 설정'**
-  String get alarmSet;
-
-  /// No description provided for @alarmSetDone.
-  ///
-  /// In ko, this message translates to:
-  /// **'알림 설정됨'**
-  String get alarmSetDone;
-
   /// No description provided for @navigate.
   ///
   /// In ko, this message translates to:
   /// **'안내'**
   String get navigate;
-
-  /// No description provided for @alarmSheetTitle.
-  ///
-  /// In ko, this message translates to:
-  /// **'알림 시간 설정'**
-  String get alarmSheetTitle;
-
-  /// No description provided for @alarmSheetSubtitle.
-  ///
-  /// In ko, this message translates to:
-  /// **'이벤트 종료 몇 분 전에 알림을 받을까요?'**
-  String get alarmSheetSubtitle;
-
-  /// No description provided for @alarmConfirm.
-  ///
-  /// In ko, this message translates to:
-  /// **'알림 설정'**
-  String get alarmConfirm;
-
-  /// No description provided for @alarmMin10.
-  ///
-  /// In ko, this message translates to:
-  /// **'10분'**
-  String get alarmMin10;
-
-  /// No description provided for @alarmBeforeMinutes.
-  ///
-  /// In ko, this message translates to:
-  /// **'{minutes}분 전 알림'**
-  String alarmBeforeMinutes(int minutes);
-
-  /// No description provided for @alarmBeforeHourMin.
-  ///
-  /// In ko, this message translates to:
-  /// **'{hours}시간 {minutes}분 전 알림'**
-  String alarmBeforeHourMin(int hours, int minutes);
-
-  /// No description provided for @alarmBeforeHour.
-  ///
-  /// In ko, this message translates to:
-  /// **'{hours}시간 전 알림'**
-  String alarmBeforeHour(int hours);
-
-  /// No description provided for @alarmPermissionDenied.
-  ///
-  /// In ko, this message translates to:
-  /// **'알림 권한이 필요합니다. 설정에서 허용해 주세요.'**
-  String get alarmPermissionDenied;
 
   /// No description provided for @timerEnded.
   ///

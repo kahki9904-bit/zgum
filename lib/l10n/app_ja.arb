@@ -13,17 +13,7 @@
   "partnerBadge": "いま",
 
   "checkInButton": "いま",
-  "alarmSet": "アラーム設定",
-  "alarmSetDone": "設定済み",
   "navigate": "案内",
-  "alarmSheetTitle": "アラーム時間の設定",
-  "alarmSheetSubtitle": "イベント終了の何分前に通知しますか？",
-  "alarmConfirm": "アラームを設定",
-  "alarmMin10": "10分",
-  "alarmBeforeMinutes": "{minutes}分前に通知",
-  "alarmBeforeHourMin": "{hours}時間{minutes}分前に通知",
-  "alarmBeforeHour": "{hours}時間前に通知",
-  "alarmPermissionDenied": "通知の許可が必要です。設定からお許しください。",
 
   "timerEnded": "終了",
   "timerDaysLeft": "あと{days}日{hours}時間",

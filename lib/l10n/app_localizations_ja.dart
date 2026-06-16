@@ -40,43 +40,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get checkInButton => 'いま';
 
   @override
-  String get alarmSet => 'アラーム設定';
-
-  @override
-  String get alarmSetDone => '設定済み';
-
-  @override
   String get navigate => '案内';
-
-  @override
-  String get alarmSheetTitle => 'アラーム時間の設定';
-
-  @override
-  String get alarmSheetSubtitle => 'イベント終了の何分前に通知しますか？';
-
-  @override
-  String get alarmConfirm => 'アラームを設定';
-
-  @override
-  String get alarmMin10 => '10分';
-
-  @override
-  String alarmBeforeMinutes(int minutes) {
-    return '$minutes分前に通知';
-  }
-
-  @override
-  String alarmBeforeHourMin(int hours, int minutes) {
-    return '$hours時間$minutes分前に通知';
-  }
-
-  @override
-  String alarmBeforeHour(int hours) {
-    return '$hours時間前に通知';
-  }
-
-  @override
-  String get alarmPermissionDenied => '通知の許可が必要です。設定からお許しください。';
 
   @override
   String get timerEnded => '終了';

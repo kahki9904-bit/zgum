@@ -19,29 +19,7 @@
   "partnerBadge": "지금",
 
   "checkInButton": "흔적",
-  "alarmSet": "알림 설정",
-  "alarmSetDone": "알림 설정됨",
   "navigate": "안내",
-  "alarmSheetTitle": "알림 시간 설정",
-  "alarmSheetSubtitle": "이벤트 종료 몇 분 전에 알림을 받을까요?",
-  "alarmConfirm": "알림 설정",
-  "alarmMin10": "10분",
-  "alarmBeforeMinutes": "{minutes}분 전 알림",
-  "@alarmBeforeMinutes": {
-    "placeholders": { "minutes": { "type": "int" } }
-  },
-  "alarmBeforeHourMin": "{hours}시간 {minutes}분 전 알림",
-  "@alarmBeforeHourMin": {
-    "placeholders": {
-      "hours": { "type": "int" },
-      "minutes": { "type": "int" }
-    }
-  },
-  "alarmBeforeHour": "{hours}시간 전 알림",
-  "@alarmBeforeHour": {
-    "placeholders": { "hours": { "type": "int" } }
-  },
-  "alarmPermissionDenied": "알림 권한이 필요합니다. 설정에서 허용해 주세요.",
 
   "timerEnded": "종료됨",
   "timerDaysLeft": "{days}일 {hours}시간 남음",

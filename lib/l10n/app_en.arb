@@ -13,17 +13,7 @@
   "partnerBadge": "NOW",
 
   "checkInButton": "NOW",
-  "alarmSet": "Set Alarm",
-  "alarmSetDone": "Alarm Set",
   "navigate": "Go",
-  "alarmSheetTitle": "Set Alarm Time",
-  "alarmSheetSubtitle": "How early before the event ends?",
-  "alarmConfirm": "Set Alarm",
-  "alarmMin10": "10 min",
-  "alarmBeforeMinutes": "{minutes} min before",
-  "alarmBeforeHourMin": "{hours}h {minutes}m before",
-  "alarmBeforeHour": "{hours}h before",
-  "alarmPermissionDenied": "Notification permission required. Please allow it in Settings.",
 
   "timerEnded": "Ended",
   "timerDaysLeft": "{days}d {hours}h left",

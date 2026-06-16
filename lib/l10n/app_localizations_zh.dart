@@ -40,43 +40,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get checkInButton => '此刻';
 
   @override
-  String get alarmSet => '设置提醒';
-
-  @override
-  String get alarmSetDone => '已设置';
-
-  @override
   String get navigate => '出发';
-
-  @override
-  String get alarmSheetTitle => '设置提醒时间';
-
-  @override
-  String get alarmSheetSubtitle => '活动结束前多久提醒您？';
-
-  @override
-  String get alarmConfirm => '设置提醒';
-
-  @override
-  String get alarmMin10 => '10分钟';
-
-  @override
-  String alarmBeforeMinutes(int minutes) {
-    return '$minutes分钟前提醒';
-  }
-
-  @override
-  String alarmBeforeHourMin(int hours, int minutes) {
-    return '$hours小时$minutes分钟前提醒';
-  }
-
-  @override
-  String alarmBeforeHour(int hours) {
-    return '$hours小时前提醒';
-  }
-
-  @override
-  String get alarmPermissionDenied => '需要通知权限，请在设置中允许。';
 
   @override
   String get timerEnded => '已结束';

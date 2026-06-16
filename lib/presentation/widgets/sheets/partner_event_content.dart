@@ -8,8 +8,6 @@ class PartnerEventContent extends EventContentBase {
     super.key,
     required super.event,
     required super.timeService,
-    super.alarmSet,
-    super.onAlarmTap,
     super.onNavigateTap,
   });
 
@@ -30,21 +28,6 @@ class PartnerEventContent extends EventContentBase {
                 event.title,
                 style: theme.textTheme.titleLarge
                     ?.copyWith(fontWeight: FontWeight.bold, height: 1.3),
-              ),
-            ),
-            GestureDetector(
-              onTap: alarmSet ? null : onAlarmTap,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 8, top: 2),
-                child: Icon(
-                  alarmSet
-                      ? Icons.notifications_active
-                      : Icons.notifications_none_outlined,
-                  size: 22,
-                  color: alarmSet
-                      ? const Color(0xFF16213E)
-                      : const Color(0xFFAAAAAA),
-                ),
               ),
             ),
             if (onNavigateTap != null)

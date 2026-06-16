@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../data/models/cultural_event.dart';
-import '../../../services/notification_service.dart';
 import '../../../services/time_service.dart';
 import 'event_content_base.dart';
 import 'partner_event_content.dart';
@@ -69,23 +68,21 @@ class EventDetailSheet {
   static EventContentBase _contentFor(
     CulturalEvent event,
     TimeService timeService, {
-    bool alarmSet = false,
-    VoidCallback? onAlarmTap,
+    bool interestSet = false,
+    VoidCallback? onInterestTap,
     VoidCallback? onNavigateTap,
   }) {
     return switch (event.source) {
       EventSource.partner => PartnerEventContent(
           event: event,
           timeService: timeService,
-          alarmSet: alarmSet,
-          onAlarmTap: onAlarmTap,
           onNavigateTap: onNavigateTap,
         ),
       EventSource.public => PublicEventContent(
           event: event,
           timeService: timeService,
-          alarmSet: alarmSet,
-          onAlarmTap: onAlarmTap,
+          interestSet: interestSet,
+          onInterestTap: onInterestTap,
           onNavigateTap: onNavigateTap,
         ),
     };
@@ -118,7 +115,7 @@ class _SheetWrapper extends ConsumerStatefulWidget {
 }
 
 class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
-  bool _alarmSet = false;
+  bool _interestSet = false;
 
   // 흔적 폼 상태
   bool _showForm = false;
@@ -130,131 +127,6 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
   void dispose() {
     _memoCtrl.dispose();
     super.dispose();
-  }
-
-  Future<void> _showAlarmSlider() async {
-    final remaining = widget.event.endDateTime.difference(DateTime.now());
-    if (remaining <= Duration.zero) return;
-
-    // 슬라이더 범위: 10분 ~ min(남은시간, 3시간)
-    final maxMinutes = remaining.inMinutes.clamp(10, 180).toDouble();
-
-    double selectedMinutes = (maxMinutes / 2).clamp(10, maxMinutes);
-
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) {
-          final h = (selectedMinutes / 60).floor();
-          final m = (selectedMinutes % 60).round();
-          final label = h > 0
-              ? (m > 0
-                  ? ctx.l10n.alarmBeforeHourMin(h, m)
-                  : ctx.l10n.alarmBeforeHour(h))
-              : ctx.l10n.alarmBeforeMinutes(m);
-
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  ctx.l10n.alarmSheetTitle,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  ctx.l10n.alarmSheetSubtitle,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF999999),
-                  ),
-                ),
-                const SizedBox(height: 28),
-                Center(
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF16213E),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Text(ctx.l10n.alarmMin10,
-                        style: const TextStyle(fontSize: 11, color: Color(0xFFAAAAAA))),
-                    Expanded(
-                      child: Slider(
-                        value: selectedMinutes,
-                        min: 10,
-                        max: maxMinutes,
-                        divisions: ((maxMinutes - 10) / 5).round().clamp(1, 34),
-                        activeColor: const Color(0xFF16213E),
-                        inactiveColor: const Color(0xFFEEEEEE),
-                        onChanged: (v) =>
-                            setModalState(() => selectedMinutes = v),
-                      ),
-                    ),
-                    Text(
-                      maxMinutes >= 60
-                          ? ctx.l10n.alarmBeforeHour((maxMinutes / 60).floor())
-                          : ctx.l10n.alarmBeforeMinutes(maxMinutes.round()),
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFFAAAAAA)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    final granted =
-                        await NotificationService.instance.requestPermission();
-                    if (!granted) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(context.l10n.alarmPermissionDenied),
-                          ),
-                        );
-                      }
-                      return;
-                    }
-                    final notifyAt = widget.event.endDateTime
-                        .subtract(Duration(minutes: selectedMinutes.round()));
-                    await NotificationService.instance.scheduleEventAlarm(
-                      eventId: widget.event.id,
-                      eventTitle: widget.event.title,
-                      notifyAt: notifyAt,
-                    );
-                    if (mounted) setState(() => _alarmSet = true);
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF16213E),
-                    minimumSize: const Size(double.infinity, 48),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text(ctx.l10n.alarmConfirm),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
   }
 
   bool get _showTimer {
@@ -417,8 +289,8 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
     final content = EventDetailSheet._contentFor(
       widget.event,
       widget.timeService,
-      alarmSet: _alarmSet,
-      onAlarmTap: _showAlarmSlider,
+      interestSet: _interestSet,
+      onInterestTap: () => setState(() => _interestSet = true),
       onNavigateTap: navigateCallback,
     );
     final showTimer = _showTimer;

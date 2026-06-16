@@ -106,19 +106,43 @@ class _LocationCard extends StatelessWidget {
     return _GlassCard(
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Text(
-            '위치 정보 사용 동의',
+            'Z:GUM',
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: AppTheme.deepBlue,
-              fontSize: 20,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            '개인정보를 수집하지 않습니다.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppTheme.deepBlue.withValues(alpha: 0.55),
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Divider(color: AppTheme.deepBlue.withValues(alpha: 0.12), height: 1),
+          const SizedBox(height: 20),
+          const Text(
+            '위치 정보 사용 동의',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppTheme.deepBlue,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Text(
-            '서비스 제공 목적\n수집·제공 안 함',
+            '주변을 발견하는 역할만 합니다.',
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: AppTheme.deepBlue.withValues(alpha: 0.72),
               fontSize: 14,
@@ -197,10 +221,11 @@ class _IdentityCard extends StatelessWidget {
     return _GlassCard(
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Text(
             '본인 인증',
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: AppTheme.deepBlue,
               fontSize: 20,
@@ -209,7 +234,8 @@ class _IdentityCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            '인증 후 모든 콘텐츠를 이용할 수 있습니다.\n인증은 나중에도 할 수 있습니다.',
+            '인증 후 모든 콘텐츠를\n이용할 수 있습니다.\n인증은 앱내 설정에서\n변경 가능합니다.',
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: AppTheme.deepBlue.withValues(alpha: 0.72),
               fontSize: 14,

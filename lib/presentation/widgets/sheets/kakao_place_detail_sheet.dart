@@ -35,10 +35,17 @@ class KakaoPlaceDetailSheet {
   }
 }
 
-class _PlaceSheet extends StatelessWidget {
+class _PlaceSheet extends StatefulWidget {
   final MapMarkerModel place;
 
   const _PlaceSheet({required this.place});
+
+  @override
+  State<_PlaceSheet> createState() => _PlaceSheetState();
+}
+
+class _PlaceSheetState extends State<_PlaceSheet> {
+  bool _interestSet = false;
 
   String _formatDistance(String raw) {
     final m = int.tryParse(raw) ?? 0;
@@ -48,6 +55,7 @@ class _PlaceSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final place = widget.place;
     final screenHeight = MediaQuery.sizeOf(context).height;
     final address = (place.roadAddress?.isNotEmpty == true)
         ? place.roadAddress!
@@ -79,50 +87,68 @@ class _PlaceSheet extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 장소명
-              Text(
-                place.title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A1A2E),
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          place.title,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1A1A2E),
+                          ),
+                        ),
+                        if (place.categoryName?.isNotEmpty == true) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            place.categoryName!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF16213E),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                        if (place.distance?.isNotEmpty == true) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatDistance(place.distance!),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF888888),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _interestSet ? null : () => setState(() => _interestSet = true),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 8, top: 2),
+                      child: Icon(
+                        _interestSet ? Icons.bookmark : Icons.bookmark_border,
+                        size: 22,
+                        color: _interestSet
+                            ? const Color(0xFF16213E)
+                            : const Color(0xFFAAAAAA),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-
-              // 카테고리
-              if (place.categoryName?.isNotEmpty == true) ...[
-                const SizedBox(height: 6),
-                Text(
-                  place.categoryName!,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF16213E),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-
-              // 거리
-              if (place.distance?.isNotEmpty == true) ...[
-                const SizedBox(height: 4),
-                Text(
-                  _formatDistance(place.distance!),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF888888),
-                  ),
-                ),
-              ],
 
               const SizedBox(height: 20),
               const Divider(height: 1, color: Color(0xFFF0F0F0)),
               const SizedBox(height: 20),
 
-              // 주소
               if (address?.isNotEmpty == true)
                 _InfoRow(icon: Icons.location_on_outlined, text: address!),
 
-              // 전화번호
               if (place.phone?.isNotEmpty == true) ...[
                 const SizedBox(height: 12),
                 _InfoRow(icon: Icons.phone_outlined, text: place.phone!),
@@ -132,7 +158,6 @@ class _PlaceSheet extends StatelessWidget {
               const Divider(height: 1, color: Color(0xFFF0F0F0)),
               const SizedBox(height: 20),
 
-              // Z:GUM 등록 정보
               const Text(
                 'Z:GUM에 등록된 이벤트가 없습니다',
                 style: TextStyle(

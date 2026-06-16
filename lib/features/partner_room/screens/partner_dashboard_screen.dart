@@ -184,6 +184,10 @@ class _PartnerDashboardScreenState
                   const SizedBox(height: 8),
                   _lockedCard('관리자 전용 분석'),
                 ],
+                const SizedBox(height: 32),
+                _sectionLabel('개발자'),
+                const SizedBox(height: 12),
+                const _AdminModeToggle(),
               ],
             ),
           ),
@@ -287,6 +291,51 @@ class _PartnerDashboardScreenState
           const Text(
             '준비 중',
             style: TextStyle(fontSize: 11, color: Color(0xFFDDDDDD)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminModeToggle extends ConsumerWidget {
+  const _AdminModeToggle();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isAdmin = ref.watch(adminModeProvider);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: isAdmin ? const Color(0xFF1A1A2E) : const Color(0xFFEEEEEE),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.admin_panel_settings_outlined,
+              size: 17,
+              color: isAdmin ? Colors.white : const Color(0xFFAAAAAA),
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Text(
+              '관리자 모드',
+              style: TextStyle(fontSize: 15, color: Color(0xFF333333)),
+            ),
+          ),
+          Switch(
+            value: isAdmin,
+            onChanged: (v) => ref.read(adminModeProvider.notifier).state = v,
+            activeThumbColor: const Color(0xFF1A1A2E),
           ),
         ],
       ),

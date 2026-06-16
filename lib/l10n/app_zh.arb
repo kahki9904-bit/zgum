@@ -13,17 +13,7 @@
   "partnerBadge": "此刻",
 
   "checkInButton": "此刻",
-  "alarmSet": "设置提醒",
-  "alarmSetDone": "已设置",
   "navigate": "出发",
-  "alarmSheetTitle": "设置提醒时间",
-  "alarmSheetSubtitle": "活动结束前多久提醒您？",
-  "alarmConfirm": "设置提醒",
-  "alarmMin10": "10分钟",
-  "alarmBeforeMinutes": "{minutes}分钟前提醒",
-  "alarmBeforeHourMin": "{hours}小时{minutes}分钟前提醒",
-  "alarmBeforeHour": "{hours}小时前提醒",
-  "alarmPermissionDenied": "需要通知权限，请在设置中允许。",
 
   "timerEnded": "已结束",
   "timerDaysLeft": "剩余{days}天{hours}小时",

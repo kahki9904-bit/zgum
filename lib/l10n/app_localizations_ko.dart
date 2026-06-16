@@ -40,43 +40,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get checkInButton => '흔적';
 
   @override
-  String get alarmSet => '알림 설정';
-
-  @override
-  String get alarmSetDone => '알림 설정됨';
-
-  @override
   String get navigate => '안내';
-
-  @override
-  String get alarmSheetTitle => '알림 시간 설정';
-
-  @override
-  String get alarmSheetSubtitle => '이벤트 종료 몇 분 전에 알림을 받을까요?';
-
-  @override
-  String get alarmConfirm => '알림 설정';
-
-  @override
-  String get alarmMin10 => '10분';
-
-  @override
-  String alarmBeforeMinutes(int minutes) {
-    return '$minutes분 전 알림';
-  }
-
-  @override
-  String alarmBeforeHourMin(int hours, int minutes) {
-    return '$hours시간 $minutes분 전 알림';
-  }
-
-  @override
-  String alarmBeforeHour(int hours) {
-    return '$hours시간 전 알림';
-  }
-
-  @override
-  String get alarmPermissionDenied => '알림 권한이 필요합니다. 설정에서 허용해 주세요.';
 
   @override
   String get timerEnded => '종료됨';
