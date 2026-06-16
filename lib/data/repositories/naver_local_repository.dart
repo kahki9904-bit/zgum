@@ -1,5 +1,5 @@
 import '../../core/app_config.dart';
-import '../models/map_marker_model.dart';
+import '../../core/models/map_marker_model.dart';
 
 /// 네이버 지역 검색 API 저장소 스텁.
 ///

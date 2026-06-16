@@ -213,7 +213,12 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     // 운영 전환 시 이 줄 삭제 → Firestore 실시간 구독으로 대체
     if (!mounted) return;
     final mockRegistered = ref.read(mockPartnerEventStoreProvider);
-    final all = [...publicEvents, ...kopisEvents, ...partnerEvents, ...mockRegistered];
+    final all = [
+      if (AppConstants.showPublicApiMarkers) ...publicEvents,
+      if (AppConstants.showPublicApiMarkers) ...kopisEvents,
+      ...partnerEvents,
+      ...mockRegistered,
+    ];
     final now = _timeService.now();
     final active = all
         .where((e) => !EventFade.isFullyExpired(e.endDateTime, now))

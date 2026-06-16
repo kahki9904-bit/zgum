@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_radius.dart';
 
@@ -21,7 +22,7 @@ class AppTheme {
         ),
         scaffoldBackgroundColor: AppColors.background,
 
-        textTheme: const TextTheme(
+        textTheme: GoogleFonts.gothicA1TextTheme(const TextTheme(
           displayLarge: TextStyle(
             color: AppColors.primaryDark,
             fontWeight: FontWeight.w300,
@@ -57,7 +58,7 @@ class AppTheme {
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
           ),
-        ),
+        )),
 
         appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.background,

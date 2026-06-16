@@ -18,8 +18,7 @@ class MockCulturalEventRepository implements CulturalEventRepository {
     await Future.delayed(const Duration(milliseconds: 400));
 
     return _buildEvents(center).where((e) {
-      if (!isIdentityVerified && e.isAdultOnly) return false;
-      // 파트너 이벤트는 거리 제한 없이 항상 포함
+      // 파트너 이벤트는 거리 제한 없이 항상 포함 (성인 전용 포함 — 상세 페이지 배지로 표시)
       if (e.source == EventSource.partner) return true;
       return _haversineKm(center, e.location) <= radiusKm;
     }).toList();
@@ -303,16 +302,31 @@ class MockCulturalEventRepository implements CulturalEventRepository {
         partnerMessage: '오늘 처음 문을 여는 공간입니다.',
       ),
 
+      // ── 서면 파트너 이벤트 (마커 테스트용) ──────────────────────────────────
+      CulturalEvent(
+        id: 'par-seomyeon-001',
+        title: '서면 팝업 스토어',
+        venue: '서면 팝업존',
+        address: '부산 부산진구 서면로 45',
+        description: '서면 중심부 팝업 행사.',
+        startDate: now,
+        endDateTime: now.add(const Duration(hours: 4)),
+        location: const LatLng(35.1570, 129.0590),
+        category: EventCategory.partner,
+        isFree: true,
+        source: EventSource.partner,
+      ),
+
       // ── 성인 전용 이벤트 (isAdultOnly: true) ────────────────────────────
       CulturalEvent(
         id: 'par-adult-001',
         title: '루프탑 바 Sky Lounge',
-        venue: 'Sky Lounge 강남',
-        address: '서울 강남구 테헤란로 152',
-        description: '강남 루프탑에서 저녁 시간을 보내는 공간.\n만 19세 이상 입장 가능.',
+        venue: 'Sky Lounge 서면',
+        address: '부산 부산진구 서면로 68',
+        description: '서면 루프탑에서 저녁 시간을 보내는 공간.\n만 19세 이상 입장 가능.',
         startDate: now,
         endDateTime: now.add(const Duration(hours: 5)),
-        location: const LatLng(37.5013, 127.0376),
+        location: const LatLng(35.1579, 129.0597),
         category: EventCategory.partner,
         isFree: false,
         isAdultOnly: true,
@@ -320,99 +334,17 @@ class MockCulturalEventRepository implements CulturalEventRepository {
       ),
       CulturalEvent(
         id: 'par-adult-002',
-        title: 'The Card Room 강남 오픈',
-        venue: 'The Card Room 강남',
-        address: '서울 강남구 논현로 508',
+        title: 'The Card Room 서면 오픈',
+        venue: 'The Card Room 서면',
+        address: '부산 부산진구 중앙대로 672',
         description: '보드게임·카드게임 전문 성인 라운지. 신규 오픈.\n만 19세 이상만 이용 가능합니다.',
         startDate: now,
         endDateTime: now.add(const Duration(hours: 6)),
-        location: const LatLng(37.5102, 127.0244),
+        location: const LatLng(35.1565, 129.0583),
         category: EventCategory.show,
         isFree: false,
         isAdultOnly: true,
         source: EventSource.partner,
-      ),
-
-      // ── 테스트용 가상 이벤트 (현재 위치 주변 고정 배치) ──────────────────────
-      // 10분 도보 경계(약 667m) 안쪽
-      CulturalEvent(
-        id: 'test-001',
-        title: '[테스트] 근처 전시 (5분)',
-        venue: '테스트 갤러리',
-        address: '현재 위치 북동쪽 약 350m',
-        description: '테스트용. 현재 위치 기준 북동쪽 350m (도보 5분 이내)',
-        startDate: now,
-        endDateTime: now.add(const Duration(hours: 6)),
-        location: LatLng(center.latitude + 0.003, center.longitude + 0.002),
-        category: EventCategory.exhibition,
-        isFree: true,
-        source: EventSource.public,
-      ),
-      CulturalEvent(
-        id: 'test-002',
-        title: '[테스트] 근처 콘서트 (7분)',
-        venue: '테스트 공연장',
-        address: '현재 위치 북서쪽 약 450m',
-        description: '테스트용. 현재 위치 기준 북서쪽 450m (도보 7분 이내)',
-        startDate: now,
-        endDateTime: now.add(const Duration(hours: 6)),
-        location: LatLng(center.latitude + 0.002, center.longitude - 0.004),
-        category: EventCategory.concert,
-        isFree: false,
-        source: EventSource.public,
-      ),
-      CulturalEvent(
-        id: 'test-003',
-        title: '[테스트] 근처 영화 (8분)',
-        venue: '테스트 영화관',
-        address: '현재 위치 남동쪽 약 500m',
-        description: '테스트용. 현재 위치 기준 남동쪽 500m (도보 8분 이내)',
-        startDate: now,
-        endDateTime: now.add(const Duration(hours: 6)),
-        location: LatLng(center.latitude - 0.004, center.longitude + 0.003),
-        category: EventCategory.movie,
-        isFree: false,
-        source: EventSource.public,
-      ),
-      // 10분 도보 경계(약 667m) 바깥쪽 — 흐리게 표시되어야 함
-      CulturalEvent(
-        id: 'test-004',
-        title: '[테스트] 원거리 공연 (흐림)',
-        venue: '테스트 원거리 공연장',
-        address: '현재 위치 북쪽 약 900m',
-        description: '테스트용. 현재 위치 기준 북쪽 900m (도보 10분 초과 → 흐리게)',
-        startDate: now,
-        endDateTime: now.add(const Duration(hours: 6)),
-        location: LatLng(center.latitude + 0.008, center.longitude),
-        category: EventCategory.theater,
-        isFree: false,
-        source: EventSource.public,
-      ),
-      CulturalEvent(
-        id: 'test-005',
-        title: '[테스트] 원거리 전시 (흐림)',
-        venue: '테스트 원거리 갤러리',
-        address: '현재 위치 동쪽 약 950m',
-        description: '테스트용. 현재 위치 기준 동쪽 950m (도보 10분 초과 → 흐리게)',
-        startDate: now,
-        endDateTime: now.add(const Duration(hours: 6)),
-        location: LatLng(center.latitude, center.longitude + 0.010),
-        category: EventCategory.exhibition,
-        isFree: true,
-        source: EventSource.public,
-      ),
-      CulturalEvent(
-        id: 'test-006',
-        title: '[테스트] 원거리 콘서트 (흐림)',
-        venue: '테스트 원거리 콘서트홀',
-        address: '현재 위치 남서쪽 약 1km',
-        description: '테스트용. 현재 위치 기준 남서쪽 1km (도보 10분 초과 → 흐리게)',
-        startDate: now,
-        endDateTime: now.add(const Duration(hours: 6)),
-        location: LatLng(center.latitude - 0.007, center.longitude - 0.007),
-        category: EventCategory.concert,
-        isFree: false,
-        source: EventSource.public,
       ),
 
     ];

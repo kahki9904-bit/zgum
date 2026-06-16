@@ -7,7 +7,7 @@ import '../../core/interfaces/map_engine.dart';
 import '../../core/models/map_marker_model.dart';
 import '../../core/theme.dart';
 import '../../features/map_room/engines/flutter_map_engine.dart';
-import '../../shell_screen.dart';
+import '../shell/shell_screen.dart';
 
 // ── 화면 상태 머신 ─────────────────────────────────────────────────────────────
 

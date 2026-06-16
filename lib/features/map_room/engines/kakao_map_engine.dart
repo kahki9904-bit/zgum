@@ -114,9 +114,11 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
     super.didUpdateWidget(old);
     final native = _native;
     if (native == null) return;
-    if (widget.markers != old.markers ||
-        widget.userLocation != old.userLocation) {
+    if (widget.markers != old.markers) {
       _syncMarkers(native);
+    }
+    if (widget.userLocation != old.userLocation) {
+      _syncUserMarker(native);
     }
     if (widget.routePoints != old.routePoints) {
       _syncRoute(native);
@@ -138,66 +140,91 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
     );
   }
 
+  // 이벤트 마커 비트맵 캐시
+  kakao.KImage? _markerImage;
+
+  Future<kakao.KImage> _getMarkerImage() async {
+    if (_markerImage != null) return _markerImage!;
+    const double iconSize = 20.0;
+    const double tapSize = 44.0;
+    const markerWidget = SizedBox(
+      width: tapSize,
+      height: tapSize,
+      child: Center(
+        child: Icon(Icons.location_on, size: iconSize),
+      ),
+    );
+    _markerImage = await kakao.KImage.fromWidget(markerWidget, const Size(tapSize, tapSize));
+    return _markerImage!;
+  }
+
+  // 내 위치 마커 비트맵 캐시
+  kakao.KImage? _userMarkerImage;
+  kakao.Poi? _userLocationPoi;
+
+  Future<kakao.KImage> _getUserMarkerImage() async {
+    if (_userMarkerImage != null) return _userMarkerImage!;
+    const double iconSize = 28.0;
+    const double tapSize = 44.0;
+    const markerWidget = SizedBox(
+      width: tapSize,
+      height: tapSize,
+      child: Center(
+        child: Icon(Icons.location_on, size: iconSize),
+      ),
+    );
+    _userMarkerImage = await kakao.KImage.fromWidget(markerWidget, const Size(tapSize, tapSize));
+    return _userMarkerImage!;
+  }
+
+  Future<void> _syncUserMarker(kakao.KakaoMapController ctrl) async {
+    final existing = _userLocationPoi;
+    if (existing != null) {
+      await ctrl.labelLayer.removePoi(existing);
+      _userLocationPoi = null;
+    }
+    final loc = widget.userLocation;
+    if (loc == null) return;
+    final icon = await _getUserMarkerImage();
+    _userLocationPoi = await ctrl.labelLayer.addPoi(
+      kakao.LatLng(loc.latitude, loc.longitude),
+      style: kakao.PoiStyle(icon: icon),
+    );
+  }
+
+  List<MapMarkerModel>? _pendingMarkers;
+
   Future<void> _syncMarkers(kakao.KakaoMapController ctrl) async {
-    if (_syncing) return;
+    if (_syncing) {
+      _pendingMarkers = List.of(widget.markers);
+      return;
+    }
     _syncing = true;
+    _pendingMarkers = null;
     try {
-      // 기존 POI 삭제
       for (final poi in _activePois) {
         await ctrl.labelLayer.removePoi(poi);
       }
       _activePois.clear();
 
-      final allMarkers = [
-        ...widget.markers,
-        if (widget.userLocation != null)
-          MapMarkerModel(
-            id: '__user__',
-            location: widget.userLocation!,
-            category: MarkerCategory.other,
-            title: '',
-            venue: '',
-          ),
-      ];
-
-      for (final m in allMarkers) {
+      final markersToSync = List.of(widget.markers);
+      final icon = await _getMarkerImage();
+      for (final m in markersToSync) {
         if (!mounted) break;
-        final isUser = m.id == '__user__';
-        final color = isUser
-            ? const Color(0xFF16213E)
-            : Color(widget.colorForMarker(m));
-        final size = isUser ? 20.0 : (m.isHighlighted ? 22.0 : 18.0);
-        final borderWidth = isUser ? 3.0 : (m.isHighlighted ? 3.0 : 2.0);
-
-        final icon = await kakao.KImage.fromWidget(
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: borderWidth),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x40000000),
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-          ),
-          Size(size, size),
-        );
-
         final poi = await ctrl.labelLayer.addPoi(
           kakao.LatLng(m.location.latitude, m.location.longitude),
           style: kakao.PoiStyle(icon: icon),
-          onClick: isUser ? null : () => widget.onMarkerTap(m),
+          onClick: () => widget.onMarkerTap(m),
         );
         _activePois.add(poi);
       }
     } finally {
       _syncing = false;
+      final pending = _pendingMarkers;
+      if (pending != null && mounted) {
+        _pendingMarkers = null;
+        _syncMarkers(ctrl);
+      }
     }
   }
 
@@ -230,9 +257,11 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
         widget.controller._attach(this);
         _move(widget.controller._center, widget.initialZoom);
         _syncMarkers(controller);
+        _syncUserMarker(controller);
         _syncRoute(controller);
         widget.onEngineReady?.call();
       },
     );
   }
 }
+

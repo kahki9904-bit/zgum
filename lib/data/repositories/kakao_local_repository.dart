@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../core/app_config.dart';
-import '../models/map_marker_model.dart';
+import '../../core/models/map_marker_model.dart';
 
 /// 검색 목적 구분.
 /// 사용자 발견용과 파트너 등록용은 나중에 필터 기준이 달라질 수 있어 분리.
@@ -62,8 +62,7 @@ class ApiKakaoLocalRepository implements KakaoLocalRepository {
       final preview = key.length >= 8
           ? '${key.substring(0, 4)}...${key.substring(key.length - 4)}'
           : '(길이 이상 — REST API 키 확인 필요)';
-      final lenNote = key.length == 32 ? '32자 정상' : '${key.length}자 — REST API 키는 보통 32자';
-      debugPrint('[KakaoLocal] 키 로드됨: KakaoAK $preview ($lenNote)');
+      debugPrint('[KakaoLocal] 키 로드됨: KakaoAK $preview');
       debugPrint('[KakaoLocal] Authorization 헤더 형식: KakaoAK $preview (공백 포함 여부: ${key.isNotEmpty})');
     }
 

@@ -46,11 +46,18 @@ dependencies:
   # 로컬 알림 — 사용자가 지정한 이벤트에만 알림 예약 (추후 FCM 푸시로 확장 가능)
   flutter_local_notifications: ^18.0.1
   timezone: ^0.9.4
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
 
 flutter:
   generate: true

@@ -17,14 +17,14 @@ class ZGumIcon extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: CustomPaint(painter: _ZGumIconPainter(color: color)),
+      child: CustomPaint(painter: ZGumIconPainter(color: color)),
     );
   }
 }
 
-class _ZGumIconPainter extends CustomPainter {
+class ZGumIconPainter extends CustomPainter {
   final Color color;
-  const _ZGumIconPainter({required this.color});
+  const ZGumIconPainter({required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -34,34 +34,34 @@ class _ZGumIconPainter extends CustomPainter {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.032
+      ..strokeWidth = w * 0.050
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    // 위치 핀 윤곽
+    // 위치 핀 윤곽 (82% 크기로 축소, 중앙 정렬)
     final pinPath = Path()
-      ..moveTo(w * 0.50, h * 0.10)
-      ..cubicTo(w * 0.28, h * 0.10, w * 0.14, h * 0.26, w * 0.14, h * 0.44)
-      ..cubicTo(w * 0.14, h * 0.64, w * 0.50, h * 0.92, w * 0.50, h * 0.92)
-      ..cubicTo(w * 0.50, h * 0.92, w * 0.86, h * 0.64, w * 0.86, h * 0.44)
-      ..cubicTo(w * 0.86, h * 0.26, w * 0.72, h * 0.10, w * 0.50, h * 0.10)
+      ..moveTo(w * 0.500, h * 0.172)
+      ..cubicTo(w * 0.320, h * 0.172, w * 0.205, h * 0.303, w * 0.205, h * 0.451)
+      ..cubicTo(w * 0.205, h * 0.615, w * 0.500, h * 0.844, w * 0.500, h * 0.844)
+      ..cubicTo(w * 0.500, h * 0.844, w * 0.795, h * 0.615, w * 0.795, h * 0.451)
+      ..cubicTo(w * 0.795, h * 0.303, w * 0.680, h * 0.172, w * 0.500, h * 0.172)
       ..close();
     canvas.drawPath(pinPath, paint);
 
-    // 사람 머리 (핀 중심보다 미세하게 좌측 배치)
+    // 사람 머리
     canvas.drawCircle(
-      Offset(w * 0.49, h * 0.36),
-      w * 0.087,
+      Offset(w * 0.492, h * 0.385),
+      w * 0.071,
       paint,
     );
 
-    // 사람 어깨선 (자연스러운 곡선)
+    // 사람 어깨선
     final shoulderPath = Path()
-      ..moveTo(w * 0.34, h * 0.57)
-      ..quadraticBezierTo(w * 0.49, h * 0.50, w * 0.64, h * 0.58);
+      ..moveTo(w * 0.369, h * 0.557)
+      ..quadraticBezierTo(w * 0.492, h * 0.500, w * 0.615, h * 0.566);
     canvas.drawPath(shoulderPath, paint);
   }
 
   @override
-  bool shouldRepaint(_ZGumIconPainter old) => old.color != color;
+  bool shouldRepaint(ZGumIconPainter old) => old.color != color;
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../presentation/widgets/dialogs/zgum_dialog.dart';
+import '../../presentation/widgets/dialogs/zgum_dialog.dart';
 import 'free_use_service.dart';
 
 Future<void> showFreeUseIntroPopup(BuildContext context) {

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'dialogs/camera_chooser_popup.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/providers/shell_page_provider.dart';
@@ -66,6 +67,9 @@ class _TraceSheetState extends ConsumerState<_TraceSheet> {
   }
 
   Future<void> _openCamera() async {
+    final shown = await isCameraChooserPopupShown();
+    if (!shown && mounted) await showCameraChooserPopup(context);
+    if (!mounted) return;
     final file = await ImagePicker().pickImage(
       source: ImageSource.camera,
       maxWidth: 1200,

@@ -1,10 +1,11 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/providers/locale_provider.dart';
+import '../../../core/providers/admin_mode_provider.dart';
 import '../../../promotions/free_use/free_use_settings_tile.dart';
 import '../../../promotions/free_use/free_use_notification_prompt.dart';
-import '../../../presentation/widgets/icons/zgum_icon.dart';
 import 'adult_verification_screen.dart';
 import 'notification_setting_screen.dart';
 import 'app_info_screen.dart';
@@ -44,19 +45,6 @@ class SettingsScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 아이콘 미리보기 (임시)
-              Center(
-                child: Column(
-                  children: [
-                    ZGumIcon(size: 80),
-                    SizedBox(height: 4),
-                    ZGumIcon(size: 48),
-                    SizedBox(height: 4),
-                    ZGumIcon(size: 24),
-                    SizedBox(height: 24),
-                  ],
-                ),
-              ),
               Container(
                 decoration: BoxDecoration(
                   border: Border.all(color: const Color(0xFFEEEEEE)),
@@ -112,11 +100,58 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                     ),
                     const FreeUseSettingsTile(),
+                    const Padding(
+                      padding: EdgeInsets.only(left: 58),
+                      child: _Rule(),
+                    ),
+                    if (kDebugMode) const _AdminModeToggle(),
                   ],
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminModeToggle extends ConsumerWidget {
+  const _AdminModeToggle();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isAdmin = ref.watch(adminModeProvider);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SizedBox(
+        height: 52,
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: isAdmin ? const Color(0xFF1A1A2E) : const Color(0xFFF0F0F0),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.admin_panel_settings_outlined,
+                  size: 17,
+                  color: isAdmin ? Colors.white : const Color(0xFFAAAAAA)),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Text(
+                '관리자 모드',
+                style: TextStyle(color: Color(0xFF333333), fontSize: 15),
+              ),
+            ),
+            Switch(
+              value: isAdmin,
+              onChanged: (v) => ref.read(adminModeProvider.notifier).state = v,
+              activeThumbColor: const Color(0xFF1A1A2E),
+            ),
+          ],
         ),
       ),
     );

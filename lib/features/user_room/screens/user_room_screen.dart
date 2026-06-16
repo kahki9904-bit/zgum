@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/check_in_record.dart';
 import '../providers/check_in_provider.dart';
 import 'settings_screen.dart';
-import 'trace_gallery_screen.dart';
 
 class UserRoomScreen extends ConsumerStatefulWidget {
   const UserRoomScreen({super.key});
@@ -38,17 +37,7 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Expanded(
-                      child: Text(
-                        '흔적',
-                        style: TextStyle(
-                          color: Color(0xFF1A1A2E),
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ),
+                    const Expanded(child: SizedBox()),
                     if (records.isNotEmpty) ...[
                       GestureDetector(
                         onTap: () => setState(
@@ -77,18 +66,11 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
                 )
               else
                 Expanded(
-                  child: GridView.builder(
-                    padding: EdgeInsets.fromLTRB(4, 0, 4, botPad + 16),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisExtent: 200,
-                      mainAxisSpacing: 4,
-                      crossAxisSpacing: 4,
-                    ),
+                  child: ListView.builder(
+                    padding: EdgeInsets.only(bottom: botPad + 16),
                     itemCount: sorted.length,
                     itemBuilder: (context, index) =>
-                        _GridTile(record: sorted[index]),
+                        _FeedCard(record: sorted[index]),
                   ),
                 ),
             ],
@@ -100,12 +82,12 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
   }
 }
 
-// ── 구역 3: 그리드 타일 ───────────────────────────────────────────────────────
+// ── 구역 3: 피드 카드 ───────────────────────────────────────────────────────
 
-class _GridTile extends StatelessWidget {
+class _FeedCard extends StatelessWidget {
   final CheckInRecord record;
 
-  const _GridTile({required this.record});
+  const _FeedCard({required this.record});
 
   void _openDetail(BuildContext context) {
     showGeneralDialog<void>(
@@ -136,53 +118,102 @@ class _GridTile extends StatelessWidget {
     );
   }
 
-  void _openGallery(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const TraceGalleryScreen()),
+  void _showPhotoPopup(BuildContext context) {
+    if (record.photoPath == null) return;
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black.withValues(alpha: 0.75),
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (dialogContext, __, ___) => GestureDetector(
+        onTap: () => Navigator.of(dialogContext).pop(),
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: GestureDetector(
+            onTap: () {},
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(
+                File(record.photoPath!),
+                width: MediaQuery.sizeOf(context).width * 0.88,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+        ),
+      ),
+      transitionBuilder: (_, animation, __, child) => ScaleTransition(
+        scale: Tween<double>(begin: 0.85, end: 1.0).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+        ),
+        child: FadeTransition(opacity: animation, child: child),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final hasPhoto = record.photoPath != null;
+    final dt = record.checkedInAt;
+    final dateStr = '${dt.month}.${dt.day.toString().padLeft(2, '0')}';
+    final hasMemo = record.memo != null && record.memo!.isNotEmpty;
 
     return GestureDetector(
       onTap: () => _openDetail(context),
-      onLongPress: () => _openGallery(context),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: hasPhoto
-            ? Image.file(
-                File(record.photoPath!),
-                width: double.infinity,
-                height: 200,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _textTile(),
-              )
-            : _textTile(),
-      ),
-    );
-  }
-
-  Widget _textTile() {
-    return Container(
-      width: double.infinity,
-      height: 200,
-      color: const Color(0xFFF4F6FB),
-      alignment: Alignment.center,
-      padding: const EdgeInsets.all(20),
-      child: Text(
-        record.eventTitle,
-        maxLines: 3,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: 15,
-          color: Color(0xFF3A5FCD),
-          fontWeight: FontWeight.w700,
-          height: 1.4,
-        ),
+      onLongPress: () => _showPhotoPopup(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (hasPhoto)
+            Image.file(
+              File(record.photoPath!),
+              width: double.infinity,
+              fit: BoxFit.fitWidth,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  record.eventTitle,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A2E),
+                    height: 1.3,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${record.venue}  ·  $dateStr',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFAAAAAA),
+                  ),
+                ),
+                if (hasMemo) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    record.memo!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF666666),
+                      height: 1.5,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
+        ],
       ),
     );
   }

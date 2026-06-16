@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../presentation/widgets/dialogs/zgum_dialog.dart';
+import '../../presentation/widgets/dialogs/zgum_dialog.dart';
 
 // 앱 포그라운드 복귀 시 알림 OFF 감지 경고
 Future<void> showFreeUseAlertPopup(BuildContext context) {

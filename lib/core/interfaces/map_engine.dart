@@ -39,20 +39,12 @@ abstract class MapEngine {
     VoidCallback? onEngineReady,
   });
 
-  /// 마커 카테고리에 따른 색상 (ARGB int). 엔진별로 오버라이드 가능.
+  /// 마커 색상 (ARGB int) — 파트너/검색/공공 3종류.
+  /// 색상 변경 시 이 메서드만 수정하면 됩니다.
   int markerColor(MapMarkerModel marker) {
-    if (marker.isAdultOnly) return 0xFFFF4C7D;
-    if (marker.isPartner) return 0xFFFF8C00;
-    return switch (marker.category) {
-      MarkerCategory.movie => 0xFF2196F3,
-      MarkerCategory.theater => 0xFF9C27B0,
-      MarkerCategory.exhibition => 0xFFFFC107,
-      MarkerCategory.show => 0xFF4CAF50,
-      MarkerCategory.concert => 0xFFF44336,
-      MarkerCategory.sale => 0xFFFF8C00,
-      MarkerCategory.cinema => 0xFF0D47A1,
-      MarkerCategory.partner => 0xFFFF8C00,
-      MarkerCategory.other => 0xFF00BCD4,
-    };
+    if (marker.isPartner) return 0xFFE63946;  // 파트너 — 레드
+    if (marker.category == MarkerCategory.cinema ||
+        marker.category == MarkerCategory.other) { return 0xFF00B4D8; }  // 검색 — 청록
+    return 0xFF1A1A2E;  // 공공 이벤트 — 딥블루
   }
 }

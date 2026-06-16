@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../shell_screen.dart';
+import '../shell/shell_screen.dart';
 
 class BrandingScreen extends StatefulWidget {
   const BrandingScreen({super.key});

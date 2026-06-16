@@ -3,12 +3,51 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/admin_mode_provider.dart';
 import '../../../dev/mock_partner_event_store.dart';
 import '../../../features/alert/providers/event_stats_provider.dart';
+import '../../../promotions/free_use/free_use_service.dart';
 
-class PartnerDashboardScreen extends ConsumerWidget {
+class PartnerDashboardScreen extends ConsumerStatefulWidget {
   const PartnerDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PartnerDashboardScreen> createState() =>
+      _PartnerDashboardScreenState();
+}
+
+class _PartnerDashboardScreenState
+    extends ConsumerState<PartnerDashboardScreen> {
+  int _remainingDays = 0;
+  bool _freeActive = false;
+  bool _canRegisterToday = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFreeUseStatus();
+  }
+
+  Future<void> _loadFreeUseStatus() async {
+    final isAdmin = ref.read(adminModeProvider);
+    if (isAdmin) {
+      setState(() {
+        _remainingDays = 999;
+        _freeActive = true;
+        _canRegisterToday = true;
+      });
+      return;
+    }
+    final days = await FreeUseService.instance.remainingDays();
+    final active = await FreeUseService.instance.isActive();
+    final canReg = await FreeUseService.instance.canRegisterToday();
+    if (!mounted) return;
+    setState(() {
+      _remainingDays = days;
+      _freeActive = active;
+      _canRegisterToday = canReg;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final topPad = MediaQuery.paddingOf(context).top;
     final isAdmin = ref.watch(adminModeProvider);
     final events = ref.watch(mockPartnerEventStoreProvider);
@@ -55,6 +94,43 @@ class PartnerDashboardScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
               children: [
+                _sectionLabel('무료이용'),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _infoCard(
+                        label: '무료이용 상태',
+                        value: _freeActive ? '활성' : '비활성',
+                        icon: Icons.card_giftcard_outlined,
+                        valueColor: _freeActive
+                            ? const Color(0xFF1A1A2E)
+                            : const Color(0xFFAAAAAA),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _infoCard(
+                        label: '오늘 등록 가능',
+                        value: _freeActive
+                            ? (_canRegisterToday ? '가능' : '한도 초과')
+                            : '-',
+                        icon: Icons.today_outlined,
+                        valueColor: _canRegisterToday && _freeActive
+                            ? const Color(0xFF1A1A2E)
+                            : const Color(0xFFAAAAAA),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _infoCard(
+                  label: '무료이용 잔여',
+                  value: _freeActive ? '$_remainingDays일' : '-',
+                  icon: Icons.hourglass_empty_outlined,
+                  wide: true,
+                ),
+                const SizedBox(height: 24),
                 _sectionLabel('기본 현황'),
                 const SizedBox(height: 12),
                 Row(
@@ -96,15 +172,15 @@ class PartnerDashboardScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 24),
+                _sectionLabel('확장 데이터'),
+                const SizedBox(height: 12),
+                _lockedCard('상세 조회 데이터'),
+                const SizedBox(height: 8),
+                _lockedCard('지역 / 시간대 데이터'),
+                const SizedBox(height: 8),
+                _lockedCard('by Z:GUM 확장 데이터'),
                 if (isAdmin) ...[
-                  const SizedBox(height: 32),
-                  _sectionLabel('확장 데이터'),
-                  const SizedBox(height: 12),
-                  _lockedCard('상세 조회 데이터'),
-                  const SizedBox(height: 8),
-                  _lockedCard('지역 / 시간대 데이터'),
-                  const SizedBox(height: 8),
-                  _lockedCard('by Z:GUM 확장 데이터'),
                   const SizedBox(height: 8),
                   _lockedCard('관리자 전용 분석'),
                 ],
@@ -133,6 +209,7 @@ class PartnerDashboardScreen extends ConsumerWidget {
     required String value,
     required IconData icon,
     Color? valueColor,
+    bool wide = false,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -140,30 +217,52 @@ class PartnerDashboardScreen extends ConsumerWidget {
         color: const Color(0xFFF8F8F8),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: const Color(0xFFAAAAAA)),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: valueColor ?? const Color(0xFF1A1A2E),
-              letterSpacing: -0.3,
+      child: wide
+          ? Row(
+              children: [
+                Icon(icon, size: 18, color: const Color(0xFFAAAAAA)),
+                const SizedBox(width: 12),
+                Text(
+                  label,
+                  style: const TextStyle(
+                      fontSize: 12, color: Color(0xFFAAAAAA)),
+                ),
+                const Spacer(),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: valueColor ?? const Color(0xFF1A1A2E),
+                    letterSpacing: -0.3,
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, size: 18, color: const Color(0xFFAAAAAA)),
+                const SizedBox(height: 10),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: valueColor ?? const Color(0xFF1A1A2E),
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFAAAAAA),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFFAAAAAA),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -182,18 +281,12 @@ class PartnerDashboardScreen extends ConsumerWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFFCCCCCC),
-              ),
+              style: const TextStyle(fontSize: 14, color: Color(0xFFCCCCCC)),
             ),
           ),
           const Text(
             '준비 중',
-            style: TextStyle(
-              fontSize: 11,
-              color: Color(0xFFDDDDDD),
-            ),
+            style: TextStyle(fontSize: 11, color: Color(0xFFDDDDDD)),
           ),
         ],
       ),

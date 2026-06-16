@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart' hide Path;
 import '../../../core/event_fade.dart';
 import '../../../core/interfaces/map_engine.dart';
 import '../../../core/models/map_marker_model.dart';
+import '../../../presentation/widgets/icons/zgum_icon.dart';
 
 // ── 좌표 변환 헬퍼 ─────────────────────────────────────────────────────────────
 
@@ -92,35 +93,10 @@ class FlutterMapEngine extends MapEngine {
   Marker _buildUserMarker(MapCoordinate location) {
     return Marker(
       point: location.toLatLng(),
-      width: 28,
-      height: 28,
-      alignment: Alignment.center,
-      child: Container(
-        width: 22,
-        height: 22,
-        decoration: BoxDecoration(
-          color: const Color(0xFF16213E),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 3),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.30),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Container(
-            width: 6,
-            height: 6,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-      ),
+      width: 48,
+      height: 52,
+      alignment: Alignment.bottomCenter,
+      child: const _UserMarkerPin(),
     );
   }
 
@@ -136,11 +112,12 @@ class FlutterMapEngine extends MapEngine {
         ? (EventFade.negativeLabel(deadline, now) ?? '')
         : '';
     final highlighted = marker.isHighlighted;
+    final shouldBlink = !expired && !marker.isDimmed;
 
     return Marker(
       point: marker.location.toLatLng(),
       width: highlighted ? 88 : 72,
-      height: highlighted ? 40 : 32,
+      height: highlighted ? 40 : 36,
       alignment: Alignment.bottomCenter,
       child: Opacity(
         opacity: marker.isDimmed ? 0.22 : 1.0,
@@ -152,6 +129,7 @@ class FlutterMapEngine extends MapEngine {
             label: label,
             highlighted: highlighted,
             deadline: deadline,
+            blink: shouldBlink,
           ),
         ),
       ),
@@ -159,13 +137,53 @@ class FlutterMapEngine extends MapEngine {
   }
 }
 
-// ── 마커 핀 위젯 ──────────────────────────────────────────────────────────────
+// ── 내 위치 마커 ──────────────────────────────────────────────────────────────
+
+class _UserMarkerPin extends StatelessWidget {
+  const _UserMarkerPin();
+
+  @override
+  Widget build(BuildContext context) {
+    const pinColor = Color(0xFF1A1A2E);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: pinColor,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Center(
+            child: ZGumIcon(size: 22, color: Colors.white),
+          ),
+        ),
+        const CustomPaint(
+          painter: _PinTipPainter(color: pinColor),
+          size: Size(14, 8),
+        ),
+      ],
+    );
+  }
+}
+
+// ── 이벤트 마커 핀 ────────────────────────────────────────────────────────────
 
 class _MarkerPin extends StatefulWidget {
   final Color color;
   final String label;
   final bool highlighted;
   final DateTime? deadline;
+  final bool blink;
 
   const _MarkerPin({
     super.key,
@@ -173,15 +191,19 @@ class _MarkerPin extends StatefulWidget {
     required this.label,
     this.highlighted = false,
     this.deadline,
+    this.blink = false,
   });
 
   @override
   State<_MarkerPin> createState() => _MarkerPinState();
 }
 
-class _MarkerPinState extends State<_MarkerPin> {
+class _MarkerPinState extends State<_MarkerPin>
+    with SingleTickerProviderStateMixin {
   Timer? _timer;
   DateTime _now = DateTime.now();
+  AnimationController? _blinkCtrl;
+  Animation<double>? _blinkAnim;
 
   @override
   void initState() {
@@ -191,11 +213,21 @@ class _MarkerPinState extends State<_MarkerPin> {
         if (mounted) setState(() => _now = DateTime.now());
       });
     }
+    if (widget.blink) {
+      _blinkCtrl = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 500),
+      )..repeat(reverse: true);
+      _blinkAnim = Tween<double>(begin: 0.8, end: 0.35).animate(
+        CurvedAnimation(parent: _blinkCtrl!, curve: Curves.easeInOut),
+      );
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _blinkCtrl?.dispose();
     super.dispose();
   }
 
@@ -207,7 +239,7 @@ class _MarkerPinState extends State<_MarkerPin> {
         ? const Color(0xFF9E9E9E)
         : widget.color;
 
-    return Opacity(
+    Widget pin = Opacity(
       opacity: fade,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -247,6 +279,15 @@ class _MarkerPinState extends State<_MarkerPin> {
         ],
       ),
     );
+
+    if (widget.blink && _blinkAnim != null) {
+      return AnimatedBuilder(
+        animation: _blinkAnim!,
+        builder: (_, child) => Opacity(opacity: _blinkAnim!.value, child: child!),
+        child: pin,
+      );
+    }
+    return pin;
   }
 }
 
@@ -271,4 +312,3 @@ class _PinTipPainter extends CustomPainter {
   @override
   bool shouldRepaint(_PinTipPainter old) => old.color != color;
 }
-

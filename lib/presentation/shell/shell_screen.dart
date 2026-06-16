@@ -4,31 +4,34 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'core/providers/partner_focus_provider.dart';
-import 'core/providers/shell_page_provider.dart';
-import 'core/providers/partner_my_events_provider.dart';
-import 'core/providers/user_location_provider.dart';
-import 'data/models/check_in_record.dart';
-import 'data/models/cultural_event.dart';
-import 'dev/mock_partner_event_store.dart';
-import 'features/alert/models/partner_event.dart';
-import 'features/friend/data/models/friend_request.dart';
-import 'features/friend/providers/friend_provider.dart';
-import 'services/location_service.dart';
-import 'features/alert/providers/alert_provider.dart';
-import 'features/alert/providers/geofence_provider.dart';
-import 'features/map_room/screens/map_room_screen.dart';
-import 'features/partner_room/screens/partner_room_screen.dart';
-import 'features/user_room/providers/check_in_provider.dart';
-import 'features/user_room/screens/user_room_screen.dart';
-import 'presentation/widgets/trace_checkin_dialog.dart';
-import 'presentation/widgets/dialogs/ieum_accept_dialog.dart';
-import 'presentation/widgets/dialogs/ieum_request_dialog.dart';
-import 'services/gesture_exclusion_service.dart';
-import 'promotions/free_use/free_use_service.dart';
-import 'promotions/free_use/free_use_intro_popup.dart';
-import 'promotions/free_use/free_use_alert_popup.dart';
-import 'features/friend/widgets/ieum_intro_popup.dart';
+import '../../core/providers/partner_focus_provider.dart';
+import '../../core/providers/shell_page_provider.dart';
+import '../../core/providers/partner_my_events_provider.dart';
+import '../../core/providers/user_location_provider.dart';
+import '../../data/models/check_in_record.dart';
+import '../../data/models/cultural_event.dart';
+import '../../dev/mock_partner_event_store.dart';
+import '../../features/alert/models/partner_event.dart';
+import '../../features/friend/data/models/friend_request.dart';
+import '../../features/friend/providers/friend_provider.dart';
+import '../../services/location_service.dart';
+import '../../features/alert/providers/alert_provider.dart';
+import '../../features/alert/providers/geofence_provider.dart';
+import '../../features/map_room/screens/map_room_screen.dart';
+import '../../features/partner_room/screens/partner_room_screen.dart';
+import '../../features/user_room/providers/check_in_provider.dart';
+import '../../features/user_room/screens/user_room_screen.dart';
+import '../widgets/trace_checkin_dialog.dart';
+import '../widgets/dialogs/ieum_accept_dialog.dart';
+import '../widgets/dialogs/ieum_request_dialog.dart';
+import '../../services/gesture_exclusion_service.dart';
+import '../../core/providers/active_partner_event_provider.dart';
+import '../../core/providers/admin_mode_provider.dart';
+import '../../promotions/free_use/free_use_service.dart';
+import '../../promotions/free_use/free_use_intro_popup.dart';
+import '../../promotions/free_use/free_use_alert_popup.dart';
+import '../../features/friend/widgets/ieum_intro_popup.dart';
+import '../widgets/dialogs/camera_chooser_popup.dart';
 
 // 지금 패널/캡슐 크기 상수 (file-level — _NowBundle에서도 사용)
 const double _kCapsuleHeight = 40.0;
@@ -57,6 +60,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   double panelHeight = 300.0;
   bool _tabVisible = false;
   bool _showNowTab = false;
+  bool _mapReady = false;
 
   void _onRouteAnimationComplete() {
     setState(() => _tabVisible = true);
@@ -68,7 +72,11 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   }
 
   void _onMapReady() {
-    if (mounted && !_showNowTab) setState(() => _showNowTab = true);
+    if (!mounted) return;
+    setState(() {
+      _showNowTab = true;
+      _mapReady = true;
+    });
   }
 
   @override
@@ -96,11 +104,16 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     if (mounted) await _checkNotificationStatus();
   }
 
+  Future<void> _showFreeUseIntroIfNeeded() async {
+    final shown = await FreeUseService.instance.isIntroShown();
+    if (!shown && mounted) showFreeUseIntroPopup(context);
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _panelAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _panelAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _showIntroIfNeeded();
@@ -186,6 +199,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       _panelAnim.animateTo(1.0,
           duration: Duration(milliseconds: (rem * 300).round().clamp(80, 300)),
           curve: Curves.easeOut);
+      _navigateToAlertIfNeeded();
     } else {
       _nowPanelOpen.value = false;
       final rem = _panelAnim.value;
@@ -193,6 +207,37 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
           duration: Duration(milliseconds: (rem * 280).round().clamp(80, 280)),
           curve: Curves.easeIn);
     }
+  }
+
+  void _navigateToAlertIfNeeded() {
+    final alerts = (ref.read(partnerAlertProvider)
+          .where((e) => !e.seen && !e.isExpired)
+          .toList()
+        ..sort((a, b) => b.startsAt.compareTo(a.startsAt)));
+    if (alerts.isEmpty) return;
+
+    final event = alerts.first;
+    final cultural = CulturalEvent(
+      id: event.id,
+      title: event.title,
+      venue: event.venue,
+      address: '현재 위치',
+      description: event.title,
+      startDate: event.startsAt,
+      endDateTime: event.expiresAt,
+      location: event.location,
+      category: EventCategory.partner,
+      isFree: false,
+      source: EventSource.partner,
+      partnerMessage: event.message,
+    );
+    final store = ref.read(mockPartnerEventStoreProvider);
+    if (!store.any((e) => e.id == cultural.id)) {
+      ref.read(mockPartnerEventStoreProvider.notifier).state = [...store, cultural];
+    }
+    ref.read(partnerFocusPendingProvider.notifier).state = true;
+    ref.read(partnerFocusProvider.notifier).state = cultural;
+    ref.read(partnerAlertProvider.notifier).markAsSeen(event.id);
   }
 
   /// 지오펜스 3분 체류 달성 시 자동으로 흔적 팝업 표시
@@ -245,11 +290,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
               physics: const NeverScrollableScrollPhysics(),
               onPageChanged: (p) {
                 setState(() => _page = p);
-                // 수동 스와이프로 인한 페이지 변경을 shellPageProvider에 반영
-                // _applyToMap 등이 나중에 page=1을 설정할 때 변경 감지가 가능해짐
                 ref.read(shellPageProvider.notifier).state = p;
                 WidgetsBinding.instance
                     .addPostFrameCallback((_) => _syncExclusionRects());
+                if (p == 2) _showFreeUseIntroIfNeeded();
               },
               children: [
                 _SwipeWrapper(
@@ -320,6 +364,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                                 panelHeight: panelHeight,
                                 panelAnim: _panelAnim,
                                 currentPage: _page,
+                                mapReady: _mapReady,
                                 onDragUpdate: _onNowDragUpdate,
                                 onDragEnd: _onNowDragEnd,
                                 onClose: _closeNow,
@@ -403,6 +448,7 @@ class _NowBundle extends StatelessWidget {
   final double panelHeight;
   final Animation<double> panelAnim;
   final int currentPage;
+  final bool mapReady;
   final GestureDragUpdateCallback onDragUpdate;
   final GestureDragEndCallback onDragEnd;
   final VoidCallback onClose;
@@ -413,6 +459,7 @@ class _NowBundle extends StatelessWidget {
     required this.panelHeight,
     required this.panelAnim,
     required this.currentPage,
+    required this.mapReady,
     required this.onDragUpdate,
     required this.onDragEnd,
     required this.onClose,
@@ -514,7 +561,7 @@ class _NowBundle extends StatelessWidget {
                       onVerticalDragEnd: onDragEnd,
                       child: Align(
                         alignment: Alignment.bottomCenter,
-                        child: _NowCapsule(hasAlert: hasAlert, isOpen: isOpen),
+                        child: _NowCapsule(hasAlert: hasAlert, isOpen: isOpen, mapReady: mapReady),
                       ),
                     ),
                   ),
@@ -853,7 +900,7 @@ class _UserPanelContentState extends ConsumerState<_UserPanelContent> {
     final count = friendCount.whenOrNull(data: (v) => v) ?? 0;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, _kCapsuleHeight + 12, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, _kCapsuleHeight + 12, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -945,31 +992,82 @@ class _RecentTraceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasPhoto = record.photoPath != null;
+    final dt = record.checkedInAt;
+    final dateStr = '${dt.month}.${dt.day.toString().padLeft(2, '0')}';
+    final hasMemo = record.memo != null && record.memo!.isNotEmpty;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: SizedBox(
-        height: 120,
+        height: 240,
         width: double.infinity,
-        child: hasPhoto
-            ? Image.file(File(record.photoPath!), fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _textCard())
-            : _textCard(),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (hasPhoto)
+              Image.file(
+                File(record.photoPath!),
+                height: 240,
+                fit: BoxFit.fitHeight,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      record.eventTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      record.venue,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFFAAAAAA),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      dateStr,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFAAAAAA),
+                      ),
+                    ),
+                    if (hasMemo) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        record.memo!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF666666),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
-
-  Widget _textCard() => Container(
-        color: const Color(0xFFF4F6FB),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(16),
-        child: Text(
-          record.eventTitle,
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF3A5FCD)),
-        ),
-      );
 }
 
 class _SmallAction extends StatelessWidget {
@@ -1040,7 +1138,7 @@ class _TitleInputBarState extends State<_TitleInputBar> {
                     child: TextField(
                       controller: widget.controller,
                       focusNode: widget.focusNode,
-                      style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
+                      style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E), decoration: TextDecoration.none),
                       cursorColor: const Color(0xFF16213E),
                       decoration: const InputDecoration(
                         hintText: '이벤트 제목',
@@ -1100,6 +1198,9 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
   }
 
   Future<void> _takePhoto() async {
+    final shown = await isCameraChooserPopupShown();
+    if (!shown && mounted) await showCameraChooserPopup(context);
+    if (!mounted) return;
     final picked = await _picker.pickImage(
       source: ImageSource.camera,
       imageQuality: 80,
@@ -1143,9 +1244,10 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
       }
     }
 
-    // 무료이용 일일 한도 체크 (버튼이 비활성화되어 있어도 방어 처리)
-    final isFreeActive = await FreeUseService.instance.isActive();
-    if (isFreeActive) {
+    // 무료이용 일일 한도 체크 (관리자 모드는 항상 통과)
+    final isAdmin = ref.read(adminModeProvider);
+    final isFreeActive = isAdmin || await FreeUseService.instance.isActive();
+    if (!isAdmin && isFreeActive) {
       final canRegister = await FreeUseService.instance.canRegisterToday();
       if (!canRegister) return;
     }
@@ -1215,7 +1317,8 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
 
     final paidEvent = event.copyWith(paymentStatus: PaymentStatus.paid, paidAt: now);
     _applyToMap(paidEvent);
-    ref.read(partnerMyEventsProvider.notifier).update((list) => [paidEvent, ...list]);
+    // 대기 상태 저장 → 이곳 패널 재오픈 시 대기 뷰로 표시됨
+    ref.read(activePartnerEventProvider.notifier).state = paidEvent;
     ref.read(shellPageProvider.notifier).state = 1;
     widget.onClose();
   }
@@ -1242,6 +1345,7 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
     ref.read(partnerFocusPendingProvider.notifier).state = true;
     ref.read(partnerFocusProvider.notifier).state = mockCultural;
   }
+
 
   void _showDescOverlay(int index) {
     _descOverlay?.remove();
@@ -1300,12 +1404,16 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
     _descOverlay?.remove();
     _descFocusNode?.dispose();
     _titleCtrl.dispose();
-    for (final c in _photoCtrls) c.dispose();
+    for (final c in _photoCtrls) { c.dispose(); }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final activeEvent = ref.watch(activePartnerEventProvider);
+    if (activeEvent != null) {
+      return _ActiveEventWaitingView(event: activeEvent, onClose: widget.onClose);
+    }
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       behavior: HitTestBehavior.opaque,
@@ -1408,6 +1516,8 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
                 width: MediaQuery.sizeOf(context).width * 0.5,
                 child: FutureBuilder<(bool, bool)>(
                   future: () async {
+                    final isAdmin = ref.read(adminModeProvider);
+                    if (isAdmin) return (true, true);
                     final active = await FreeUseService.instance.isActive();
                     final canRegister = active
                         ? await FreeUseService.instance.canRegisterToday()
@@ -1550,11 +1660,212 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
   }
 }
 
+class _ActiveEventWaitingView extends ConsumerStatefulWidget {
+  final PartnerEvent event;
+  final VoidCallback onClose;
+  const _ActiveEventWaitingView({required this.event, required this.onClose});
+
+  @override
+  ConsumerState<_ActiveEventWaitingView> createState() => _ActiveEventWaitingViewState();
+}
+
+class _ActiveEventWaitingViewState extends ConsumerState<_ActiveEventWaitingView> {
+  Timer? _timer;
+  late Duration _remaining;
+  bool _extending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateRemaining();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(_updateRemaining);
+      if (_remaining <= Duration.zero) _finish();
+    });
+  }
+
+  void _updateRemaining() {
+    final diff = widget.event.expiresAt.difference(DateTime.now());
+    _remaining = diff.isNegative ? Duration.zero : diff;
+  }
+
+  void _finish() {
+    _timer?.cancel();
+    _timer = null;
+    // 지도에서 제거
+    final store = ref.read(mockPartnerEventStoreProvider);
+    ref.read(mockPartnerEventStoreProvider.notifier).state =
+        store.where((e) => e.id != widget.event.id).toList();
+    // 그리드에 추가
+    final list = ref.read(partnerMyEventsProvider);
+    ref.read(partnerMyEventsProvider.notifier).state = [widget.event, ...list];
+    ref.read(activePartnerEventProvider.notifier).state = null;
+    widget.onClose();
+  }
+
+  void _terminate() {
+    _timer?.cancel();
+    _timer = null;
+    // 지도에서 제거, 그리드에는 저장하지 않음
+    final store = ref.read(mockPartnerEventStoreProvider);
+    ref.read(mockPartnerEventStoreProvider.notifier).state =
+        store.where((e) => e.id != widget.event.id).toList();
+    ref.read(activePartnerEventProvider.notifier).state = null;
+    widget.onClose();
+  }
+
+  Future<void> _extend() async {
+    if (_extending) return;
+    setState(() => _extending = true);
+    try {
+      final isAdmin = ref.read(adminModeProvider);
+      final isFreeActive = isAdmin || await FreeUseService.instance.isActive();
+      if (!isAdmin && isFreeActive) {
+        final canRegister = await FreeUseService.instance.canRegisterToday();
+        if (!canRegister) return;
+      }
+      if (isFreeActive) await FreeUseService.instance.recordRegistration();
+
+      final newExpiresAt = widget.event.expiresAt.add(const Duration(hours: 1));
+      final extendedEvent = widget.event.copyWith(expiresAt: newExpiresAt);
+      ref.read(activePartnerEventProvider.notifier).state = extendedEvent;
+
+      final store = ref.read(mockPartnerEventStoreProvider);
+      ref.read(mockPartnerEventStoreProvider.notifier).state = store.map((e) {
+        if (e.id != widget.event.id) return e;
+        return CulturalEvent(
+          id: e.id, title: e.title, venue: e.venue, address: e.address,
+          description: e.description, startDate: e.startDate,
+          endDateTime: newExpiresAt, location: e.location,
+          category: e.category, isFree: e.isFree, source: e.source,
+          partnerMessage: e.partnerMessage, isAdultOnly: e.isAdultOnly,
+        );
+      }).toList();
+    } finally {
+      if (mounted) setState(() => _extending = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _formatDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return h > 0 ? '$h:$m:$s' : '$m:$s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isExpired = _remaining <= Duration.zero;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(height: 28),
+          Text(
+            widget.event.title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1A1A2E),
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '이벤트 진행 중',
+            style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+          ),
+          const Spacer(),
+          Text(
+            isExpired ? '종료됨' : _formatDuration(_remaining),
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w200,
+              color: isExpired ? const Color(0xFFAAAAAA) : const Color(0xFF1A1A2E),
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            isExpired ? '' : '남은 시간',
+            style: const TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),
+          ),
+          const Spacer(),
+          if (isExpired)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEEEEE),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              alignment: Alignment.center,
+              child: const Text(
+                '종료 완료',
+                style: TextStyle(color: Color(0xFFAAAAAA), fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: 2.0),
+              ),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _extending ? null : _extend,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      decoration: BoxDecoration(
+                        color: _extending ? const Color(0xFFAAAAAA) : const Color(0xFF1A1A2E),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        '연장',
+                        style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _terminate,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEEEEE),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        '종료',
+                        style: TextStyle(color: Color(0xFF1A1A2E), fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _NowCapsule extends StatefulWidget {
   final bool hasAlert;
   final bool isOpen;
+  final bool mapReady;
 
-  const _NowCapsule({required this.hasAlert, required this.isOpen});
+  const _NowCapsule({required this.hasAlert, required this.isOpen, required this.mapReady});
 
   @override
   State<_NowCapsule> createState() => _NowCapsuleState();
@@ -1562,9 +1873,6 @@ class _NowCapsule extends StatefulWidget {
 
 class _NowCapsuleState extends State<_NowCapsule>
     with TickerProviderStateMixin {
-  // 앱 세션 내 첫 진입 시 1회만 재생
-  static bool _hasPlayed = false;
-
   late final AnimationController _blink;
   late final Animation<double> _blinkAnim;
   late final AnimationController _light;
@@ -1573,34 +1881,35 @@ class _NowCapsuleState extends State<_NowCapsule>
   @override
   void initState() {
     super.initState();
-    _blink = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
+    _blink = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
     _blinkAnim = Tween<double>(begin: 0.35, end: 1.0).animate(
       CurvedAnimation(parent: _blink, curve: Curves.easeInOut),
     );
     if (widget.hasAlert) _blink.repeat(reverse: true);
 
+    // State 재생성 시 이미 완료 상태로 시작해 재실행 방지
     _light = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 5500),
+      duration: const Duration(milliseconds: 2000),
+      value: widget.mapReady ? 1.0 : 0.0,
     );
-    _lightAnim = CurvedAnimation(parent: _light, curve: Curves.easeInOut);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (_hasPlayed) {
-        _light.value = 1.0; // 이미 재생됐으면 즉시 완료 상태
-      } else {
-        _hasPlayed = true;
-        _light.forward();
-      }
-    });
+    _lightAnim = CurvedAnimation(parent: _light, curve: Curves.decelerate);
+
+    if (widget.mapReady && !_light.isCompleted) {
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted) _light.forward();
+      });
+    }
   }
 
   @override
   void didUpdateWidget(covariant _NowCapsule old) {
     super.didUpdateWidget(old);
+    if (widget.mapReady && !old.mapReady && !_light.isCompleted) {
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted) _light.forward();
+      });
+    }
     if (widget.hasAlert && !old.hasAlert) {
       _blink.repeat(reverse: true);
     } else if (!widget.hasAlert && old.hasAlert) {
@@ -1627,19 +1936,12 @@ class _NowCapsuleState extends State<_NowCapsule>
       animation: Listenable.merge([_blinkAnim, _lightAnim]),
       builder: (_, __) {
         final color = widget.hasAlert ? alertColor : normalColor;
-        final opacity = widget.hasAlert ? _blinkAnim.value : 1.0;
+        final blinkOpacity = widget.hasAlert ? _blinkAnim.value : 1.0;
         final progress = _lightAnim.value;
         final halfW = capsuleWidth / 2;
-        // 0→0.55: 채우기, 0.55→0.85: 중앙 정지, 0.85→1.0: 시안 페이드아웃, 0.93→1.0: 딥블루 페이드인
-        final fillProgress = (progress / 0.55).clamp(0.0, 1.0);
-        final fillWidth = fillProgress * halfW;
-        final fillOpacity = progress < 0.85
-            ? 1.0
-            : (1.0 - (progress - 0.85) / 0.15).clamp(0.0, 1.0);
-        final baseOpacity = progress < 0.93
-            ? 0.0
-            : ((progress - 0.93) / 0.07).clamp(0.0, 1.0);
-        const fillColor = Color(0xFF00E5FF);
+
+        // 양쪽 끝에서 중앙으로 채우기 (decelerate: 끝에서 빠르게 출발 → 중앙에서 부드럽게 안착)
+        final fillWidth = progress * halfW;
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(5),
@@ -1647,51 +1949,24 @@ class _NowCapsuleState extends State<_NowCapsule>
             width: capsuleWidth,
             height: 10,
             child: progress >= 1.0
-                // 완료: 기본 캡슐 유지 (사라지지 않음)
-                ? ColoredBox(color: color.withValues(alpha: opacity * 0.70))
+                ? ColoredBox(color: color.withValues(alpha: blinkOpacity * 0.70))
                 : Stack(
                     children: [
-                      // 베이스 — 처음엔 투명, 페이드아웃 구간에서 딥블루로 교차
-                      Positioned.fill(
-                        child: ColoredBox(color: color.withValues(alpha: baseOpacity * 0.70)),
-                      ),
-                      // 좌측 → 중앙으로 채우기 (선단에 흰빛)
+                      // 좌측 끝 → 중앙으로
                       Positioned(
                         left: 0,
-                        top: 3,
-                        bottom: 3,
+                        top: 0,
+                        bottom: 0,
                         width: fillWidth,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                fillColor.withValues(alpha: fillOpacity),
-                                fillColor.withValues(alpha: fillOpacity),
-                                Colors.white.withValues(alpha: fillOpacity),
-                              ],
-                              stops: const [0.0, 0.65, 1.0],
-                            ),
-                          ),
-                        ),
+                        child: ColoredBox(color: color.withValues(alpha: blinkOpacity * 0.70)),
                       ),
-                      // 우측 → 중앙으로 채우기 (선단에 흰빛)
+                      // 우측 끝 → 중앙으로
                       Positioned(
                         right: 0,
-                        top: 3,
-                        bottom: 3,
+                        top: 0,
+                        bottom: 0,
                         width: fillWidth,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.white.withValues(alpha: fillOpacity),
-                                fillColor.withValues(alpha: fillOpacity),
-                                fillColor.withValues(alpha: fillOpacity),
-                              ],
-                              stops: const [0.0, 0.35, 1.0],
-                            ),
-                          ),
-                        ),
+                        child: ColoredBox(color: color.withValues(alpha: blinkOpacity * 0.70)),
                       ),
                     ],
                   ),

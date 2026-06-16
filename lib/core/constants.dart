@@ -16,4 +16,10 @@ class AppConstants {
 
   /// 앱 이름
   static const String appName = 'Z:GUM';
+
+  // ── 피처 플래그 ───────────────────────────────────────────────────────────────
+
+  /// 공공 API 마커 표시 여부.
+  /// 초창기 지도 채우기용 — 파트너가 충분히 확보되면 false 로 변경.
+  static const bool showPublicApiMarkers = true;
 }

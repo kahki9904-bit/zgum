@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../presentation/widgets/dialogs/zgum_dialog.dart';
+import '../../presentation/widgets/dialogs/zgum_dialog.dart';
 import 'free_use_service.dart';
 
 // 설정 > 알림 탭 시 무료이용 크레딧 안내 팝업

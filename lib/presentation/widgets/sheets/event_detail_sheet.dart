@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import '../dialogs/camera_chooser_popup.dart';
 import '../../../core/event_fade.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/providers/shell_page_provider.dart';
@@ -264,6 +265,9 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
 
 
   Future<void> _openCamera() async {
+    final shown = await isCameraChooserPopupShown();
+    if (!shown && mounted) await showCameraChooserPopup(context);
+    if (!mounted) return;
     final picked = await ImagePicker().pickImage(
       source: ImageSource.camera,
       maxWidth: 1200,

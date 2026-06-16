@@ -1,5 +1,5 @@
 import '../models/cultural_event.dart';
-import '../models/map_marker_model.dart';
+import '../../core/models/map_marker_model.dart';
 
 /// CulturalEvent → MapMarkerModel 변환 어댑터.
 ///
