@@ -2120,7 +2120,7 @@ class _NowCapsuleState extends State<_NowCapsule>
           borderRadius: BorderRadius.circular(5),
           child: SizedBox(
             width: capsuleWidth,
-            height: 10,
+            height: 6,
             child: progress >= 1.0
                 ? ColoredBox(color: color.withValues(alpha: blinkOpacity * 0.70))
                 : Stack(

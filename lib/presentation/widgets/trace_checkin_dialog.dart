@@ -303,7 +303,7 @@ class _TraceSheetState extends ConsumerState<_TraceSheet> {
                         borderRadius: BorderRadius.circular(14)),
                   ),
                   child: const Text(
-                    '흔적',
+                    '지금',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -409,7 +409,7 @@ class _TraceSheetState extends ConsumerState<_TraceSheet> {
                               strokeWidth: 2, color: Colors.white),
                         )
                       : const Text(
-                          '흔적',
+                          '지금',
                           style: TextStyle(
                               fontSize: 15, fontWeight: FontWeight.w700),
                         ),

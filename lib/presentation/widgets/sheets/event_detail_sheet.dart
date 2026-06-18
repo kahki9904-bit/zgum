@@ -462,7 +462,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white),
                         )
-                      : const Text('흔적',
+                      : const Text('지금',
                           style: TextStyle(
                               fontSize: 15, fontWeight: FontWeight.w700)),
                 ),

@@ -888,13 +888,13 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                                   strokeWidth: 3.5,
                                   color: Color(0xFF16213E),
                                 )
-                              : Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.white.withValues(alpha: 0.10),
-                                    border: Border.all(
+                              : Center(
+                                  child: Container(
+                                    width: 20,
+                                    height: 6,
+                                    decoration: BoxDecoration(
                                       color: const Color(0xFF16213E).withValues(alpha: 0.70),
-                                      width: 4.0,
+                                      borderRadius: BorderRadius.circular(5),
                                     ),
                                   ),
                                 ),
