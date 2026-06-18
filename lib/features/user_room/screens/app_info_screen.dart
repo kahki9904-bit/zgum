@@ -50,7 +50,7 @@ class _AppInfoScreenState extends State<AppInfoScreen> {
           const Divider(height: 1, color: Color(0xFFF2F2F2)),
           _infoRow('앱 이름', 'Z:GUM'),
           const Divider(height: 1, color: Color(0xFFF2F2F2)),
-          _infoRow('개발사', 'Z:GUM'),
+          _infoRow('개발사', 'project Z:GUM'),
         ],
       ),
     );
