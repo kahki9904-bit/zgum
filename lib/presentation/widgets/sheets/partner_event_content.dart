@@ -41,20 +41,13 @@ class PartnerEventContent extends EventContentBase {
                     color: const Color(0xFF16213E),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.near_me, size: 13, color: Colors.white),
-                      const SizedBox(width: 3),
-                      Text(
-                        context.l10n.navigate,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    context.l10n.navigate,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),

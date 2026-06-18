@@ -339,15 +339,8 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
         if (widget.onCheckIn != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: FilledButton.icon(
+            child: FilledButton(
               onPressed: widget.isCheckedIn ? null : _openCamera,
-              icon: Icon(
-                widget.isCheckedIn
-                    ? Icons.check_circle_outline
-                    : Icons.where_to_vote_outlined,
-                size: 18,
-              ),
-              label: Text(context.l10n.checkInButton),
               style: FilledButton.styleFrom(
                 minimumSize: const Size(double.infinity, 54),
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -359,6 +352,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              child: const Text('지금'),
             ),
           ),
       ],
