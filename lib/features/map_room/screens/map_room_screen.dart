@@ -10,8 +10,6 @@ import '../../../core/geo_utils.dart';
 import '../../../core/interfaces/map_engine.dart';
 import '../../../core/providers/user_location_provider.dart';
 import '../../../core/models/map_marker_model.dart';
-import '../../../core/extensions/context_extensions.dart';
-import '../../../core/providers/tick_provider.dart';
 import '../../../data/adapters/cultural_event_adapter.dart';
 import '../../../data/models/cultural_event.dart';
 import '../../../core/app_config.dart';
@@ -59,7 +57,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   bool get wantKeepAlive => true;
 
   late final AnimationController _pulseController;
-  bool _partnerEventSeen = false;
+  final bool _partnerEventSeen = false;
 
   // ── 지도 엔진 (여기만 바꾸면 지도 교체 완료) ─────────────────────────────────
   final MapEngine _engine = KakaoMapEngine();
@@ -428,51 +426,6 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     }
   }
 
-  // TODO: ShellScreen 지금 패널 열림 시 호출 연결 예정
-  void _onNowPanelOpened() {
-    if (_searchOpen) _closeSearch();
-    setState(() => _partnerEventSeen = true);
-    _pulseController.stop();
-    _pulseController.reset();
-    ref.read(partnerAlertProvider.notifier).markAllAsSeen();
-
-    final filter = ref.read(mapFilterProvider);
-    final visible = _visibleEvents(filter);
-
-    showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: '',
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 280),
-      pageBuilder: (dialogContext, __, ___) => GestureDetector(
-        onTap: () => Navigator.of(dialogContext).pop(),
-        behavior: HitTestBehavior.opaque,
-        child: Center(
-          child: GestureDetector(
-            onTap: () {},
-            child: Material(
-              color: Colors.transparent,
-              child: _NowPanelPopup(
-                visible: visible,
-                center: _center,
-                onEventTap: (event) {
-                  Navigator.pop(context);
-                  _focusEvent(event);
-                },
-              ),
-            ),
-          ),
-        ),
-      ),
-      transitionBuilder: (_, animation, __, child) => ScaleTransition(
-        scale: Tween<double>(begin: 0.88, end: 1.0).animate(
-          CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
-        ),
-        child: FadeTransition(opacity: animation, child: child),
-      ),
-    );
-  }
 
   void _focusEvent(CulturalEvent event) {
     ref.read(partnerFocusPendingProvider.notifier).state = false;
@@ -1066,217 +1019,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   }
 }
 
-// ── 지금 패널 팝업 래퍼 ───────────────────────────────────────────────────────
 
-class _NowPanelPopup extends StatelessWidget {
-  final List<CulturalEvent> visible;
-  final LatLng center;
-  final void Function(CulturalEvent) onEventTap;
 
-  const _NowPanelPopup({
-    required this.visible,
-    required this.center,
-    required this.onEventTap,
-  });
 
-  @override
-  Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    return Container(
-      width: double.infinity,
-      constraints: BoxConstraints(maxHeight: screenHeight * 0.72),
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x38000000),
-            blurRadius: 24,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: _NowPanelContent(
-        visible: visible,
-        center: center,
-        onEventTap: onEventTap,
-      ),
-    );
-  }
-}
-
-// ── 지금 패널 콘텐츠 (tickProvider 구독 — 1초마다 자체 갱신) ─────────────────────
-
-class _NowPanelContent extends ConsumerWidget {
-  final List<CulturalEvent> visible;
-  final LatLng center;
-  final void Function(CulturalEvent) onEventTap;
-
-  const _NowPanelContent({
-    required this.visible,
-    required this.center,
-    required this.onEventTap,
-  });
-
-  String _formatRemaining(DateTime endDateTime, DateTime now) {
-    final neg = EventFade.negativeLabel(endDateTime, now);
-    if (neg != null) return neg;
-    final remaining = endDateTime.difference(now);
-    if (remaining.inDays >= 1) return '${remaining.inDays}일';
-    if (remaining.inHours >= 1) return '${remaining.inHours}시간';
-    return '${remaining.inMinutes}분';
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tick = ref.watch(tickProvider);
-    final now = tick.value ?? DateTime.now();
-
-    final sorted = [...visible];
-    sorted.sort((a, b) {
-      final aR = a.endDateTime.difference(now);
-      final bR = b.endDateTime.difference(now);
-      if (!aR.isNegative && bR.isNegative) return -1;
-      if (aR.isNegative && !bR.isNegative) return 1;
-      if (aR.isNegative) return bR.compareTo(aR); // 종료됨: 최근 종료 순
-      return aR.compareTo(bR); // 활성: 마감 임박 순
-    });
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                context.l10n.panelTitle,
-                style: const TextStyle(
-                  color: Color(0xFF16213E),
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                context.l10n.momentCount(sorted.length),
-                style: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-        if (sorted.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 32),
-            child: Center(
-              child: Text(
-                context.l10n.noMomentsNearby,
-                style: const TextStyle(color: Color(0xFFCCCCCC), fontSize: 13),
-              ),
-            ),
-          )
-        else
-          Flexible(
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              itemCount: sorted.length,
-              separatorBuilder: (_, __) =>
-                  Container(height: 1, color: const Color(0xFFF5F5F5)),
-              itemBuilder: (_, i) {
-                final event = sorted[i];
-                final isPartner = event.source == EventSource.partner;
-                final isPostEnd =
-                    now.isAfter(event.endDateTime);
-                final isGrayed =
-                    EventFade.isGrayed(event.endDateTime, now);
-                final fade =
-                    EventFade.opacity(event.endDateTime, now);
-                final timeLabel =
-                    _formatRemaining(event.endDateTime, now);
-
-                final dotColor = isGrayed
-                    ? const Color(0xFFBBBBBB)
-                    : isPartner
-                        ? const Color(0xFFFF8C00)
-                        : const Color(0xFF16213E).withValues(alpha: 0.3);
-                final titleColor = isGrayed
-                    ? const Color(0xFFBBBBBB)
-                    : const Color(0xFF333333);
-                final timeColor = isPostEnd
-                    ? const Color(0xFF999999)
-                    : const Color(0xFF16213E);
-
-                return Opacity(
-                  opacity: fade,
-                  child: GestureDetector(
-                    onTap: () => onEventTap(event),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: dotColor,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              event.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: isPartner
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                                color: titleColor,
-                              ),
-                            ),
-                          ),
-                          if (isPartner) ...[
-                            const SizedBox(width: 8),
-                            Text(
-                              context.l10n.partnerBadge,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isGrayed
-                                    ? const Color(0xFFCCCCCC)
-                                    : const Color(0xFFFF8C00),
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(width: 8),
-                          Text(
-                            timeLabel,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: timeColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-      ],
-    );
-  }
-}
 

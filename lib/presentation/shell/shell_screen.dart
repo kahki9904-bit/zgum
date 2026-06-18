@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui' show lerpDouble;
+import 'package:sensors_plus/sensors_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/providers/partner_focus_provider.dart';
@@ -590,25 +593,80 @@ class _NowBundle extends StatelessWidget {
       case 0: // 사용자
         return _UserPanelContent(onClose: onClose);
       default: // 지도 — 지금 패널
-        return _MapPanelContent(onClose: onClose);
+        return _MapPanelContent(onClose: onClose, isOpen: isOpen);
     }
   }
 }
 
 // 탭별 패널 내용 — 각자 독립적으로 구현
-class _MapPanelContent extends ConsumerWidget {
+class _MapPanelContent extends ConsumerStatefulWidget {
   final VoidCallback onClose;
-  const _MapPanelContent({required this.onClose});
+  final bool isOpen;
+  const _MapPanelContent({required this.onClose, required this.isOpen});
 
-  void _tapEvent(WidgetRef ref, CulturalEvent event) {
-    onClose();
+  @override
+  ConsumerState<_MapPanelContent> createState() => _MapPanelContentState();
+}
+
+class _MapPanelContentState extends ConsumerState<_MapPanelContent> {
+  final _shownIds = <String>{};
+  StreamSubscription<AccelerometerEvent>? _accelSub;
+  DateTime? _lastShake;
+
+  @override
+  void dispose() {
+    _accelSub?.cancel();
+    super.dispose();
+  }
+
+  void _startShake() {
+    if (_accelSub != null) return;
+    _accelSub = accelerometerEventStream().listen((event) {
+      if (!widget.isOpen) return;
+      final mag = sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
+      if (mag > 18) {
+        final now = DateTime.now();
+        if (_lastShake == null || now.difference(_lastShake!) > const Duration(milliseconds: 1500)) {
+          _lastShake = now;
+          _onShake();
+        }
+      }
+    });
+  }
+
+  void _stopShake() {
+    _accelSub?.cancel();
+    _accelSub = null;
+  }
+
+  void _onShake() {
+    final now = DateTime.now();
+    var candidates = ref.read(mapEventsProvider)
+        .where((e) => e.endDateTime.isAfter(now))
+        .toList();
+    if (candidates.isEmpty) return;
+    final unseen = candidates.where((e) => !_shownIds.contains(e.id)).toList();
+    if (unseen.isEmpty) {
+      _shownIds.clear();
+    } else {
+      candidates = unseen;
+    }
+    candidates.shuffle();
+    final picked = candidates.first;
+    _shownIds.add(picked.id);
+    HapticFeedback.heavyImpact();
+    _tapEvent(picked);
+  }
+
+  void _tapEvent(CulturalEvent event) {
+    widget.onClose();
     ref.read(partnerFocusPendingProvider.notifier).state = true;
     ref.read(partnerFocusProvider.notifier).state = event;
     ref.read(shellPageProvider.notifier).state = 1;
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final now = DateTime.now();
     final myEvents = (ref.watch(partnerMyEventsProvider)
           .where((e) => e.expiresAt.isAfter(now))
@@ -623,6 +681,7 @@ class _MapPanelContent extends ConsumerWidget {
 
     if (myEvents.isEmpty) {
       if (partnerMode) {
+        _stopShake();
         return const Center(
           child: Text(
             'Z:GUM 등록된 이벤트가 없습니다.',
@@ -636,15 +695,25 @@ class _MapPanelContent extends ConsumerWidget {
           .toList()
         ..sort((a, b) => a.endDateTime.compareTo(b.endDateTime));
       if (publicEvents.isEmpty) {
+        _startShake();
         return const Center(
-          child: Text(
-            '근처 이벤트가 없습니다.',
-            style: TextStyle(fontSize: 14, color: Color(0xFFAAAAAA)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.vibration, size: 32, color: Color(0xFFCCCCCC)),
+              SizedBox(height: 12),
+              Text(
+                '기기를 흔들어보세요',
+                style: TextStyle(fontSize: 14, color: Color(0xFFAAAAAA)),
+              ),
+            ],
           ),
         );
       }
-      return _PublicEventList(events: publicEvents, onTap: (e) => _tapEvent(ref, e));
+      _stopShake();
+      return _PublicEventList(events: publicEvents, onTap: (e) => _tapEvent(e));
     }
+    _stopShake();
 
     final featured = myEvents.first;
     final featuredCultural = culturalMap[featured.id];
@@ -684,7 +753,7 @@ class _MapPanelContent extends ConsumerWidget {
             children: [
               GestureDetector(
                 onTap: featuredCultural != null
-                    ? () => _tapEvent(ref, featuredCultural)
+                    ? () => _tapEvent(featuredCultural)
                     : null,
                 child: Container(
                   height: featuredH,
@@ -760,7 +829,7 @@ class _MapPanelContent extends ConsumerWidget {
                   padding: const EdgeInsets.only(top: 8),
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: () => _tapEvent(ref, cultural),
+                    onTap: () => _tapEvent(cultural),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
