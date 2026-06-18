@@ -32,6 +32,7 @@ import '../../promotions/free_use/free_use_intro_popup.dart';
 import '../../promotions/free_use/free_use_alert_popup.dart';
 import '../../features/friend/widgets/ieum_intro_popup.dart';
 import '../widgets/dialogs/camera_chooser_popup.dart';
+import '../widgets/dialogs/zgum_dialog.dart';
 
 // 지금 패널/캡슐 크기 상수 (file-level — _NowBundle에서도 사용)
 const double _kCapsuleHeight = 40.0;
@@ -1690,6 +1691,96 @@ class _ActiveEventWaitingViewState extends ConsumerState<_ActiveEventWaitingView
     _remaining = diff.isNegative ? Duration.zero : diff;
   }
 
+  bool _withinRefundThreshold() {
+    final total = widget.event.expiresAt.difference(widget.event.startsAt);
+    final elapsed = DateTime.now().difference(widget.event.startsAt);
+    final thresholdSeconds = total.inSeconds ~/ 6;
+    return elapsed.inSeconds < thresholdSeconds;
+  }
+
+  void _showExtendConfirm() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: const Color(0x66000000),
+      builder: (_) => Center(
+        child: ZGumDialog(
+          heightFactor: 0.38,
+          centerContent: true,
+          actions: ZGumButton(
+            label: '확인',
+            onTap: () {
+              Navigator.of(context).pop();
+              _extend();
+            },
+          ),
+          child: const Text(
+            '1회 1시간 연장가능',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1A1A2E),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showTerminateConfirm() {
+    final hours = widget.event.expiresAt.difference(widget.event.startsAt).inHours;
+    final withinThreshold = _withinRefundThreshold();
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: const Color(0x66000000),
+      builder: (_) => Center(
+        child: ZGumDialog(
+          heightFactor: 0.38,
+          centerContent: true,
+          actions: ZGumButton(
+            label: '확인',
+            onTap: () {
+              Navigator.of(context).pop();
+              _terminate();
+            },
+          ),
+          child: withinThreshold
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      '시간이 남아있습니다.',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '$hours시간 재등록 1회 가능',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF888888),
+                      ),
+                    ),
+                  ],
+                )
+              : Text(
+                  '${_formatDuration(_remaining)} 남아있습니다.\n종료하시겠습니까?',
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
   void _finish() {
     _timer?.cancel();
     _timer = null;
@@ -1819,7 +1910,7 @@ class _ActiveEventWaitingViewState extends ConsumerState<_ActiveEventWaitingView
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: _extending ? null : _extend,
+                    onTap: _extending ? null : _showExtendConfirm,
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       decoration: BoxDecoration(
@@ -1837,7 +1928,7 @@ class _ActiveEventWaitingViewState extends ConsumerState<_ActiveEventWaitingView
                 const SizedBox(width: 8),
                 Expanded(
                   child: GestureDetector(
-                    onTap: _terminate,
+                    onTap: _showTerminateConfirm,
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       decoration: BoxDecoration(

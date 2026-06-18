@@ -10,6 +10,7 @@ class ZGumDialog extends StatelessWidget {
     this.heightFactor = 0.45,
     this.contentPadding = const EdgeInsets.fromLTRB(24, 28, 24, 0),
     this.actionsPadding = const EdgeInsets.fromLTRB(24, 16, 24, 28),
+    this.centerContent = false,
   });
 
   final Widget child;
@@ -17,6 +18,7 @@ class ZGumDialog extends StatelessWidget {
   final double heightFactor;
   final EdgeInsets contentPadding;
   final EdgeInsets actionsPadding;
+  final bool centerContent;
 
   @override
   Widget build(BuildContext context) {
@@ -42,10 +44,17 @@ class ZGumDialog extends StatelessWidget {
         child: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                padding: contentPadding,
-                child: child,
-              ),
+              child: centerContent
+                  ? Center(
+                      child: Padding(
+                        padding: contentPadding,
+                        child: child,
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      padding: contentPadding,
+                      child: child,
+                    ),
             ),
             if (actions != null)
               Padding(
