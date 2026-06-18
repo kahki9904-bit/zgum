@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/admin/user_role.dart';
+import '../../data/models/cultural_event.dart';
 
 // 기존 테스트용 — Firebase 연동 전까지 유지
 final adminModeProvider = StateProvider<bool>((ref) => true);
@@ -11,3 +12,11 @@ final userRoleProvider = StateProvider<UserRole>((ref) => UserRole.user);
 // 총괄이 특정 관리자에게 웹 접근 권한을 열어준 상태
 // Firebase 연동 시: Firestore webAdminAccess 필드로 교체
 final webAdminAccessProvider = StateProvider<bool>((ref) => false);
+
+// 지도에 로드된 이벤트 — _MapPanelContent에서 공공 API 채우기에 사용
+final mapEventsProvider = StateProvider<List<CulturalEvent>>((ref) => []);
+
+// 지금 패널 모드 스위치
+// false = Phase 1: 파트너 이벤트 없으면 공공 API로 채움
+// true  = Phase 2: 파트너 이벤트만 표시
+final nowPanelPartnerModeProvider = StateProvider<bool>((ref) => false);

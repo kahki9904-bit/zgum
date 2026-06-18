@@ -35,6 +35,7 @@ import '../providers/map_filter_provider.dart';
 import '../providers/kakao_search_provider.dart';
 import '../../../core/providers/partner_my_events_provider.dart';
 import '../../../core/providers/active_partner_event_provider.dart';
+import '../../../core/providers/admin_mode_provider.dart';
 
 class MapRoomScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSwipeToUserRoom;
@@ -228,6 +229,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       _events = active;
       _eventById = {for (final e in active) e.id: e};
     });
+    ref.read(mapEventsProvider.notifier).state = active;
     _scheduleEventTimers(active);
     _rebuildMarkers();
     _updatePartnerPulse();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/extensions/context_extensions.dart';
 import 'event_content_base.dart';
 
@@ -23,23 +24,31 @@ class PublicEventContent extends EventContentBase {
       children: [
         EventCategoryBadge(event.category, isAdultOnly: event.isAdultOnly),
         const SizedBox(height: 10),
+        Text(
+          event.title,
+          style: theme.textTheme.titleLarge
+              ?.copyWith(fontWeight: FontWeight.bold, height: 1.3),
+        ),
+        const SizedBox(height: 10),
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Text(
-                event.title,
-                style: theme.textTheme.titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold, height: 1.3),
+            if (event.ticketUrl != null && event.ticketUrl!.isNotEmpty)
+              GestureDetector(
+                onTap: () async {
+                  final uri = Uri.tryParse(event.ticketUrl!);
+                  if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                },
+                child: const Padding(
+                  padding: EdgeInsets.only(right: 12),
+                  child: Icon(Icons.open_in_new, size: 20, color: Color(0xFF16213E)),
+                ),
               ),
-            ),
             if (onNavigateTap != null)
               GestureDetector(
                 onTap: onNavigateTap,
                 child: Container(
-                  margin: const EdgeInsets.only(left: 8, top: 2),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: const Color(0xFF16213E),
                     borderRadius: BorderRadius.circular(8),
@@ -63,15 +72,12 @@ class PublicEventContent extends EventContentBase {
               ),
             GestureDetector(
               onTap: interestSet ? null : onInterestTap,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 8, top: 2),
-                child: Icon(
-                  interestSet ? Icons.bookmark : Icons.bookmark_border,
-                  size: 22,
-                  color: interestSet
-                      ? const Color(0xFF16213E)
-                      : const Color(0xFFAAAAAA),
-                ),
+              child: Icon(
+                interestSet ? Icons.bookmark : Icons.bookmark_border,
+                size: 22,
+                color: interestSet
+                    ? const Color(0xFF16213E)
+                    : const Color(0xFFAAAAAA),
               ),
             ),
           ],

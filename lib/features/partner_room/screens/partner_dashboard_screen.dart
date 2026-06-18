@@ -188,6 +188,8 @@ class _PartnerDashboardScreenState
                 _sectionLabel('개발자'),
                 const SizedBox(height: 12),
                 const _AdminModeToggle(),
+                const SizedBox(height: 8),
+                const _NowPanelModeToggle(),
               ],
             ),
           ),
@@ -335,6 +337,51 @@ class _AdminModeToggle extends ConsumerWidget {
           Switch(
             value: isAdmin,
             onChanged: (v) => ref.read(adminModeProvider.notifier).state = v,
+            activeThumbColor: const Color(0xFF1A1A2E),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NowPanelModeToggle extends ConsumerWidget {
+  const _NowPanelModeToggle();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final partnerMode = ref.watch(nowPanelPartnerModeProvider);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: partnerMode ? const Color(0xFF1A1A2E) : const Color(0xFFEEEEEE),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.tune,
+              size: 16,
+              color: partnerMode ? Colors.white : const Color(0xFFAAAAAA),
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Text(
+              '지금 패널 파트너 전용',
+              style: TextStyle(fontSize: 15, color: Color(0xFF333333)),
+            ),
+          ),
+          Switch(
+            value: partnerMode,
+            onChanged: (v) => ref.read(nowPanelPartnerModeProvider.notifier).state = v,
             activeThumbColor: const Color(0xFF1A1A2E),
           ),
         ],

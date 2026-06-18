@@ -48,6 +48,12 @@ dependencies:
   timezone: ^0.9.4
   google_fonts: ^6.2.1
 
+  # 외부 링크 열기
+  url_launcher: ^6.3.0
+
+  # 앱 버전 정보
+  package_info_plus: ^8.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

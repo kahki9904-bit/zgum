@@ -619,13 +619,31 @@ class _MapPanelContent extends ConsumerWidget {
       for (final e in ref.watch(mockPartnerEventStoreProvider)) e.id: e,
     };
 
+    final partnerMode = ref.watch(nowPanelPartnerModeProvider);
+
     if (myEvents.isEmpty) {
-      return const Center(
-        child: Text(
-          'Z:GUM 등록된 이벤트가 없습니다.',
-          style: TextStyle(fontSize: 14, color: Color(0xFFAAAAAA)),
-        ),
-      );
+      if (partnerMode) {
+        return const Center(
+          child: Text(
+            'Z:GUM 등록된 이벤트가 없습니다.',
+            style: TextStyle(fontSize: 14, color: Color(0xFFAAAAAA)),
+          ),
+        );
+      }
+      // Phase 1: 공공 API 이벤트로 채우기
+      final publicEvents = ref.watch(mapEventsProvider)
+          .where((e) => e.source == EventSource.public && e.endDateTime.isAfter(now))
+          .toList()
+        ..sort((a, b) => a.endDateTime.compareTo(b.endDateTime));
+      if (publicEvents.isEmpty) {
+        return const Center(
+          child: Text(
+            '근처 이벤트가 없습니다.',
+            style: TextStyle(fontSize: 14, color: Color(0xFFAAAAAA)),
+          ),
+        );
+      }
+      return _PublicEventList(events: publicEvents, onTap: (e) => _tapEvent(ref, e));
     }
 
     final featured = myEvents.first;
@@ -794,6 +812,70 @@ class _MapPanelContent extends ConsumerWidget {
                 );
               }),
             ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PublicEventList extends StatelessWidget {
+  final List<CulturalEvent> events;
+  final void Function(CulturalEvent) onTap;
+
+  const _PublicEventList({required this.events, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, _kCapsuleHeight + 14, 16, 16),
+      itemCount: events.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (_, i) {
+        final e = events[i];
+        final remaining = e.endDateTime.difference(now);
+        final label = remaining.inDays > 0
+            ? '${remaining.inDays}일 남음'
+            : remaining.inHours > 0
+                ? '${remaining.inHours}시간 남음'
+                : '${remaining.inMinutes}분 남음';
+        return InkWell(
+          onTap: () => onTap(e),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        e.title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1A1A2E),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        e.venue,
+                        style: const TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 11, color: Color(0xFFAAAAAA)),
+                ),
+              ],
+            ),
           ),
         );
       },
