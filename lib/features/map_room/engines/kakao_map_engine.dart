@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:kakao_map_sdk/kakao_map_sdk.dart' as kakao;
 
@@ -145,14 +146,14 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
 
   Future<kakao.KImage> _getMarkerImage() async {
     if (_markerImage != null) return _markerImage!;
-    const double iconSize = 28.0;
-    const double tapSize = 44.0;
-    const markerWidget = SizedBox(
+    final double tapSize = Platform.isIOS ? 30.0 : 44.0;
+    final double iconSize = Platform.isIOS ? 20.0 : 28.0;
+    final markerWidget = SizedBox(
       width: tapSize,
       height: tapSize,
       child: Center(
         child: DecoratedBox(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.white,
             shape: BoxShape.circle,
           ),
@@ -164,7 +165,7 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
         ),
       ),
     );
-    _markerImage = await kakao.KImage.fromWidget(markerWidget, const Size(tapSize, tapSize));
+    _markerImage = await kakao.KImage.fromWidget(markerWidget, Size(tapSize, tapSize));
     return _markerImage!;
   }
 
@@ -174,16 +175,16 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
 
   Future<kakao.KImage> _getUserMarkerImage() async {
     if (_userMarkerImage != null) return _userMarkerImage!;
-    const double iconSize = 28.0;
-    const double tapSize = 44.0;
-    const markerWidget = SizedBox(
+    final double tapSize = Platform.isIOS ? 30.0 : 44.0;
+    final double iconSize = Platform.isIOS ? 20.0 : 28.0;
+    final markerWidget = SizedBox(
       width: tapSize,
       height: tapSize,
       child: Center(
         child: Icon(Icons.location_on, size: iconSize),
       ),
     );
-    _userMarkerImage = await kakao.KImage.fromWidget(markerWidget, const Size(tapSize, tapSize));
+    _userMarkerImage = await kakao.KImage.fromWidget(markerWidget, Size(tapSize, tapSize));
     return _userMarkerImage!;
   }
 

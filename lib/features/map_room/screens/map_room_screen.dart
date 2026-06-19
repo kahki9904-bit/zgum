@@ -405,13 +405,17 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   }
 
   void _toggleSearch() {
-    if (_searchOpen) {
+    try {
+      if (_searchOpen) {
+        _closeSearch();
+      } else {
+        setState(() => _searchOpen = true);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _searchOpen) _searchFocus.requestFocus();
+        });
+      }
+    } catch (_) {
       _closeSearch();
-    } else {
-      setState(() => _searchOpen = true);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _searchOpen) _searchFocus.requestFocus();
-      });
     }
   }
 
@@ -757,7 +761,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               left: 0,
               top: 0,
               bottom: 0,
-              width: 60,
+              width: MediaQuery.sizeOf(context).width * 0.15,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onHorizontalDragEnd: (details) {
@@ -771,7 +775,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               right: 0,
               top: 0,
               bottom: 0,
-              width: 60,
+              width: MediaQuery.sizeOf(context).width * 0.15,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onHorizontalDragEnd: (details) {

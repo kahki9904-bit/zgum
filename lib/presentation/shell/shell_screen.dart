@@ -1052,7 +1052,7 @@ class _UserPanelContentState extends ConsumerState<_UserPanelContent> {
     final count = friendCount.whenOrNull(data: (v) => v) ?? 0;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(20, _kCapsuleHeight + 12, 20, 24 + MediaQuery.paddingOf(context).bottom),
+      padding: EdgeInsets.fromLTRB(20, _kCapsuleHeight + 12, 20, max(24.0, MediaQuery.paddingOf(context).bottom)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
