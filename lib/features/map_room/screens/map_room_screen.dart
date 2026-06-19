@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -763,7 +764,9 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               bottom: 0,
               width: MediaQuery.sizeOf(context).width * 0.15,
               child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
+                behavior: Platform.isIOS
+                    ? HitTestBehavior.translucent
+                    : HitTestBehavior.opaque,
                 onHorizontalDragEnd: (details) {
                   if ((details.primaryVelocity ?? 0) > 400) {
                     widget.onSwipeToUserRoom?.call();
@@ -777,7 +780,9 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               bottom: 0,
               width: MediaQuery.sizeOf(context).width * 0.15,
               child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
+                behavior: Platform.isIOS
+                    ? HitTestBehavior.translucent
+                    : HitTestBehavior.opaque,
                 onHorizontalDragEnd: (details) {
                   if ((details.primaryVelocity ?? 0) < -400) {
                     widget.onSwipeToPartnerRoom?.call();
