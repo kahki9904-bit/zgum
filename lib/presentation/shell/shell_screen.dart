@@ -191,6 +191,19 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
         curve: Curves.easeIn);
   }
 
+  void _toggleNow() {
+    if (_nowPanelOpen.value) {
+      _closeNow();
+    } else {
+      _nowPanelOpen.value = true;
+      final rem = 1.0 - _panelAnim.value;
+      _panelAnim.animateTo(1.0,
+          duration: Duration(milliseconds: (rem * 300).round().clamp(80, 300)),
+          curve: Curves.easeOut);
+      _navigateToAlertIfNeeded();
+    }
+  }
+
   void _onNowDragUpdate(DragUpdateDetails d) {
     final maxDist = panelHeight + _kPanelFloat;
     _panelAnim.value =
@@ -277,7 +290,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     final availableHeight =
         media.size.height - media.padding.top - media.padding.bottom;
     panelHeight = (availableHeight * 0.68).clamp(420.0, 560.0);
-    final bottomPadding = media.padding.bottom + _kIosGestureBuffer;
+    final bottomPadding = max(media.padding.bottom, Platform.isAndroid ? 16.0 : 0.0) + _kIosGestureBuffer;
 
     return ValueListenableBuilder<bool>(
       valueListenable: _nowPanelOpen,
@@ -359,9 +372,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                           Positioned(
                             left: 0,
                             right: 0,
-                            bottom: bottomPadding,
-                            height:
-                                panelHeight + _kCapsuleHeight + _kPanelFloat,
+                            bottom: Platform.isIOS ? 0 : bottomPadding,
+                            height: Platform.isIOS
+                                ? panelHeight + _kCapsuleHeight + _kPanelFloat + bottomPadding
+                                : panelHeight + _kCapsuleHeight + _kPanelFloat,
                             child: AnimatedBuilder(
                               animation: _panelAnim,
                               builder: (_, child) => Transform.translate(
@@ -376,6 +390,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                                 isOpen: isOpen,
                                 hasAlert: hasAlert,
                                 panelHeight: panelHeight,
+                                bottomPadding: Platform.isIOS ? bottomPadding : 0,
+                                onToggle: Platform.isIOS ? _toggleNow : null,
                                 panelAnim: _panelAnim,
                                 currentPage: _page,
                                 mapReady: _mapReady,
@@ -459,6 +475,8 @@ class _NowBundle extends StatelessWidget {
   final bool isOpen;
   final bool hasAlert;
   final double panelHeight;
+  final double bottomPadding;
+  final VoidCallback? onToggle;
   final Animation<double> panelAnim;
   final int currentPage;
   final bool mapReady;
@@ -470,28 +488,32 @@ class _NowBundle extends StatelessWidget {
     required this.isOpen,
     required this.hasAlert,
     required this.panelHeight,
+    required this.bottomPadding,
     required this.panelAnim,
     required this.currentPage,
     required this.mapReady,
     required this.onDragUpdate,
     required this.onDragEnd,
     required this.onClose,
+    this.onToggle,
   });
 
   @override
   Widget build(BuildContext context) {
     final touchWidth = MediaQuery.sizeOf(context).width * 0.80;
 
+    final isIOS = onToggle != null;
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onVerticalDragUpdate: onDragUpdate,
-      onVerticalDragEnd: onDragEnd,
+      onVerticalDragUpdate: isIOS ? null : onDragUpdate,
+      onVerticalDragEnd: isIOS ? null : onDragEnd,
       child: AnimatedBuilder(
         animation: panelAnim,
         builder: (_, content) {
           final capsuleBottom = lerpDouble(
-            panelHeight + _kPanelFloat,
-            panelHeight - _kCapsuleHeight,
+            panelHeight + _kPanelFloat + bottomPadding,
+            panelHeight - _kCapsuleHeight + bottomPadding,
             panelAnim.value,
           )!;
           return Stack(
@@ -503,8 +525,8 @@ class _NowBundle extends StatelessWidget {
                 height: panelHeight,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onVerticalDragUpdate: onDragUpdate,
-                  onVerticalDragEnd: onDragEnd,
+                  onVerticalDragUpdate: isIOS ? null : onDragUpdate,
+                  onVerticalDragEnd: isIOS ? null : onDragEnd,
                   child: Container(
                     decoration: const BoxDecoration(
                       color: Colors.white,
@@ -574,8 +596,9 @@ class _NowBundle extends StatelessWidget {
                     width: touchWidth,
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
-                      onVerticalDragUpdate: onDragUpdate,
-                      onVerticalDragEnd: onDragEnd,
+                      onTap: isIOS ? onToggle : null,
+                      onVerticalDragUpdate: isIOS ? null : onDragUpdate,
+                      onVerticalDragEnd: isIOS ? null : onDragEnd,
                       child: Align(
                         alignment: Alignment.center,
                         child: _NowCapsule(
@@ -1460,37 +1483,72 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
 
     // 19세 이상 여부 확인
     if (!mounted) return;
-    final isAdultOnly = await showDialog<bool>(
+    final isAdultOnly = await showGeneralDialog<bool>(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          '이벤트 대상',
-          style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A2E)),
-        ),
-        content: const Text(
-          '이 이벤트가 19세 이상 대상인가요?',
-          style: TextStyle(fontSize: 14, color: Color(0xFF555555)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('전체 이용가',
-                style: TextStyle(color: Color(0xFF888888))),
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (dialogContext, __, ___) => GestureDetector(
+        onTap: () => Navigator.of(dialogContext).pop(null),
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: GestureDetector(
+            onTap: () {},
+            child: ZGumDialog(
+              heightFactor: 0.30,
+              actions: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(dialogContext).pop(false),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0F0F0),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text('전체 이용가',
+                            style: TextStyle(fontSize: 14, color: Color(0xFF888888), fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(dialogContext).pop(true),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1A2E),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text('19세 이상',
+                            style: TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('이벤트 대상',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+                  SizedBox(height: 10),
+                  Text('이 이벤트가 19세 이상 대상인가요?',
+                      style: TextStyle(fontSize: 14, color: Color(0xFF555555))),
+                ],
+              ),
+            ),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('19세 이상',
-                style: TextStyle(
-                    color: Color(0xFF1A1A2E), fontWeight: FontWeight.w700)),
-          ),
-        ],
+        ),
       ),
+      transitionBuilder: (_, animation, __, child) =>
+          FadeTransition(opacity: animation, child: child),
     );
     if (isAdultOnly == null || !mounted) return;
 
