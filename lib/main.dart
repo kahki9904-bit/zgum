@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kakao_map_sdk/kakao_map_sdk.dart';
 import 'app.dart';
+import 'core/app_config.dart';
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
 
@@ -20,9 +21,15 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  try {
-    await KakaoMapSdk.instance.initialize('8afda6d12588ca6c501beef9e41136f8');
-  } catch (_) {}
+  if (AppConfig.hasKakaoNativeAppKey) {
+    try {
+      await KakaoMapSdk.instance.initialize(AppConfig.kakaoNativeAppKey);
+    } catch (error) {
+      debugPrint('Kakao map initialize failed: $error');
+    }
+  } else {
+    debugPrint('KAKAO_NATIVE_APP_KEY is missing. Kakao map init skipped.');
+  }
 
   runApp(const ProviderScope(child: ZGumApp()));
   unawaited(NotificationService.instance.init());

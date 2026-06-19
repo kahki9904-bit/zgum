@@ -1,5 +1,8 @@
 # API 인증키 (절대 커밋 금지)
 secrets.env
+.env
+.env.*
+!*.env.example
 
 # Miscellaneous
 *.class

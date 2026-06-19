@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
@@ -23,10 +24,9 @@ class DefaultFirebaseOptions {
     storageBucket: 'zgum-6cc66.firebasestorage.app',
   );
 
-  // iOS 값은 GoogleService-Info.plist 받은 후 코덱스가 채울 것
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: '',
-    appId: '',
+    apiKey: 'AIzaSyDGI8sCcV1XDI8wDdahA3QXfo0H6ZKIRI0',
+    appId: '1:617839795124:ios:2a0037d380b9382fadb0e1',
     messagingSenderId: '617839795124',
     projectId: 'zgum-6cc66',
     storageBucket: 'zgum-6cc66.firebasestorage.app',

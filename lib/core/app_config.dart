@@ -8,6 +8,7 @@
 ///   --dart-define=TOUR_API_KEY=your_key \
 ///   --dart-define=NAVER_CLIENT_ID=your_id \
 ///   --dart-define=NAVER_CLIENT_SECRET=your_secret \
+///   --dart-define=KAKAO_NATIVE_APP_KEY=your_native_key \
 ///   --dart-define=KAKAO_API_KEY=your_key
 /// ```
 ///
@@ -52,13 +53,20 @@ abstract final class AppConfig {
     defaultValue: '',
   );
 
+  /// 카카오맵 네이티브 SDK 초기화에 사용
+  static const String kakaoNativeAppKey = String.fromEnvironment(
+    'KAKAO_NATIVE_APP_KEY',
+    defaultValue: '',
+  );
+
   // ── KOPIS 공연예술통합전산망 ────────────────────────────────────────────────
   static const String kopisApiKey = String.fromEnvironment(
     'KOPIS_API_KEY',
     defaultValue: '',
   );
 
-  static const String kopisApiBaseUrl = 'http://www.kopis.or.kr/openApi/restful';
+  static const String kopisApiBaseUrl =
+      'http://www.kopis.or.kr/openApi/restful';
 
   // ── 소상공인시장진흥공단 상가(상권)정보 API ──────────────────────────────────
   static const String sdscApiKey = String.fromEnvironment(
@@ -75,4 +83,5 @@ abstract final class AppConfig {
   static bool get hasSdscKey => sdscApiKey.isNotEmpty;
   static bool get hasNaverKey => naverClientId.isNotEmpty;
   static bool get hasKakaoKey => kakaoApiKey.isNotEmpty;
+  static bool get hasKakaoNativeAppKey => kakaoNativeAppKey.isNotEmpty;
 }
