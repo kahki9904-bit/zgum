@@ -695,8 +695,10 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       MapCoordinate(event.location.latitude, event.location.longitude),
       AppConstants.defaultZoom,
     );
-    Future.delayed(const Duration(milliseconds: 150), () {
-      if (mounted) _showEventSheet(event);
+    Future.delayed(const Duration(milliseconds: 150), () async {
+      if (!mounted) return;
+      await _showEventSheet(event);
+      if (mounted) _rebuildMarkers();
     });
   }
 
