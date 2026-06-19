@@ -14,7 +14,9 @@ void main() async {
     DeviceOrientation.portraitUp,
   ]);
 
-  await KakaoMapSdk.instance.initialize('433d2724092434b5642227386bcd2f13');
+  try {
+    await KakaoMapSdk.instance.initialize('433d2724092434b5642227386bcd2f13');
+  } catch (_) {}
 
   runApp(const ProviderScope(child: ZGumApp()));
   unawaited(NotificationService.instance.init());
