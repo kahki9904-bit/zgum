@@ -358,7 +358,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                               builder: (_, child) => Transform.translate(
                                 offset: Offset(
                                   0,
-                                  (1.0 - _panelAnim.value) * (panelHeight + _kPanelFloat - 20),
+                                  (1.0 - _panelAnim.value) * (panelHeight + _kPanelFloat),
                                 ),
                                 child: child,
                               ),
@@ -1059,7 +1059,7 @@ class _UserPanelContentState extends ConsumerState<_UserPanelContent> {
         children: [
           // 흔적 자리 — 항상 고정 높이
           SizedBox(
-            height: 240,
+            height: 200,
             width: double.infinity,
             child: latest != null
                 ? _RecentTraceCard(record: latest)
@@ -1100,12 +1100,12 @@ class _UserPanelContentState extends ConsumerState<_UserPanelContent> {
             const SizedBox(height: 32),
           const SizedBox(height: 16),
           Container(height: 1, color: const Color(0xFFF0F0F0)),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Text(
             '$count명과 이어졌습니다.',
             style: const TextStyle(fontSize: 13, color: Color(0xFFAAAAAA)),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           // 이음 버튼
           Center(
             child: SizedBox(
@@ -1152,7 +1152,7 @@ class _RecentTraceCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: SizedBox(
-        height: 240,
+        height: 200,
         width: double.infinity,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,

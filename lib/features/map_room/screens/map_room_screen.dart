@@ -761,7 +761,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               bottom: 0,
               width: MediaQuery.sizeOf(context).width * 0.15,
               child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
+                behavior: HitTestBehavior.translucent,
                 onHorizontalDragEnd: (details) {
                   if ((details.primaryVelocity ?? 0) > 400) {
                     widget.onSwipeToUserRoom?.call();
@@ -775,7 +775,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               bottom: 0,
               width: MediaQuery.sizeOf(context).width * 0.15,
               child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
+                behavior: HitTestBehavior.translucent,
                 onHorizontalDragEnd: (details) {
                   if ((details.primaryVelocity ?? 0) < -400) {
                     widget.onSwipeToPartnerRoom?.call();
