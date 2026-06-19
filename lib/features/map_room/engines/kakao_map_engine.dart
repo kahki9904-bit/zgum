@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:kakao_map_sdk/kakao_map_sdk.dart' as kakao;
 
@@ -257,6 +258,51 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
     );
   }
 
+  void _handleIosMapTap(kakao.LatLng position) {
+    if (!Platform.isIOS || widget.markers.isEmpty) return;
+
+    MapMarkerModel? nearest;
+    var nearestMeters = double.infinity;
+
+    for (final marker in widget.markers) {
+      final meters = _distanceMeters(
+        position.latitude,
+        position.longitude,
+        marker.location.latitude,
+        marker.location.longitude,
+      );
+      if (meters < nearestMeters) {
+        nearestMeters = meters;
+        nearest = marker;
+      }
+    }
+
+    if (nearest == null || nearestMeters > 70) return;
+    debugPrint(
+      '[KakaoMap] iOS map tap fallback: ${nearest.id} / ${nearest.title} / ${nearestMeters.toStringAsFixed(1)}m',
+    );
+    widget.onMarkerTap(nearest);
+  }
+
+  double _distanceMeters(
+    double lat1,
+    double lng1,
+    double lat2,
+    double lng2,
+  ) {
+    const earthRadius = 6371000.0;
+    final dLat = _radians(lat2 - lat1);
+    final dLng = _radians(lng2 - lng1);
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_radians(lat1)) *
+            math.cos(_radians(lat2)) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    return earthRadius * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  }
+
+  double _radians(double degrees) => degrees * math.pi / 180;
+
   @override
   Widget build(BuildContext context) {
     return kakao.KakaoMap(
@@ -276,6 +322,8 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
         _syncRoute(controller);
         widget.onEngineReady?.call();
       },
+      onMapClick: (_, position) => _handleIosMapTap(position),
+      onTerrainClick: (_, position) => _handleIosMapTap(position),
     );
   }
 }
