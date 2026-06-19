@@ -40,6 +40,7 @@ import '../widgets/dialogs/zgum_dialog.dart';
 // 지금 패널/캡슐 크기 상수 (file-level — _NowBundle에서도 사용)
 const double _kCapsuleHeight = 40.0;
 const double _kPanelFloat = 30.0;
+const double _kPanelHandleContentGap = 44.0;
 
 // iOS 홈 제스처 충돌 시 이 값을 8~20 사이로 올리세요 (현재 0 = 안전구역만 사용)
 const double _kIosGestureBuffer = 0.0;
@@ -117,7 +118,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _panelAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
+    _panelAnim = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1000));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _showIntroIfNeeded();
@@ -214,10 +216,11 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   }
 
   void _navigateToAlertIfNeeded() {
-    final alerts = (ref.read(partnerAlertProvider)
-          .where((e) => !e.seen && !e.isExpired)
-          .toList()
-        ..sort((a, b) => b.startsAt.compareTo(a.startsAt)));
+    final alerts = (ref
+        .read(partnerAlertProvider)
+        .where((e) => !e.seen && !e.isExpired)
+        .toList()
+      ..sort((a, b) => b.startsAt.compareTo(a.startsAt)));
     if (alerts.isEmpty) return;
 
     final event = alerts.first;
@@ -237,7 +240,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     );
     final store = ref.read(mockPartnerEventStoreProvider);
     if (!store.any((e) => e.id == cultural.id)) {
-      ref.read(mockPartnerEventStoreProvider.notifier).state = [...store, cultural];
+      ref.read(mockPartnerEventStoreProvider.notifier).state = [
+        ...store,
+        cultural
+      ];
     }
     ref.read(partnerFocusPendingProvider.notifier).state = true;
     ref.read(partnerFocusProvider.notifier).state = cultural;
@@ -266,10 +272,12 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       if (prev != next) _goTo(next);
     });
 
-
     final hasAlert = ref.watch(hasUnseenAlertProvider);
-    panelHeight = MediaQuery.sizeOf(context).height * 0.65;
-    final bottomPadding = MediaQuery.paddingOf(context).bottom + _kIosGestureBuffer;
+    final media = MediaQuery.of(context);
+    final availableHeight =
+        media.size.height - media.padding.top - media.padding.bottom;
+    panelHeight = (availableHeight * 0.68).clamp(420.0, 560.0);
+    final bottomPadding = media.padding.bottom + _kIosGestureBuffer;
 
     return ValueListenableBuilder<bool>(
       valueListenable: _nowPanelOpen,
@@ -351,14 +359,16 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                           Positioned(
                             left: 0,
                             right: 0,
-                            bottom: 0,
-                            height: panelHeight + _kCapsuleHeight + _kPanelFloat + bottomPadding,
+                            bottom: bottomPadding,
+                            height:
+                                panelHeight + _kCapsuleHeight + _kPanelFloat,
                             child: AnimatedBuilder(
                               animation: _panelAnim,
                               builder: (_, child) => Transform.translate(
                                 offset: Offset(
                                   0,
-                                  (1.0 - _panelAnim.value) * (panelHeight + _kPanelFloat),
+                                  (1.0 - _panelAnim.value) *
+                                      (panelHeight + _kPanelFloat),
                                 ),
                                 child: child,
                               ),
@@ -366,7 +376,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                                 isOpen: isOpen,
                                 hasAlert: hasAlert,
                                 panelHeight: panelHeight,
-                                bottomPadding: bottomPadding,
                                 panelAnim: _panelAnim,
                                 currentPage: _page,
                                 mapReady: _mapReady,
@@ -446,12 +455,10 @@ class _SwipeWrapperState extends State<_SwipeWrapper> {
   }
 }
 
-
 class _NowBundle extends StatelessWidget {
   final bool isOpen;
   final bool hasAlert;
   final double panelHeight;
-  final double bottomPadding;
   final Animation<double> panelAnim;
   final int currentPage;
   final bool mapReady;
@@ -463,7 +470,6 @@ class _NowBundle extends StatelessWidget {
     required this.isOpen,
     required this.hasAlert,
     required this.panelHeight,
-    required this.bottomPadding,
     required this.panelAnim,
     required this.currentPage,
     required this.mapReady,
@@ -484,8 +490,8 @@ class _NowBundle extends StatelessWidget {
         animation: panelAnim,
         builder: (_, content) {
           final capsuleBottom = lerpDouble(
-            panelHeight + _kPanelFloat + bottomPadding,
-            panelHeight - _kCapsuleHeight + bottomPadding,
+            panelHeight + _kPanelFloat,
+            panelHeight - _kCapsuleHeight,
             panelAnim.value,
           )!;
           return Stack(
@@ -502,7 +508,8 @@ class _NowBundle extends StatelessWidget {
                   child: Container(
                     decoration: const BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(20)),
                       boxShadow: [
                         BoxShadow(
                           color: Color(0x14000000),
@@ -526,14 +533,16 @@ class _NowBundle extends StatelessWidget {
                     builder: (_, constraints) {
                       const thumbH = 36.0;
                       final trackH = constraints.maxHeight;
-                      final thumbTop = (1 - panelAnim.value) * (trackH - thumbH);
+                      final thumbTop =
+                          (1 - panelAnim.value) * (trackH - thumbH);
                       return Stack(
                         children: [
                           Container(
                             width: 4,
                             height: trackH,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE0E0E0).withValues(alpha: 0.6),
+                              color: const Color(0xFFE0E0E0)
+                                  .withValues(alpha: 0.6),
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
@@ -543,7 +552,8 @@ class _NowBundle extends StatelessWidget {
                               width: 4,
                               height: thumbH,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF1A1A2E).withValues(alpha: 0.22),
+                                color: const Color(0xFF1A1A2E)
+                                    .withValues(alpha: 0.22),
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             ),
@@ -567,8 +577,11 @@ class _NowBundle extends StatelessWidget {
                       onVerticalDragUpdate: onDragUpdate,
                       onVerticalDragEnd: onDragEnd,
                       child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: _NowCapsule(hasAlert: hasAlert, isOpen: isOpen, mapReady: mapReady),
+                        alignment: Alignment.center,
+                        child: _NowCapsule(
+                            hasAlert: hasAlert,
+                            isOpen: isOpen,
+                            mapReady: mapReady),
                       ),
                     ),
                   ),
@@ -626,10 +639,12 @@ class _MapPanelContentState extends ConsumerState<_MapPanelContent> {
     if (_accelSub != null) return;
     _accelSub = accelerometerEventStream().listen((event) {
       if (!widget.isOpen) return;
-      final mag = sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
+      final mag =
+          sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
       if (mag > 18) {
         final now = DateTime.now();
-        if (_lastShake == null || now.difference(_lastShake!) > const Duration(milliseconds: 1500)) {
+        if (_lastShake == null ||
+            now.difference(_lastShake!) > const Duration(milliseconds: 1500)) {
           _lastShake = now;
           _onShake();
         }
@@ -644,7 +659,8 @@ class _MapPanelContentState extends ConsumerState<_MapPanelContent> {
 
   void _onShake() {
     final now = DateTime.now();
-    var candidates = ref.read(mapEventsProvider)
+    var candidates = ref
+        .read(mapEventsProvider)
         .where((e) => e.endDateTime.isAfter(now))
         .toList();
     if (candidates.isEmpty) return;
@@ -671,10 +687,11 @@ class _MapPanelContentState extends ConsumerState<_MapPanelContent> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final myEvents = (ref.watch(partnerMyEventsProvider)
-          .where((e) => e.expiresAt.isAfter(now))
-          .toList()
-        ..sort((a, b) => b.startsAt.compareTo(a.startsAt)));
+    final myEvents = (ref
+        .watch(partnerMyEventsProvider)
+        .where((e) => e.expiresAt.isAfter(now))
+        .toList()
+      ..sort((a, b) => b.startsAt.compareTo(a.startsAt)));
 
     final culturalMap = {
       for (final e in ref.watch(mockPartnerEventStoreProvider)) e.id: e,
@@ -693,8 +710,10 @@ class _MapPanelContentState extends ConsumerState<_MapPanelContent> {
         );
       }
       // Phase 1: 공공 API 이벤트로 채우기
-      final publicEvents = ref.watch(mapEventsProvider)
-          .where((e) => e.source == EventSource.public && e.endDateTime.isAfter(now))
+      final publicEvents = ref
+          .watch(mapEventsProvider)
+          .where((e) =>
+              e.source == EventSource.public && e.endDateTime.isAfter(now))
           .toList()
         ..sort((a, b) => a.endDateTime.compareTo(b.endDateTime));
       if (publicEvents.isEmpty) {
@@ -743,11 +762,9 @@ class _MapPanelContentState extends ConsumerState<_MapPanelContent> {
         final sectionH = totalH / 5;
         const itemH = 40.0;
         const itemGap = 8.0;
-        final bottomH = rest.isNotEmpty
-            ? rest.length * (itemH + itemGap)
-            : sectionH;
-        final featuredH =
-            (totalH - bottomH).clamp(sectionH * 2, sectionH * 4);
+        final bottomH =
+            rest.isNotEmpty ? rest.length * (itemH + itemGap) : sectionH;
+        final featuredH = (totalH - bottomH).clamp(sectionH * 2, sectionH * 4);
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, topPad, 16, botPad),
@@ -825,7 +842,6 @@ class _MapPanelContentState extends ConsumerState<_MapPanelContent> {
                   ),
                 ),
               ),
-
               ...rest.map((e) {
                 final cultural = culturalMap[e.id]!;
                 return Padding(
@@ -935,7 +951,8 @@ class _PublicEventList extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(
                         e.venue,
-                        style: const TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFFAAAAAA)),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -944,7 +961,8 @@ class _PublicEventList extends StatelessWidget {
                 ),
                 Text(
                   label,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFFAAAAAA)),
+                  style:
+                      const TextStyle(fontSize: 11, color: Color(0xFFAAAAAA)),
                 ),
               ],
             ),
@@ -1025,21 +1043,31 @@ class _UserPanelContentState extends ConsumerState<_UserPanelContent> {
         contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
         content: const Text(
           '정말 잊어도 될까요?',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+          style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1A1A2E)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소', style: TextStyle(color: Color(0xFFAAAAAA), fontSize: 13)),
+            child: const Text('취소',
+                style: TextStyle(color: Color(0xFFAAAAAA), fontSize: 13)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('확인', style: TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w600)),
+            child: const Text('확인',
+                style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
           ),
         ],
       ),
     ).then((confirmed) {
-      if (confirmed == true) ref.read(checkInProvider.notifier).delete(record.id);
+      if (confirmed == true) {
+        ref.read(checkInProvider.notifier).delete(record.id);
+      }
     });
   }
 
@@ -1054,89 +1082,103 @@ class _UserPanelContentState extends ConsumerState<_UserPanelContent> {
     final friendCount = ref.watch(friendCountProvider);
     final count = friendCount.whenOrNull(data: (v) => v) ?? 0;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(20, _kCapsuleHeight + 12, 20, max(24.0, MediaQuery.paddingOf(context).bottom)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 흔적 자리 — 항상 고정 높이
-          SizedBox(
-            height: 200,
-            width: double.infinity,
-            child: latest != null
-                ? _RecentTraceCard(record: latest)
-                : Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8F8F8),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFEEEEEE)),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      '아직 남긴 흔적이 없습니다',
-                      style: TextStyle(fontSize: 13, color: Color(0xFFCCCCCC)),
-                    ),
-                  ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 500;
+        final traceHeight = compact ? 200.0 : 240.0;
+        final bottomPad = 20.0 + MediaQuery.paddingOf(context).bottom;
+
+        return SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            _kPanelHandleContentGap,
+            20,
+            bottomPad,
           ),
-          const SizedBox(height: 10),
-          if (latest != null)
-            Row(
-              children: [
-                _SmallAction(
-                  label: '남기기',
-                  color: const Color(0xFF1A1A2E),
-                  onTap: () {
-                    widget.onClose();
-                    ref.read(shellPageProvider.notifier).state = 0;
-                  },
-                ),
-                const SizedBox(width: 8),
-                _SmallAction(
-                  label: '잊기',
-                  color: const Color(0xFFAAAAAA),
-                  onTap: () => _confirmForget(latest),
-                ),
-              ],
-            )
-          else
-            const SizedBox(height: 32),
-          const SizedBox(height: 16),
-          Container(height: 1, color: const Color(0xFFF0F0F0)),
-          const SizedBox(height: 10),
-          Text(
-            '$count명과 이어졌습니다.',
-            style: const TextStyle(fontSize: 13, color: Color(0xFFAAAAAA)),
-          ),
-          const SizedBox(height: 8),
-          // 이음 버튼
-          Center(
-            child: SizedBox(
-              width: MediaQuery.sizeOf(context).width * 0.5,
-              child: GestureDetector(
-                onTap: _showRequestDialog,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A2E),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    '이음',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 2.0,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 흔적 자리 — 항상 고정 높이
+              SizedBox(
+                height: traceHeight,
+                width: double.infinity,
+                child: latest != null
+                    ? _RecentTraceCard(record: latest)
+                    : Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8F8F8),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFEEEEEE)),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          '아직 남긴 흔적이 없습니다',
+                          style:
+                              TextStyle(fontSize: 13, color: Color(0xFFCCCCCC)),
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 10),
+              if (latest != null)
+                Row(
+                  children: [
+                    _SmallAction(
+                      label: '남기기',
+                      color: const Color(0xFF1A1A2E),
+                      onTap: () {
+                        widget.onClose();
+                        ref.read(shellPageProvider.notifier).state = 0;
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _SmallAction(
+                      label: '잊기',
+                      color: const Color(0xFFAAAAAA),
+                      onTap: () => _confirmForget(latest),
+                    ),
+                  ],
+                )
+              else
+                const SizedBox(height: 32),
+              const SizedBox(height: 16),
+              Container(height: 1, color: const Color(0xFFF0F0F0)),
+              const SizedBox(height: 14),
+              Text(
+                '$count명과 이어졌습니다.',
+                style: const TextStyle(fontSize: 13, color: Color(0xFFAAAAAA)),
+              ),
+              const SizedBox(height: 12),
+              // 이음 버튼
+              Center(
+                child: SizedBox(
+                  width: MediaQuery.sizeOf(context).width * 0.5,
+                  child: GestureDetector(
+                    onTap: _showRequestDialog,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1A2E),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        '이음',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 2.0,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -1152,18 +1194,16 @@ class _RecentTraceCard extends StatelessWidget {
     final dateStr = '${dt.month}.${dt.day.toString().padLeft(2, '0')}';
     final hasMemo = record.memo != null && record.memo!.isNotEmpty;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: SizedBox(
-        height: 200,
-        width: double.infinity,
+    return LayoutBuilder(
+      builder: (context, constraints) => ClipRRect(
+        borderRadius: BorderRadius.circular(12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (hasPhoto)
               Image.file(
                 File(record.photoPath!),
-                height: 240,
+                height: constraints.maxHeight,
                 fit: BoxFit.fitHeight,
                 errorBuilder: (_, __, ___) => const SizedBox.shrink(),
               ),
@@ -1230,7 +1270,8 @@ class _SmallAction extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
-  const _SmallAction({required this.label, required this.color, required this.onTap});
+  const _SmallAction(
+      {required this.label, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1242,7 +1283,9 @@ class _SmallAction extends StatelessWidget {
           border: Border.all(color: color.withValues(alpha: 0.35)),
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w500)),
+        child: Text(label,
+            style: TextStyle(
+                fontSize: 12, color: color, fontWeight: FontWeight.w500)),
       ),
     );
   }
@@ -1254,7 +1297,10 @@ class _TitleInputBar extends StatefulWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final VoidCallback onClose;
-  const _TitleInputBar({required this.controller, required this.focusNode, required this.onClose});
+  const _TitleInputBar(
+      {required this.controller,
+      required this.focusNode,
+      required this.onClose});
 
   @override
   State<_TitleInputBar> createState() => _TitleInputBarState();
@@ -1294,11 +1340,15 @@ class _TitleInputBarState extends State<_TitleInputBar> {
                     child: TextField(
                       controller: widget.controller,
                       focusNode: widget.focusNode,
-                      style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E), decoration: TextDecoration.none),
+                      style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF1A1A2E),
+                          decoration: TextDecoration.none),
                       cursorColor: const Color(0xFF16213E),
                       decoration: const InputDecoration(
                         hintText: '이벤트 제목',
-                        hintStyle: TextStyle(color: Color(0xFFCCCCCC), fontSize: 14),
+                        hintStyle:
+                            TextStyle(color: Color(0xFFCCCCCC), fontSize: 14),
                         border: InputBorder.none,
                         isDense: true,
                       ),
@@ -1326,13 +1376,13 @@ class _TitleInputBarState extends State<_TitleInputBar> {
   }
 }
 
-
 class _PartnerPanelContent extends ConsumerStatefulWidget {
   final VoidCallback onClose;
   const _PartnerPanelContent({required this.onClose});
 
   @override
-  ConsumerState<_PartnerPanelContent> createState() => _PartnerPanelContentState();
+  ConsumerState<_PartnerPanelContent> createState() =>
+      _PartnerPanelContentState();
 }
 
 class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
@@ -1418,7 +1468,10 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           '이벤트 대상',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+          style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1A1A2E)),
         ),
         content: const Text(
           '이 이벤트가 19세 이상 대상인가요?',
@@ -1427,11 +1480,14 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('전체 이용가', style: TextStyle(color: Color(0xFF888888))),
+            child: const Text('전체 이용가',
+                style: TextStyle(color: Color(0xFF888888))),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('19세 이상', style: TextStyle(color: Color(0xFF1A1A2E), fontWeight: FontWeight.w700)),
+            child: const Text('19세 이상',
+                style: TextStyle(
+                    color: Color(0xFF1A1A2E), fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -1447,7 +1503,9 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
       _photos.length,
       (i) => PartnerPhoto(
         path: _photos[i].path,
-        title: _photoCtrls[i].text.trim().isEmpty ? null : _photoCtrls[i].text.trim(),
+        title: _photoCtrls[i].text.trim().isEmpty
+            ? null
+            : _photoCtrls[i].text.trim(),
       ),
     );
 
@@ -1471,7 +1529,8 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
 
     if (isFreeActive) await FreeUseService.instance.recordRegistration();
 
-    final paidEvent = event.copyWith(paymentStatus: PaymentStatus.paid, paidAt: now);
+    final paidEvent =
+        event.copyWith(paymentStatus: PaymentStatus.paid, paidAt: now);
     _applyToMap(paidEvent);
     // 대기 상태 저장 → 이곳 패널 재오픈 시 대기 뷰로 표시됨
     ref.read(activePartnerEventProvider.notifier).state = paidEvent;
@@ -1501,7 +1560,6 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
     ref.read(partnerFocusPendingProvider.notifier).state = true;
     ref.read(partnerFocusProvider.notifier).state = mockCultural;
   }
-
 
   void _showDescOverlay(int index) {
     _descOverlay?.remove();
@@ -1560,7 +1618,9 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
     _descOverlay?.remove();
     _descFocusNode?.dispose();
     _titleCtrl.dispose();
-    for (final c in _photoCtrls) { c.dispose(); }
+    for (final c in _photoCtrls) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -1568,27 +1628,38 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
   Widget build(BuildContext context) {
     final activeEvent = ref.watch(activePartnerEventProvider);
     if (activeEvent != null) {
-      return _ActiveEventWaitingView(event: activeEvent, onClose: widget.onClose);
+      return _ActiveEventWaitingView(
+          event: activeEvent, onClose: widget.onClose);
     }
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
+      child: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          _kPanelHandleContentGap,
+          24,
+          28 + MediaQuery.paddingOf(context).bottom,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 제목
             const Text(
               '제목',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF555555)),
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF555555)),
             ),
             const SizedBox(height: 8),
             GestureDetector(
               onTap: _showTitleOverlay,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8F8F8),
                   borderRadius: BorderRadius.circular(10),
@@ -1607,14 +1678,16 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
                 ),
               ),
             ),
-            const Spacer(),
+            const SizedBox(height: 40),
             // 사진 3슬롯 (세로 비율 0.85로 확대)
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (int i = 0; i < 3; i++) ...[
                   if (i > 0) const SizedBox(width: 6),
-                  Expanded(child: AspectRatio(aspectRatio: 0.85, child: _buildPhotoCell(i))),
+                  Expanded(
+                      child: AspectRatio(
+                          aspectRatio: 0.85, child: _buildPhotoCell(i))),
                 ],
               ],
             ),
@@ -1624,18 +1697,23 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
                 for (int i = 0; i < 3; i++) ...[
                   if (i > 0) const SizedBox(width: 6),
                   Expanded(
-                    child: i < _photos.length ? _buildDescField(i) : const SizedBox(height: 32),
+                    child: i < _photos.length
+                        ? _buildDescField(i)
+                        : const SizedBox(height: 32),
                   ),
                 ],
               ],
             ),
-            const Spacer(),
+            const SizedBox(height: 32),
             // 노출시간
             Row(
               children: [
                 const Text(
                   '노출시간',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF555555)),
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF555555)),
                 ),
                 const SizedBox(width: 12),
                 ...[60, 120, 180].map((min) {
@@ -1645,9 +1723,12 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
                     child: GestureDetector(
                       onTap: () => setState(() => _selectedMinutes = min),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: selected ? const Color(0xFF16213E) : const Color(0xFFF4F4F7),
+                          color: selected
+                              ? const Color(0xFF16213E)
+                              : const Color(0xFFF4F4F7),
                           borderRadius: BorderRadius.circular(7),
                         ),
                         child: Text(
@@ -1655,7 +1736,9 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: selected ? Colors.white : const Color(0xFF888888),
+                            color: selected
+                                ? Colors.white
+                                : const Color(0xFF888888),
                           ),
                         ),
                       ),
@@ -1726,21 +1809,26 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
           children: [
             Image.file(_photos[i], fit: BoxFit.cover),
             Positioned(
-              top: 6, left: 6,
+              top: 6,
+              left: 6,
               child: GestureDetector(
                 onTap: () => setState(() => _repIndex = i),
                 child: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: isRep ? const Color(0xFF16213E) : Colors.black.withValues(alpha: 0.45),
+                    color: isRep
+                        ? const Color(0xFF16213E)
+                        : Colors.black.withValues(alpha: 0.45),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(isRep ? Icons.star : Icons.star_border, color: Colors.white, size: 14),
+                  child: Icon(isRep ? Icons.star : Icons.star_border,
+                      color: Colors.white, size: 14),
                 ),
               ),
             ),
             Positioned(
-              top: 4, right: 4,
+              top: 4,
+              right: 4,
               child: GestureDetector(
                 onTap: () => _deletePhoto(i),
                 child: Container(
@@ -1770,10 +1858,12 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.add_a_photo_outlined, size: 20, color: Color(0xFFAAAAAA)),
+                const Icon(Icons.add_a_photo_outlined,
+                    size: 20, color: Color(0xFFAAAAAA)),
                 if (i == 0) ...[
                   const SizedBox(height: 4),
-                  const Text('필수', style: TextStyle(fontSize: 11, color: Color(0xFFCC3333))),
+                  const Text('필수',
+                      style: TextStyle(fontSize: 11, color: Color(0xFFCC3333))),
                 ],
               ],
             ),
@@ -1805,7 +1895,9 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
             value.text.isEmpty ? '내용' : value.text,
             style: TextStyle(
               fontSize: 11,
-              color: value.text.isEmpty ? const Color(0xFFCCCCCC) : const Color(0xFF333333),
+              color: value.text.isEmpty
+                  ? const Color(0xFFCCCCCC)
+                  : const Color(0xFF333333),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -1822,10 +1914,12 @@ class _ActiveEventWaitingView extends ConsumerStatefulWidget {
   const _ActiveEventWaitingView({required this.event, required this.onClose});
 
   @override
-  ConsumerState<_ActiveEventWaitingView> createState() => _ActiveEventWaitingViewState();
+  ConsumerState<_ActiveEventWaitingView> createState() =>
+      _ActiveEventWaitingViewState();
 }
 
-class _ActiveEventWaitingViewState extends ConsumerState<_ActiveEventWaitingView> {
+class _ActiveEventWaitingViewState
+    extends ConsumerState<_ActiveEventWaitingView> {
   Timer? _timer;
   late Duration _remaining;
   bool _extending = false;
@@ -1883,7 +1977,8 @@ class _ActiveEventWaitingViewState extends ConsumerState<_ActiveEventWaitingView
   }
 
   void _showTerminateConfirm() {
-    final hours = widget.event.expiresAt.difference(widget.event.startsAt).inHours;
+    final hours =
+        widget.event.expiresAt.difference(widget.event.startsAt).inHours;
     final withinThreshold = _withinRefundThreshold();
     showDialog(
       context: context,
@@ -1981,11 +2076,19 @@ class _ActiveEventWaitingViewState extends ConsumerState<_ActiveEventWaitingView
       ref.read(mockPartnerEventStoreProvider.notifier).state = store.map((e) {
         if (e.id != widget.event.id) return e;
         return CulturalEvent(
-          id: e.id, title: e.title, venue: e.venue, address: e.address,
-          description: e.description, startDate: e.startDate,
-          endDateTime: newExpiresAt, location: e.location,
-          category: e.category, isFree: e.isFree, source: e.source,
-          partnerMessage: e.partnerMessage, isAdultOnly: e.isAdultOnly,
+          id: e.id,
+          title: e.title,
+          venue: e.venue,
+          address: e.address,
+          description: e.description,
+          startDate: e.startDate,
+          endDateTime: newExpiresAt,
+          location: e.location,
+          category: e.category,
+          isFree: e.isFree,
+          source: e.source,
+          partnerMessage: e.partnerMessage,
+          isAdultOnly: e.isAdultOnly,
         );
       }).toList();
     } finally {
@@ -2037,7 +2140,8 @@ class _ActiveEventWaitingViewState extends ConsumerState<_ActiveEventWaitingView
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w200,
-              color: isExpired ? const Color(0xFFAAAAAA) : const Color(0xFF1A1A2E),
+              color:
+                  isExpired ? const Color(0xFFAAAAAA) : const Color(0xFF1A1A2E),
               letterSpacing: 2,
             ),
           ),
@@ -2057,7 +2161,11 @@ class _ActiveEventWaitingViewState extends ConsumerState<_ActiveEventWaitingView
               alignment: Alignment.center,
               child: const Text(
                 '종료 완료',
-                style: TextStyle(color: Color(0xFFAAAAAA), fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: 2.0),
+                style: TextStyle(
+                    color: Color(0xFFAAAAAA),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 2.0),
               ),
             )
           else
@@ -2069,13 +2177,18 @@ class _ActiveEventWaitingViewState extends ConsumerState<_ActiveEventWaitingView
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       decoration: BoxDecoration(
-                        color: _extending ? const Color(0xFFAAAAAA) : const Color(0xFF1A1A2E),
+                        color: _extending
+                            ? const Color(0xFFAAAAAA)
+                            : const Color(0xFF1A1A2E),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       alignment: Alignment.center,
                       child: const Text(
                         '연장',
-                        style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -2093,7 +2206,10 @@ class _ActiveEventWaitingViewState extends ConsumerState<_ActiveEventWaitingView
                       alignment: Alignment.center,
                       child: const Text(
                         '종료',
-                        style: TextStyle(color: Color(0xFF1A1A2E), fontSize: 15, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                            color: Color(0xFF1A1A2E),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -2111,7 +2227,8 @@ class _NowCapsule extends StatefulWidget {
   final bool isOpen;
   final bool mapReady;
 
-  const _NowCapsule({required this.hasAlert, required this.isOpen, required this.mapReady});
+  const _NowCapsule(
+      {required this.hasAlert, required this.isOpen, required this.mapReady});
 
   @override
   State<_NowCapsule> createState() => _NowCapsuleState();
@@ -2127,7 +2244,8 @@ class _NowCapsuleState extends State<_NowCapsule>
   @override
   void initState() {
     super.initState();
-    _blink = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _blink = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900));
     _blinkAnim = Tween<double>(begin: 0.35, end: 1.0).animate(
       CurvedAnimation(parent: _blink, curve: Curves.easeInOut),
     );
@@ -2195,7 +2313,8 @@ class _NowCapsuleState extends State<_NowCapsule>
             width: capsuleWidth,
             height: 6,
             child: progress >= 1.0
-                ? ColoredBox(color: color.withValues(alpha: blinkOpacity * 0.70))
+                ? ColoredBox(
+                    color: color.withValues(alpha: blinkOpacity * 0.70))
                 : Stack(
                     children: [
                       // 좌측 끝 → 중앙으로
@@ -2204,7 +2323,9 @@ class _NowCapsuleState extends State<_NowCapsule>
                         top: 0,
                         bottom: 0,
                         width: fillWidth,
-                        child: ColoredBox(color: color.withValues(alpha: blinkOpacity * 0.70)),
+                        child: ColoredBox(
+                            color:
+                                color.withValues(alpha: blinkOpacity * 0.70)),
                       ),
                       // 우측 끝 → 중앙으로
                       Positioned(
@@ -2212,7 +2333,9 @@ class _NowCapsuleState extends State<_NowCapsule>
                         top: 0,
                         bottom: 0,
                         width: fillWidth,
-                        child: ColoredBox(color: color.withValues(alpha: blinkOpacity * 0.70)),
+                        child: ColoredBox(
+                            color:
+                                color.withValues(alpha: blinkOpacity * 0.70)),
                       ),
                     ],
                   ),
