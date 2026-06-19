@@ -99,10 +99,16 @@ class _BrandBlock extends StatelessWidget {
       children: [
         const Text(_titleText, style: _titleStyle),
         const SizedBox(height: 16),
-        Text(
-          _subtitleText,
-          style: _subtitleBase.copyWith(
-            letterSpacing: spacing.clamp(0.0, 30.0),
+        SizedBox(
+          width: tw,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              _subtitleText,
+              style: _subtitleBase.copyWith(
+                letterSpacing: spacing.clamp(0.0, 30.0),
+              ),
+            ),
           ),
         ),
       ],

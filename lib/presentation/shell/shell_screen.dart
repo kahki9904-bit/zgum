@@ -1051,10 +1051,11 @@ class _UserPanelContentState extends ConsumerState<_UserPanelContent> {
     final friendCount = ref.watch(friendCountProvider);
     final count = friendCount.whenOrNull(data: (v) => v) ?? 0;
 
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(20, _kCapsuleHeight + 12, 20, 24 + MediaQuery.paddingOf(context).bottom),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           // 흔적 자리 — 항상 고정 높이
           SizedBox(
