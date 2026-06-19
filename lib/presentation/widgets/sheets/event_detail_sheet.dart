@@ -29,7 +29,7 @@ class EventDetailSheet {
   }) async {
     if (!context.mounted) return;
 
-    showGeneralDialog<void>(
+    await showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
       barrierLabel: '',

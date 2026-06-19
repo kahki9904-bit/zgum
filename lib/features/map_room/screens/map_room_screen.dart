@@ -442,8 +442,10 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     });
     _rebuildMarkers();
     // 지도가 이동을 처리한 후 팝업 표시 (동시 실행 시 WebView 렌더 충돌 방지)
-    Future.delayed(_kPartnerFocusDelay, () {
-      if (mounted) _showEventSheet(event);
+    Future.delayed(_kPartnerFocusDelay, () async {
+      if (!mounted) return;
+      await _showEventSheet(event);
+      if (mounted) _rebuildMarkers();
     });
   }
 
@@ -644,7 +646,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     });
   }
 
-  void _showEventSheet(CulturalEvent event) {
+  Future<void> _showEventSheet(CulturalEvent event) async {
     if (!mounted) return;
     final myEventIds =
         ref.read(partnerMyEventsProvider).map((e) => e.id).toSet();
