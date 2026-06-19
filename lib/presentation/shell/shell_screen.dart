@@ -190,7 +190,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   }
 
   void _onNowDragUpdate(DragUpdateDetails d) {
-    final maxDist = panelHeight + _kPanelFloat - 20;
+    final maxDist = panelHeight + _kPanelFloat;
     _panelAnim.value =
         (_panelAnim.value - (d.primaryDelta ?? 0) / maxDist).clamp(0.0, 1.0);
   }
@@ -351,8 +351,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                           Positioned(
                             left: 0,
                             right: 0,
-                            bottom: bottomPadding,
-                            height: panelHeight + _kCapsuleHeight + _kPanelFloat,
+                            bottom: 0,
+                            height: panelHeight + _kCapsuleHeight + _kPanelFloat + bottomPadding,
                             child: AnimatedBuilder(
                               animation: _panelAnim,
                               builder: (_, child) => Transform.translate(
@@ -366,6 +366,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                                 isOpen: isOpen,
                                 hasAlert: hasAlert,
                                 panelHeight: panelHeight,
+                                bottomPadding: bottomPadding,
                                 panelAnim: _panelAnim,
                                 currentPage: _page,
                                 mapReady: _mapReady,
@@ -450,6 +451,7 @@ class _NowBundle extends StatelessWidget {
   final bool isOpen;
   final bool hasAlert;
   final double panelHeight;
+  final double bottomPadding;
   final Animation<double> panelAnim;
   final int currentPage;
   final bool mapReady;
@@ -461,6 +463,7 @@ class _NowBundle extends StatelessWidget {
     required this.isOpen,
     required this.hasAlert,
     required this.panelHeight,
+    required this.bottomPadding,
     required this.panelAnim,
     required this.currentPage,
     required this.mapReady,
@@ -481,8 +484,8 @@ class _NowBundle extends StatelessWidget {
         animation: panelAnim,
         builder: (_, content) {
           final capsuleBottom = lerpDouble(
-            panelHeight + _kPanelFloat,
-            panelHeight - _kCapsuleHeight,
+            panelHeight + _kPanelFloat + bottomPadding,
+            panelHeight - _kCapsuleHeight + bottomPadding,
             panelAnim.value,
           )!;
           return Stack(
