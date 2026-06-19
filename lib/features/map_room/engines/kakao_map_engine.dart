@@ -11,8 +11,7 @@ int _zoomToLevel(double zoom) => zoom.round().clamp(6, 21);
 // ── 컨트롤러 ──────────────────────────────────────────────────────────────────
 
 class _KakaoNativeController implements MapEngineController {
-  _KakaoNativeController(MapCoordinate center)
-      : _center = center;
+  _KakaoNativeController(MapCoordinate center) : _center = center;
 
   MapCoordinate _center;
   _KakaoMapViewState? _state;
@@ -115,11 +114,11 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
     super.didUpdateWidget(old);
     final native = _native;
     if (native == null) return;
-    if (widget.markers != old.markers) {
-      _syncMarkers(native);
-    }
     if (widget.userLocation != old.userLocation) {
       _syncUserMarker(native);
+    }
+    if (widget.markers != old.markers) {
+      _syncMarkers(native);
     }
     if (widget.routePoints != old.routePoints) {
       _syncRoute(native);
@@ -146,8 +145,8 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
 
   Future<kakao.KImage> _getMarkerImage() async {
     if (_markerImage != null) return _markerImage!;
-    final double tapSize = Platform.isIOS ? 30.0 : 44.0;
-    final double iconSize = Platform.isIOS ? 20.0 : 28.0;
+    final double tapSize = Platform.isIOS ? 48.0 : 44.0;
+    final double iconSize = Platform.isIOS ? 26.0 : 28.0;
     final markerWidget = SizedBox(
       width: tapSize,
       height: tapSize,
@@ -165,7 +164,8 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
         ),
       ),
     );
-    _markerImage = await kakao.KImage.fromWidget(markerWidget, Size(tapSize, tapSize));
+    _markerImage =
+        await kakao.KImage.fromWidget(markerWidget, Size(tapSize, tapSize));
     return _markerImage!;
   }
 
@@ -175,8 +175,8 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
 
   Future<kakao.KImage> _getUserMarkerImage() async {
     if (_userMarkerImage != null) return _userMarkerImage!;
-    final double tapSize = Platform.isIOS ? 30.0 : 44.0;
-    final double iconSize = Platform.isIOS ? 20.0 : 28.0;
+    final double tapSize = Platform.isIOS ? 48.0 : 44.0;
+    final double iconSize = Platform.isIOS ? 26.0 : 28.0;
     final markerWidget = SizedBox(
       width: tapSize,
       height: tapSize,
@@ -184,7 +184,8 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
         child: Icon(Icons.location_on, size: iconSize),
       ),
     );
-    _userMarkerImage = await kakao.KImage.fromWidget(markerWidget, Size(tapSize, tapSize));
+    _userMarkerImage =
+        await kakao.KImage.fromWidget(markerWidget, Size(tapSize, tapSize));
     return _userMarkerImage!;
   }
 
@@ -225,7 +226,10 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
         final poi = await ctrl.labelLayer.addPoi(
           kakao.LatLng(m.location.latitude, m.location.longitude),
           style: kakao.PoiStyle(icon: icon),
-          onClick: () => widget.onMarkerTap(m),
+          onClick: () {
+            debugPrint('[KakaoMap] marker tapped: ${m.id} / ${m.title}');
+            widget.onMarkerTap(m);
+          },
         );
         _activePois.add(poi);
       }
@@ -267,12 +271,11 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
         _native = controller;
         widget.controller._attach(this);
         _move(widget.controller._center, widget.initialZoom);
-        _syncMarkers(controller);
         _syncUserMarker(controller);
+        _syncMarkers(controller);
         _syncRoute(controller);
         widget.onEngineReady?.call();
       },
     );
   }
 }
-

@@ -290,7 +290,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     final availableHeight =
         media.size.height - media.padding.top - media.padding.bottom;
     panelHeight = (availableHeight * 0.68).clamp(420.0, 560.0);
-    final bottomPadding = max(media.padding.bottom, Platform.isAndroid ? 16.0 : 0.0) + _kIosGestureBuffer;
+    final bottomPadding =
+        max(media.padding.bottom, Platform.isAndroid ? 16.0 : 0.0) +
+            _kIosGestureBuffer;
 
     return ValueListenableBuilder<bool>(
       valueListenable: _nowPanelOpen,
@@ -374,7 +376,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                             right: 0,
                             bottom: Platform.isIOS ? 0 : bottomPadding,
                             height: Platform.isIOS
-                                ? panelHeight + _kCapsuleHeight + _kPanelFloat + bottomPadding
+                                ? panelHeight +
+                                    _kCapsuleHeight +
+                                    _kPanelFloat +
+                                    bottomPadding
                                 : panelHeight + _kCapsuleHeight + _kPanelFloat,
                             child: AnimatedBuilder(
                               animation: _panelAnim,
@@ -390,7 +395,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                                 isOpen: isOpen,
                                 hasAlert: hasAlert,
                                 panelHeight: panelHeight,
-                                bottomPadding: Platform.isIOS ? bottomPadding : 0,
+                                bottomPadding:
+                                    Platform.isIOS ? bottomPadding : 0,
                                 onToggle: Platform.isIOS ? _toggleNow : null,
                                 panelAnim: _panelAnim,
                                 currentPage: _page,
@@ -500,127 +506,29 @@ class _NowBundle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final touchWidth = MediaQuery.sizeOf(context).width * 0.80;
+    final content = _buildPanelContent();
 
-    final isIOS = onToggle != null;
+    if (onToggle != null) {
+      return _IosNowBundle(
+        isOpen: isOpen,
+        hasAlert: hasAlert,
+        panelHeight: panelHeight,
+        bottomPadding: bottomPadding,
+        panelAnim: panelAnim,
+        mapReady: mapReady,
+        onToggle: onToggle!,
+        content: content,
+      );
+    }
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onVerticalDragUpdate: isIOS ? null : onDragUpdate,
-      onVerticalDragEnd: isIOS ? null : onDragEnd,
-      child: AnimatedBuilder(
-        animation: panelAnim,
-        builder: (_, content) {
-          final capsuleBottom = lerpDouble(
-            panelHeight + _kPanelFloat + bottomPadding,
-            panelHeight - _kCapsuleHeight + bottomPadding,
-            panelAnim.value,
-          )!;
-          return Stack(
-            children: [
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: panelHeight,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onVerticalDragUpdate: isIOS ? null : onDragUpdate,
-                  onVerticalDragEnd: isIOS ? null : onDragEnd,
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(20)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color(0x14000000),
-                          blurRadius: 8,
-                          offset: Offset(0, -2),
-                        ),
-                      ],
-                    ),
-                    child: content,
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 16,
-                right: 6,
-                width: 4,
-                height: panelHeight - 32,
-                child: FadeTransition(
-                  opacity: panelAnim,
-                  child: LayoutBuilder(
-                    builder: (_, constraints) {
-                      const thumbH = 36.0;
-                      final trackH = constraints.maxHeight;
-                      final thumbTop =
-                          (1 - panelAnim.value) * (trackH - thumbH);
-                      return Stack(
-                        children: [
-                          Container(
-                            width: 4,
-                            height: trackH,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE0E0E0)
-                                  .withValues(alpha: 0.6),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          Positioned(
-                            top: thumbTop,
-                            child: Container(
-                              width: 4,
-                              height: thumbH,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF1A1A2E)
-                                    .withValues(alpha: 0.22),
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: capsuleBottom,
-                left: 0,
-                right: 0,
-                height: _kCapsuleHeight,
-                child: Center(
-                  child: SizedBox(
-                    width: touchWidth,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: isIOS ? onToggle : null,
-                      onVerticalDragUpdate: isIOS ? null : onDragUpdate,
-                      onVerticalDragEnd: isIOS ? null : onDragEnd,
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: _NowCapsule(
-                            hasAlert: hasAlert,
-                            isOpen: isOpen,
-                            mapReady: mapReady),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          child: Material(
-            color: Colors.white,
-            child: _buildPanelContent(),
-          ),
-        ),
-      ),
+    return _AndroidNowBundle(
+      hasAlert: hasAlert,
+      panelHeight: panelHeight,
+      panelAnim: panelAnim,
+      mapReady: mapReady,
+      onDragUpdate: onDragUpdate,
+      onDragEnd: onDragEnd,
+      content: content,
     );
   }
 
@@ -634,6 +542,232 @@ class _NowBundle extends StatelessWidget {
       default: // 지도 — 지금 패널
         return _MapPanelContent(onClose: onClose, isOpen: isOpen);
     }
+  }
+}
+
+class _IosNowBundle extends StatelessWidget {
+  final bool isOpen;
+  final bool hasAlert;
+  final double panelHeight;
+  final double bottomPadding;
+  final Animation<double> panelAnim;
+  final bool mapReady;
+  final VoidCallback onToggle;
+  final Widget content;
+
+  const _IosNowBundle({
+    required this.isOpen,
+    required this.hasAlert,
+    required this.panelHeight,
+    required this.bottomPadding,
+    required this.panelAnim,
+    required this.mapReady,
+    required this.onToggle,
+    required this.content,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: panelAnim,
+      child: _NowPanelSheet(child: content),
+      builder: (_, sheet) {
+        final capsuleBottom = lerpDouble(
+          panelHeight + _kPanelFloat + bottomPadding,
+          panelHeight - _kCapsuleHeight + bottomPadding,
+          panelAnim.value,
+        )!;
+
+        return Stack(
+          children: [
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: panelHeight,
+              child: sheet!,
+            ),
+            _PanelScrollIndicator(
+                panelHeight: panelHeight, panelAnim: panelAnim),
+            Positioned(
+              bottom: capsuleBottom,
+              left: 0,
+              right: 0,
+              height: _kCapsuleHeight,
+              child: Center(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onToggle,
+                  child: _NowCapsule(
+                    hasAlert: hasAlert,
+                    isOpen: isOpen,
+                    mapReady: mapReady,
+                    buttonStyle: true,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _AndroidNowBundle extends StatelessWidget {
+  final bool hasAlert;
+  final double panelHeight;
+  final Animation<double> panelAnim;
+  final bool mapReady;
+  final GestureDragUpdateCallback onDragUpdate;
+  final GestureDragEndCallback onDragEnd;
+  final Widget content;
+
+  const _AndroidNowBundle({
+    required this.hasAlert,
+    required this.panelHeight,
+    required this.panelAnim,
+    required this.mapReady,
+    required this.onDragUpdate,
+    required this.onDragEnd,
+    required this.content,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final touchWidth = MediaQuery.sizeOf(context).width * 0.80;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onVerticalDragUpdate: onDragUpdate,
+      onVerticalDragEnd: onDragEnd,
+      child: AnimatedBuilder(
+        animation: panelAnim,
+        child: _NowPanelSheet(child: content),
+        builder: (_, sheet) {
+          final capsuleBottom = lerpDouble(
+            panelHeight + _kPanelFloat,
+            panelHeight - _kCapsuleHeight,
+            panelAnim.value,
+          )!;
+
+          return Stack(
+            children: [
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: panelHeight,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragUpdate: onDragUpdate,
+                  onVerticalDragEnd: onDragEnd,
+                  child: sheet!,
+                ),
+              ),
+              _PanelScrollIndicator(
+                panelHeight: panelHeight,
+                panelAnim: panelAnim,
+              ),
+              Positioned(
+                bottom: capsuleBottom,
+                left: 0,
+                right: 0,
+                height: _kCapsuleHeight,
+                child: Center(
+                  child: SizedBox(
+                    width: touchWidth,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onVerticalDragUpdate: onDragUpdate,
+                      onVerticalDragEnd: onDragEnd,
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: _NowCapsule(
+                          hasAlert: hasAlert,
+                          isOpen: false,
+                          mapReady: mapReady,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _NowPanelSheet extends StatelessWidget {
+  final Widget child;
+
+  const _NowPanelSheet({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      child: Material(
+        color: Colors.white,
+        child: child,
+      ),
+    );
+  }
+}
+
+class _PanelScrollIndicator extends StatelessWidget {
+  final double panelHeight;
+  final Animation<double> panelAnim;
+
+  const _PanelScrollIndicator({
+    required this.panelHeight,
+    required this.panelAnim,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: 16,
+      right: 6,
+      width: 4,
+      height: panelHeight - 32,
+      child: FadeTransition(
+        opacity: panelAnim,
+        child: LayoutBuilder(
+          builder: (_, constraints) {
+            const thumbH = 36.0;
+            final trackH = constraints.maxHeight;
+            final thumbTop = (1 - panelAnim.value) * (trackH - thumbH);
+            return Stack(
+              children: [
+                Container(
+                  width: 4,
+                  height: trackH,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0E0E0).withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Positioned(
+                  top: thumbTop,
+                  child: Container(
+                    width: 4,
+                    height: thumbH,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A2E).withValues(alpha: 0.22),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
   }
 }
 
@@ -1510,7 +1644,10 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
                         ),
                         alignment: Alignment.center,
                         child: const Text('전체 이용가',
-                            style: TextStyle(fontSize: 14, color: Color(0xFF888888), fontWeight: FontWeight.w600)),
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF888888),
+                                fontWeight: FontWeight.w600)),
                       ),
                     ),
                   ),
@@ -1526,7 +1663,10 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
                         ),
                         alignment: Alignment.center,
                         child: const Text('19세 이상',
-                            style: TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w700)),
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700)),
                       ),
                     ),
                   ),
@@ -1537,7 +1677,10 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('이벤트 대상',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A1A2E))),
                   SizedBox(height: 10),
                   Text('이 이벤트가 19세 이상 대상인가요?',
                       style: TextStyle(fontSize: 14, color: Color(0xFF555555))),
@@ -1689,6 +1832,9 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
       return _ActiveEventWaitingView(
           event: activeEvent, onClose: widget.onClose);
     }
+    final formTopPadding = Platform.isIOS ? 24.0 : _kPanelHandleContentGap;
+    final titleToPhotosGap = Platform.isIOS ? 28.0 : 40.0;
+    final photosToControlsGap = Platform.isIOS ? 24.0 : 32.0;
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       behavior: HitTestBehavior.opaque,
@@ -1696,7 +1842,7 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
         physics: const ClampingScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
           24,
-          _kPanelHandleContentGap,
+          formTopPadding,
           24,
           28 + MediaQuery.paddingOf(context).bottom,
         ),
@@ -1736,7 +1882,7 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
                 ),
               ),
             ),
-            const SizedBox(height: 40),
+            SizedBox(height: titleToPhotosGap),
             // 사진 3슬롯 (세로 비율 0.85로 확대)
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1762,7 +1908,7 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
                 ],
               ],
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: photosToControlsGap),
             // 노출시간
             Row(
               children: [
@@ -2284,9 +2430,14 @@ class _NowCapsule extends StatefulWidget {
   final bool hasAlert;
   final bool isOpen;
   final bool mapReady;
+  final bool buttonStyle;
 
-  const _NowCapsule(
-      {required this.hasAlert, required this.isOpen, required this.mapReady});
+  const _NowCapsule({
+    required this.hasAlert,
+    required this.isOpen,
+    required this.mapReady,
+    this.buttonStyle = false,
+  });
 
   @override
   State<_NowCapsule> createState() => _NowCapsuleState();
@@ -2364,6 +2515,32 @@ class _NowCapsuleState extends State<_NowCapsule>
 
         // 양쪽 끝에서 중앙으로 채우기 (decelerate: 끝에서 빠르게 출발 → 중앙에서 부드럽게 안착)
         final fillWidth = progress * halfW;
+
+        if (widget.buttonStyle) {
+          return Container(
+            width: 84,
+            height: 34,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: blinkOpacity * 0.88),
+              borderRadius: BorderRadius.circular(17),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x1F000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              widget.isOpen
+                  ? Icons.keyboard_arrow_down_rounded
+                  : Icons.keyboard_arrow_up_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
+          );
+        }
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(5),

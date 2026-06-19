@@ -86,7 +86,6 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   // ── 이벤트별 만료 타이머 (4번: 즉시 삭제) ────────────────────────────────────
   final Map<String, Timer> _eventTimers = {};
 
-
   // ── 검색 ──────────────────────────────────────────────────────────────────
   bool _searchOpen = false;
   final _searchCtrl = TextEditingController();
@@ -254,8 +253,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       final expiryTime = event.endDateTime.add(const Duration(hours: 1));
       final delay = expiryTime.difference(now);
       if (delay <= Duration.zero) continue;
-      _eventTimers[event.id] =
-          Timer(delay, () => _expireEventNow(event.id));
+      _eventTimers[event.id] = Timer(delay, () => _expireEventNow(event.id));
     }
   }
 
@@ -321,9 +319,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
         ),
         ...CulturalEventAdapter.toMarkers(visible).map((m) {
           final event = _eventById[m.id];
-          final mins = event != null
-              ? walkingMinutes(focusLatLng, event.location)
-              : 999;
+          final mins =
+              event != null ? walkingMinutes(focusLatLng, event.location) : 999;
           return applyState(m, dimmed: mins > _displayRadiusMinutes);
         }),
       ];
@@ -331,9 +328,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       // 일반 모드: 현재 위치 기준 반경 안 강조, 밖 흐림
       markers = CulturalEventAdapter.toMarkers(visible).map((m) {
         final event = _eventById[m.id];
-        final mins = event != null
-            ? walkingMinutes(_center, event.location)
-            : 999;
+        final mins =
+            event != null ? walkingMinutes(_center, event.location) : 999;
         return applyState(m, dimmed: mins > _displayRadiusMinutes);
       }).toList();
     }
@@ -429,7 +425,6 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     }
   }
 
-
   void _focusEvent(CulturalEvent event) {
     ref.read(partnerFocusPendingProvider.notifier).state = false;
     _mapCtrl.move(
@@ -501,8 +496,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                       )
                     : null,
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
               onChanged: _onSearchChanged,
               onSubmitted: _runKakaoSearch,
@@ -597,8 +592,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right,
-                color: Color(0xFFDDDDDD), size: 18),
+            const Icon(Icons.chevron_right, color: Color(0xFFDDDDDD), size: 18),
           ],
         ),
       ),
@@ -617,8 +611,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
           '${to.longitude},${to.latitude}'
           '?overview=full&geometries=geojson';
       final res = await Dio().get<Map<String, dynamic>>(url);
-      final coords =
-          res.data!['routes'][0]['geometry']['coordinates'] as List;
+      final coords = res.data!['routes'][0]['geometry']['coordinates'] as List;
       final points = coords
           .map((c) => MapCoordinate(c[1] as double, c[0] as double))
           .toList();
@@ -633,8 +626,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       if (!mounted) return;
       setState(() => _isLoadingRoute = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('경로를 불러오지 못했습니다. 잠시 후 다시 시도하세요.')),
+        const SnackBar(content: Text('경로를 불러오지 못했습니다. 잠시 후 다시 시도하세요.')),
       );
     }
   }
@@ -652,13 +644,17 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     final myEventIds =
         ref.read(partnerMyEventsProvider).map((e) => e.id).toSet();
     final activeEvent = ref.read(activePartnerEventProvider);
-    final isMyEvent = myEventIds.contains(event.id) || activeEvent?.id == event.id;
+    final isMyEvent =
+        myEventIds.contains(event.id) || activeEvent?.id == event.id;
     EventDetailSheet.show(
       context,
       event,
       timeService: _timeService,
       userLocation: _center,
-      isCheckedIn: ref.read(checkInProvider.notifier).checkedInEventIds.contains(event.id),
+      isCheckedIn: ref
+          .read(checkInProvider.notifier)
+          .checkedInEventIds
+          .contains(event.id),
       friendTraceCount: 0,
       onCheckIn: isMyEvent
           ? null
@@ -683,13 +679,18 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   }
 
   void _onMarkerTap(MapMarkerModel marker) {
+    debugPrint('[MapRoom] _onMarkerTap: ${marker.id} / ${marker.title}');
     if (marker.id == _searchPinId) {
       final place = _searchFocusPlace;
       if (place != null && mounted) KakaoPlaceDetailSheet.show(context, place);
       return;
     }
     final event = _eventById[marker.id];
-    if (event == null) return;
+    if (event == null) {
+      debugPrint('[MapRoom] marker event missing: ${marker.id}');
+      return;
+    }
+    debugPrint('[MapRoom] show sheet: ${event.id} / ${event.title}');
     _mapCtrl.move(
       MapCoordinate(event.location.latitude, event.location.longitude),
       AppConstants.defaultZoom,
@@ -703,8 +704,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   Widget build(BuildContext context) {
     super.build(context);
     // DEV/MOCK ONLY: 파트너 등록 이벤트 추가 시 마커 갱신
-    ref.listen<List<CulturalEvent>>(
-        mockPartnerEventStoreProvider, (prev, next) {
+    ref.listen<List<CulturalEvent>>(mockPartnerEventStoreProvider,
+        (prev, next) {
       if (next.length != (prev?.length ?? 0)) _loadEvents();
     });
     ref.listen<CulturalEvent?>(partnerFocusProvider, (prev, next) {
@@ -715,12 +716,9 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
         });
       }
     });
-    ref.listen<MapFilterState>(
-        mapFilterProvider, (_, __) => _rebuildMarkers());
-    ref.listen<AuthState>(
-        authStateProvider, (_, __) => _loadEvents());
-    ref.listen<bool>(
-        hasUnseenAlertProvider, (_, __) => _updatePartnerPulse());
+    ref.listen<MapFilterState>(mapFilterProvider, (_, __) => _rebuildMarkers());
+    ref.listen<AuthState>(authStateProvider, (_, __) => _loadEvents());
+    ref.listen<bool>(hasUnseenAlertProvider, (_, __) => _updatePartnerPulse());
 
     final safePadding = MediaQuery.paddingOf(context).top;
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
@@ -732,7 +730,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     final panelHeight =
         (screenHeight * 0.48).clamp(220.0, maxSearchPanelHeight).toDouble();
     final kakaoResults = ref.watch(kakaoSearchProvider).results;
-    final hasResults = _searchQuery.isNotEmpty && (kakaoResults.isNotEmpty || _searchResults.isNotEmpty);
+    final hasResults = _searchQuery.isNotEmpty &&
+        (kakaoResults.isNotEmpty || _searchResults.isNotEmpty);
     final searchPanelHeight = !_searchOpen
         ? 48.0
         : hasResults
@@ -855,7 +854,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                                     width: 20,
                                     height: 6,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF16213E).withValues(alpha: 0.70),
+                                      color: const Color(0xFF16213E)
+                                          .withValues(alpha: 0.70),
                                       borderRadius: BorderRadius.circular(5),
                                     ),
                                   ),
@@ -873,8 +873,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               child: GestureDetector(
                 onTap: _isNavigating ? _stopNavigation : null,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
                     color: const Color(0xFF16213E),
                     borderRadius: BorderRadius.circular(24),
@@ -912,8 +912,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                       : const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.close,
-                                color: Colors.white, size: 16),
+                            Icon(Icons.close, color: Colors.white, size: 16),
                             SizedBox(width: 6),
                             Text(
                               '안내 종료',
@@ -936,8 +935,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               left: 16,
               right: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: const Color(0xFF16213E).withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(12),
@@ -974,22 +973,15 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                 ),
                 child: const Text(
                   '이 위치로 설정',
-                  style: TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
               ),
             ),
           ],
 
           // 지금 버튼 → ShellScreen 공통 하단 탭으로 이전됨
-
         ],
       ),
     );
   }
 }
-
-
-
-
-
