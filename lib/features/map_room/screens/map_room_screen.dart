@@ -102,7 +102,6 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   // ── GPS 상태 ───────────────────────────────────────────────────────────────
   bool _locationAcquiring = true;
   bool _needsManualLocation = false;
-  LocationStep _locationStep = LocationStep.gps;
 
   // ── 체크인 (checkInProvider에서 관리) ────────────────────────────────────
 
@@ -148,7 +147,6 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     if (!mounted) return;
     setState(() {
       _center = result.position;
-      _locationStep = result.step;
       _locationAcquiring = false;
       _needsManualLocation = result.needsManual;
     });
@@ -920,45 +918,6 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                             ),
                           ],
                         ),
-                ),
-              ),
-            ),
-
-          // ── 유추 위치 안내 배너 ────────────────────────────────────────
-          if (!_locationAcquiring && !_needsManualLocation &&
-              (_locationStep == LocationStep.lastKnown ||
-                  _locationStep == LocationStep.network))
-            Positioned(
-              top: safePadding + 56,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF3CD),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFFFD580)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.location_searching,
-                          size: 13, color: Color(0xFFFF8C00)),
-                      const SizedBox(width: 6),
-                      Text(
-                        _locationStep == LocationStep.lastKnown
-                            ? '이전 위치 기준으로 표시 중'
-                            : '대략적인 위치로 표시 중',
-                        style: const TextStyle(
-                          color: Color(0xFF996600),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),
