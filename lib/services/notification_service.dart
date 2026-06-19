@@ -21,8 +21,12 @@ class NotificationService {
       tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
 
       const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-      const ios = DarwinInitializationSettings();
-      const settings = InitializationSettings(android: android, iOS: ios);
+      const darwin = DarwinInitializationSettings();
+      const settings = InitializationSettings(
+        android: android,
+        iOS: darwin,
+        macOS: darwin,
+      );
       await _plugin.initialize(settings);
       _initialized = true;
     } catch (_) {

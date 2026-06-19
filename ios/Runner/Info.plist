@@ -49,6 +49,10 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Face ID 권한 — local_auth 플러그인 필수 -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Z:GUM에 접근하기 위해 기기 인증을 사용합니다.</string>
+
 	<!-- 위치 권한 — geolocator 플러그인 필수 -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>주변을 발견하는 역할만 합니다.</string>
