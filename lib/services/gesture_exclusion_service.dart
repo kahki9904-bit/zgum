@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/services.dart';
 
 /// Android Q(10)+ 에서 시스템 백(back) 제스처 영역을 제외시킵니다.
@@ -11,6 +12,7 @@ class GestureExclusionService {
     List<Rect> rects,
     double devicePixelRatio,
   ) async {
+    if (!Platform.isAndroid) return;
     await _ch.invokeMethod<void>('setExclusionRects', {
       'rects': rects
           .map((r) => {
@@ -25,6 +27,7 @@ class GestureExclusionService {
 
   /// 등록된 제외 영역을 모두 해제합니다.
   static Future<void> clearExclusionRects() async {
+    if (!Platform.isAndroid) return;
     await _ch.invokeMethod<void>('clearExclusionRects');
   }
 }
