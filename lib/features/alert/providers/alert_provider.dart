@@ -16,7 +16,7 @@ final partnerAlertServiceProvider = Provider<PartnerAlertService>((ref) {
 class PartnerAlertNotifier extends StateNotifier<List<PartnerEvent>> {
   final PartnerAlertService _service;
 
-  PartnerAlertNotifier(this._service) : super([]) {
+  PartnerAlertNotifier(this._service) : super(_service.currentEvents) {
     _service.events.listen((events) {
       if (mounted) state = events;
     });

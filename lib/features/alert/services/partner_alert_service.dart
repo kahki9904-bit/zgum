@@ -1,6 +1,9 @@
 import '../models/partner_event.dart';
 
 abstract interface class PartnerAlertService {
+  /// 현재 보유한 이벤트 목록 (스트림 구독 전 초기값으로 사용)
+  List<PartnerEvent> get currentEvents;
+
   /// 활성 파트너 이벤트 스트림 (폴링 or FCM → 동일 인터페이스)
   Stream<List<PartnerEvent>> get events;
 

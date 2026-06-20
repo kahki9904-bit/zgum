@@ -66,6 +66,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   bool _tabVisible = false;
   bool _showNowTab = false;
   bool _mapReady = false;
+  PartnerEvent? _pendingAlert;
 
   void _onRouteAnimationComplete() {
     setState(() => _tabVisible = true);
@@ -169,6 +170,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   void _closeNow() {
     if (!_nowPanelOpen.value) return;
     _nowPanelOpen.value = false;
+    if (_pendingAlert != null) setState(() => _pendingAlert = null);
     final rem = _panelAnim.value;
     _panelAnim.animateTo(0.0,
         duration: Duration(milliseconds: (rem * 280).round().clamp(80, 280)),
@@ -184,8 +186,46 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       _panelAnim.animateTo(1.0,
           duration: Duration(milliseconds: (rem * 300).round().clamp(80, 300)),
           curve: Curves.easeOut);
-      _navigateToAlertIfNeeded();
+      _updatePendingAlert();
     }
+  }
+
+  // 패널이 열릴 때 한 번만 호출 — 파트너 탭(2)은 작업 중일 수 있으므로 차단
+  void _updatePendingAlert() {
+    if (_page == 2) return;
+    final alerts = (ref.read(partnerAlertProvider)
+        .where((e) => !e.seen && !e.isExpired)
+        .toList()
+      ..sort((a, b) => b.startsAt.compareTo(a.startsAt)));
+    if (alerts.isEmpty) return;
+    setState(() => _pendingAlert = alerts.first);
+  }
+
+  // 사용자가 알림 카드를 탭했을 때 — 지도로 이동 후 패널 닫기
+  void _confirmAlert(PartnerEvent alert) {
+    final cultural = CulturalEvent(
+      id: alert.id,
+      title: alert.title,
+      venue: alert.venue,
+      address: '현재 위치',
+      description: alert.title,
+      startDate: alert.startsAt,
+      endDateTime: alert.expiresAt,
+      location: alert.location,
+      category: EventCategory.partner,
+      isFree: false,
+      source: EventSource.partner,
+      partnerMessage: alert.message,
+    );
+    final store = ref.read(mockPartnerEventStoreProvider);
+    if (!store.any((e) => e.id == cultural.id)) {
+      ref.read(mockPartnerEventStoreProvider.notifier).state = [...store, cultural];
+    }
+    ref.read(partnerFocusPendingProvider.notifier).state = true;
+    ref.read(partnerFocusProvider.notifier).state = cultural;
+    ref.read(partnerAlertProvider.notifier).markAsSeen(alert.id);
+    _goTo(1);
+    _closeNow();
   }
 
   void _onNowDragUpdate(DragUpdateDetails d) {
@@ -202,7 +242,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       _panelAnim.animateTo(1.0,
           duration: Duration(milliseconds: (rem * 300).round().clamp(80, 300)),
           curve: Curves.easeOut);
-      _navigateToAlertIfNeeded();
+      _updatePendingAlert();
     } else {
       _nowPanelOpen.value = false;
       final rem = _panelAnim.value;
@@ -210,41 +250,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
           duration: Duration(milliseconds: (rem * 280).round().clamp(80, 280)),
           curve: Curves.easeIn);
     }
-  }
-
-  void _navigateToAlertIfNeeded() {
-    final alerts = (ref
-        .read(partnerAlertProvider)
-        .where((e) => !e.seen && !e.isExpired)
-        .toList()
-      ..sort((a, b) => b.startsAt.compareTo(a.startsAt)));
-    if (alerts.isEmpty) return;
-
-    final event = alerts.first;
-    final cultural = CulturalEvent(
-      id: event.id,
-      title: event.title,
-      venue: event.venue,
-      address: '현재 위치',
-      description: event.title,
-      startDate: event.startsAt,
-      endDateTime: event.expiresAt,
-      location: event.location,
-      category: EventCategory.partner,
-      isFree: false,
-      source: EventSource.partner,
-      partnerMessage: event.message,
-    );
-    final store = ref.read(mockPartnerEventStoreProvider);
-    if (!store.any((e) => e.id == cultural.id)) {
-      ref.read(mockPartnerEventStoreProvider.notifier).state = [
-        ...store,
-        cultural
-      ];
-    }
-    ref.read(partnerFocusPendingProvider.notifier).state = true;
-    ref.read(partnerFocusProvider.notifier).state = cultural;
-    ref.read(partnerAlertProvider.notifier).markAsSeen(event.id);
   }
 
   /// 지오펜스 3분 체류 달성 시 자동으로 흔적 팝업 표시
@@ -389,6 +394,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                                 onDragUpdate: _onNowDragUpdate,
                                 onDragEnd: _onNowDragEnd,
                                 onClose: _closeNow,
+                                pendingAlert: _pendingAlert,
+                                onAlertConfirm: _confirmAlert,
                               ),
                             ),
                           ),
@@ -474,6 +481,8 @@ class _NowBundle extends StatelessWidget {
   final GestureDragUpdateCallback onDragUpdate;
   final GestureDragEndCallback onDragEnd;
   final VoidCallback onClose;
+  final PartnerEvent? pendingAlert;
+  final void Function(PartnerEvent)? onAlertConfirm;
 
   const _NowBundle({
     required this.isOpen,
@@ -487,6 +496,8 @@ class _NowBundle extends StatelessWidget {
     required this.onDragEnd,
     required this.onClose,
     this.onToggle,
+    this.pendingAlert,
+    this.onAlertConfirm,
   });
 
   @override
@@ -518,13 +529,21 @@ class _NowBundle extends StatelessWidget {
   }
 
   Widget _buildPanelContent() {
+    // 파트너 탭(2)은 등록/모니터링 중일 수 있으므로 알림 끼어들기 차단
+    if (pendingAlert != null && currentPage != 2) {
+      return _AlertPanelContent(
+        alert: pendingAlert!,
+        onTap: () => onAlertConfirm?.call(pendingAlert!),
+        onClose: onClose,
+      );
+    }
     switch (currentPage) {
-      case 2: // 이곳 — 열렸을 때만 생성 (initState에서 카메라 트리거)
+      case 2:
         if (!isOpen) return const SizedBox.shrink();
         return _PartnerPanelContent(onClose: onClose);
-      case 0: // 사용자
+      case 0:
         return _UserPanelContent(onClose: onClose);
-      default: // 지도 — 지금 패널
+      default:
         return _MapPanelContent(onClose: onClose, isOpen: isOpen);
     }
   }
@@ -1423,6 +1442,133 @@ class _SmallAction extends StatelessWidget {
         child: Text(label,
             style: TextStyle(
                 fontSize: 12, color: color, fontWeight: FontWeight.w500)),
+      ),
+    );
+  }
+}
+
+class _AlertPanelContent extends StatefulWidget {
+  final PartnerEvent alert;
+  final VoidCallback onTap;
+  final VoidCallback onClose;
+
+  const _AlertPanelContent({
+    required this.alert,
+    required this.onTap,
+    required this.onClose,
+  });
+
+  @override
+  State<_AlertPanelContent> createState() => _AlertPanelContentState();
+}
+
+class _AlertPanelContentState extends State<_AlertPanelContent> {
+  Timer? _timer;
+  late Duration _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateRemaining();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(_updateRemaining);
+    });
+  }
+
+  void _updateRemaining() {
+    final diff = widget.alert.expiresAt.difference(DateTime.now());
+    _remaining = diff.isNegative ? Duration.zero : diff;
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final h = _remaining.inHours;
+    final m = _remaining.inMinutes % 60;
+    final label = h > 0 ? '$h시간 $m분 남음' : '$m분 남음';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, _kPanelHandleContentGap, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '새 이벤트 알림',
+            style: TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: widget.onTap,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A2E),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.alert.title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.alert.venue,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFFAAAAAA),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFFAAAAAA),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        '지도에서 보기',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.arrow_forward_ios,
+                      color: Colors.white, size: 14),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2449,7 +2595,7 @@ class _NowCapsuleState extends State<_NowCapsule>
   void initState() {
     super.initState();
     _blink = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900));
+        vsync: this, duration: const Duration(milliseconds: 400));
     _blinkAnim = Tween<double>(begin: 0.35, end: 1.0).animate(
       CurvedAnimation(parent: _blink, curve: Curves.easeInOut),
     );

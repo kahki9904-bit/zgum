@@ -29,6 +29,9 @@ class PollingPartnerAlertService implements PartnerAlertService {
   }
 
   @override
+  List<PartnerEvent> get currentEvents => List.unmodifiable(_current);
+
+  @override
   Stream<List<PartnerEvent>> get events => _controller.stream;
 
   @override
