@@ -1,0 +1,22 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="270" height="540" viewBox="0 0 270 540">
+<rect width="270" height="540" fill="#F6F7F9"/>
+<style>
+  .name { font-family: Pretendard, Arial, sans-serif; font-size: 18px; font-weight: 800; fill: #15172E; }
+</style>
+<text x="20" y="34" class="name">메인</text>
+<g transform="translate(20 54)">
+<rect x="0" y="0" width="230" height="470" rx="28" fill="#FFFFFF"/>
+<rect x="71" y="28" width="88" height="5" rx="2.5" fill="#6D7483"/>
+<rect x="20" y="58" width="190" height="88" rx="18" fill="#15172E"/>
+<rect x="38" y="88" width="86" height="10" rx="5" fill="#FFFFFF" opacity="0.9"/>
+<rect x="38" y="116" width="114" height="8" rx="4" fill="#CDD2DD"/>
+<rect x="20" y="168" width="190" height="76" rx="18" fill="#F8F9FB" stroke="#EAEDF2"/>
+<rect x="38" y="199" width="92" height="10" rx="5" fill="#DDE1E8"/>
+<rect x="38" y="222" width="120" height="8" rx="4" fill="#ECEFF4"/>
+<rect x="20" y="266" width="190" height="76" rx="18" fill="#F8F9FB" stroke="#EAEDF2"/>
+<rect x="38" y="297" width="92" height="10" rx="5" fill="#DDE1E8"/>
+<rect x="38" y="320" width="120" height="8" rx="4" fill="#ECEFF4"/>
+<line x1="20" y1="382" x2="210" y2="382" stroke="#F0F2F5"/>
+<rect x="20" y="414" width="160" height="8" rx="4" fill="#ECEFF4"/>
+</g>
+</svg>

@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui' show lerpDouble;
@@ -58,6 +58,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   final _mapKey = GlobalKey<MapRoomScreenState>();
   int _page = 1;
   bool _tracePopupShowing = false;
+  bool _alertReady = false;
   // ValueNotifier: 패널 열림 상태 변경이 PageView rebuild를 유발하지 않도록 분리
   final _nowPanelOpen = ValueNotifier<bool>(false);
   // AnimationController: Transform.translate 기반 — 레이아웃 변경 없이 페인트만 이동
@@ -99,6 +100,19 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     if (!shown && mounted) showFreeUseIntroPopup(context);
   }
 
+  // 앱 시작 시 내 이벤트 복원 후 캡슐 알림 활성화 (복원 전 깜박임 방지)
+  Future<void> _initAlertReady() async {
+    try {
+      final service = ref.read(firestorePartnerEventServiceProvider);
+      final events = await service.watchByPartner('local-device').first;
+      final active = events.where((e) => !e.isExpired).toList();
+      if (active.isNotEmpty && mounted) {
+        ref.read(activePartnerEventProvider.notifier).state = active.first;
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _alertReady = true);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -124,6 +138,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _syncExclusionRects();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _initAlertReady();
     });
   }
 
@@ -259,6 +276,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   /// 지오펜스 3분 체류 달성 시 자동으로 흔적 팝업 표시
   void _showTracePopup(PartnerEvent event) {
     if (_tracePopupShowing || !mounted) return;
+    final myEventIds = ref.read(partnerMyEventsProvider).map((e) => e.id).toSet();
+    final activeEvent = ref.read(activePartnerEventProvider);
+    if (activeEvent != null) myEventIds.add(activeEvent.id);
+    if (myEventIds.contains(event.id)) return;
     _tracePopupShowing = true;
     showTraceCheckInDialog(context, event)
         .whenComplete(() => _tracePopupShowing = false);
@@ -278,7 +299,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       if (prev != next) _goTo(next);
     });
 
-    final hasAlert = ref.watch(hasUnseenAlertProvider);
+    final hasAlert = ref.watch(hasUnseenAlertProvider) && _alertReady;
     final media = MediaQuery.of(context);
     final availableHeight =
         media.size.height - media.padding.top - media.padding.bottom;
@@ -1359,73 +1380,84 @@ class _RecentTraceCard extends StatelessWidget {
     final hasMemo = record.memo != null && record.memo!.isNotEmpty;
 
     return LayoutBuilder(
-      builder: (context, constraints) => ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (hasPhoto)
-              Image.file(
-                File(record.photoPath!),
-                height: constraints.maxHeight,
-                fit: BoxFit.fitHeight,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-              ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      record.eventTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A2E),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      record.venue,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFFAAAAAA),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      dateStr,
-                      maxLines: 1,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFFAAAAAA),
-                      ),
-                    ),
-                    if (hasMemo) ...[
-                      const SizedBox(height: 8),
+      builder: (context, constraints) {
+        final photoWidth = (constraints.maxHeight * 0.72)
+            .clamp(108.0, constraints.maxWidth * 0.42);
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFFAFAFB),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFEDEDF1)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (hasPhoto)
+                SizedBox(
+                  width: photoWidth,
+                  child: Image.file(
+                    File(record.photoPath!),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                       Text(
-                        record.memo!,
+                        record.eventTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A1A2E),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        record.venue,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF666666),
+                          color: Color(0xFFAAAAAA),
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        dateStr,
+                        maxLines: 1,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFFAAAAAA),
+                        ),
+                      ),
+                      if (hasMemo) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          record.memo!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF666666),
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -1873,9 +1905,13 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
     final paidEvent =
         event.copyWith(paymentStatus: PaymentStatus.paid, paidAt: now);
 
+    // Firestore 저장 전에 먼저 설정 → 스트림 도착 시 내 이벤트로 즉시 인식
+    ref.read(activePartnerEventProvider.notifier).state = paidEvent;
+
     try {
       await ref.read(firestorePartnerEventServiceProvider).save(paidEvent);
     } catch (_) {
+      if (mounted) ref.read(activePartnerEventProvider.notifier).state = null;
       if (!mounted) return;
       setState(() => _submitting = false);
       showGeneralDialog(
@@ -1948,8 +1984,6 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
 
     if (!mounted) return;
     _applyToMap(paidEvent);
-    // 대기 상태 저장 → 이곳 패널 재오픈 시 대기 뷰로 표시됨
-    ref.read(activePartnerEventProvider.notifier).state = paidEvent;
     ref.read(shellPageProvider.notifier).state = 1;
     widget.onClose();
   }
