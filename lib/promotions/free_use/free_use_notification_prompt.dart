@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import '../../presentation/widgets/dialogs/zgum_dialog.dart';
 import 'free_use_service.dart';
 
-// 설정 > 알림 탭 시 무료이용 크레딧 안내 팝업
-// 인트로 확인 후 + 크레딧 미시작 상태일 때만 표시
+// 설정 > 알림 탭 시 표시 — 무료이용 기간(180일) 중에만 노출
 Future<void> showFreeUseNotificationPrompt(BuildContext context) async {
-  final introShown = await FreeUseService.instance.isIntroShown();
-  final started = await FreeUseService.instance.isStarted();
-  if (!introShown || started) return;
+  final active = await FreeUseService.instance.isActive();
+  if (!active) return;
   if (!context.mounted) return;
 
   return showGeneralDialog<void>(
@@ -38,20 +36,11 @@ Future<void> showFreeUseNotificationPrompt(BuildContext context) async {
                 ),
                 SizedBox(height: 16),
                 Text(
-                  '파트너 무료이용이 시작됩니다.\n6개월간 하루 최대 3회 이벤트를 무료로 등록할 수 있습니다.',
+                  '· 이음 요청을 실시간으로 받을 수 있습니다\n· 상대방의 수락 여부를 즉시 알 수 있습니다\n· 알림은 설정에서 언제든 변경할 수 있습니다',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF333333),
-                    height: 1.75,
-                  ),
-                ),
-                SizedBox(height: 20),
-                Text(
-                  '알림은 설정에서 언제든 변경할 수 있습니다.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFFAAAAAA),
-                    height: 1.6,
+                    color: Color(0xFF555555),
+                    height: 1.85,
                   ),
                 ),
               ],

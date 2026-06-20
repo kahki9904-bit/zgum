@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../promotions/free_use/free_use_service.dart';
-import '../../../promotions/free_use/free_use_alert_popup.dart';
 
 const _kEventRadiusKey = 'zgum_notif_event_radius_m';
 const _kFriendRadiusKey = 'zgum_notif_friend_radius_m';
@@ -47,13 +45,6 @@ class _NotificationSettingScreenState
 
   Future<void> _onResume() async {
     await _loadSettings();
-    final result = await FreeUseService.instance.syncNotificationStatus();
-    if (!mounted) return;
-    if (result == NotificationSyncResult.resumed) {
-      showFreeUseResumedPopup(context);
-    } else if (result == NotificationSyncResult.paused) {
-      showFreeUseAlertPopup(context);
-    }
   }
 
   Future<void> _loadSettings() async {

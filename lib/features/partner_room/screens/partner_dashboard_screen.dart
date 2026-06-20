@@ -94,43 +94,41 @@ class _PartnerDashboardScreenState
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
               children: [
-                _sectionLabel('무료이용'),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _infoCard(
-                        label: '무료이용 상태',
-                        value: _freeActive ? '활성' : '비활성',
-                        icon: Icons.card_giftcard_outlined,
-                        valueColor: _freeActive
-                            ? const Color(0xFF1A1A2E)
-                            : const Color(0xFFAAAAAA),
+                if (_freeActive) ...[
+                  _sectionLabel('무료이용'),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _infoCard(
+                          label: '무료이용 상태',
+                          value: '활성',
+                          icon: Icons.card_giftcard_outlined,
+                          valueColor: const Color(0xFF1A1A2E),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _infoCard(
-                        label: '오늘 등록 가능',
-                        value: _freeActive
-                            ? (_canRegisterToday ? '가능' : '한도 초과')
-                            : '-',
-                        icon: Icons.today_outlined,
-                        valueColor: _canRegisterToday && _freeActive
-                            ? const Color(0xFF1A1A2E)
-                            : const Color(0xFFAAAAAA),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _infoCard(
+                          label: '오늘 등록 가능',
+                          value: _canRegisterToday ? '가능' : '한도 초과',
+                          icon: Icons.today_outlined,
+                          valueColor: _canRegisterToday
+                              ? const Color(0xFF1A1A2E)
+                              : const Color(0xFFAAAAAA),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                _infoCard(
-                  label: '무료이용 잔여',
-                  value: _freeActive ? '$_remainingDays일' : '-',
-                  icon: Icons.hourglass_empty_outlined,
-                  wide: true,
-                ),
-                const SizedBox(height: 24),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _infoCard(
+                    label: '무료이용 잔여',
+                    value: '$_remainingDays일',
+                    icon: Icons.hourglass_empty_outlined,
+                    wide: true,
+                  ),
+                  const SizedBox(height: 24),
+                ],
                 _sectionLabel('기본 현황'),
                 const SizedBox(height: 12),
                 Row(

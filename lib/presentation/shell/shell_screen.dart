@@ -32,7 +32,6 @@ import '../../core/providers/active_partner_event_provider.dart';
 import '../../core/providers/admin_mode_provider.dart';
 import '../../promotions/free_use/free_use_service.dart';
 import '../../promotions/free_use/free_use_intro_popup.dart';
-import '../../promotions/free_use/free_use_alert_popup.dart';
 import '../../features/friend/widgets/ieum_intro_popup.dart';
 import '../widgets/dialogs/camera_chooser_popup.dart';
 import '../widgets/dialogs/zgum_dialog.dart';
@@ -85,29 +84,13 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     });
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _checkNotificationStatus();
-  }
-
-  Future<void> _checkNotificationStatus() async {
-    final result = await FreeUseService.instance.syncNotificationStatus();
-    if (!mounted) return;
-    if (result == NotificationSyncResult.paused) {
-      showFreeUseAlertPopup(context);
-    } else if (result == NotificationSyncResult.resumed) {
-      showFreeUseResumedPopup(context);
-    }
-  }
-
   Future<void> _showIntroIfNeeded() async {
-    final shown = await FreeUseService.instance.isIntroShown();
-    if (!shown) {
-      await Future.delayed(const Duration(milliseconds: 600));
-      if (mounted) await showFreeUseIntroPopup(context);
-    }
-    // 인트로 확인 후 현재 알림 상태 체크 → 이미 허용 중이면 크레딧 즉시 시작
-    if (mounted) await _checkNotificationStatus();
+    await FreeUseService.instance.startOnFirstLaunch();
+  }
+
+  Future<void> _showIeumIntroIfNeeded() async {
+    final shown = await isIeumIntroShown();
+    if (!shown && mounted) await showIeumIntroPopup(context);
   }
 
   Future<void> _showFreeUseIntroIfNeeded() async {
@@ -321,6 +304,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                 ref.read(shellPageProvider.notifier).state = p;
                 WidgetsBinding.instance
                     .addPostFrameCallback((_) => _syncExclusionRects());
+                if (p == 0) _showIeumIntroIfNeeded();
                 if (p == 2) _showFreeUseIntroIfNeeded();
               },
               children: [
@@ -1164,12 +1148,7 @@ class _UserPanelContentState extends ConsumerState<_UserPanelContent> {
   }
 
   Future<void> _showRequestDialog() async {
-    final introShown = await isIeumIntroShown();
     if (!mounted) return;
-    if (!introShown) {
-      await showIeumIntroPopup(context);
-      if (!mounted) return;
-    }
     showDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -1694,16 +1673,10 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
     );
     if (isAdultOnly == null || !mounted) return;
 
-    // 무료이용은 알림 허용 상태에서만 시작/유지된다.
+    // 무료이용 일일 한도 체크 (관리자 모드는 항상 통과)
     final isAdmin = ref.read(adminModeProvider);
-    final isFreeActive = isAdmin ||
-        await FreeUseService.instance.activateWithNotificationPermission();
-    if (!mounted) return;
-    if (!isAdmin && !isFreeActive) {
-      await showFreeUseRegisterReminderPopup(context);
-      return;
-    }
-    if (!isAdmin) {
+    final isFreeActive = isAdmin || await FreeUseService.instance.isActive();
+    if (!isAdmin && isFreeActive) {
       final canRegister = await FreeUseService.instance.canRegisterToday();
       if (!canRegister) return;
     }

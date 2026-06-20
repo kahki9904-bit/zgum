@@ -13,7 +13,6 @@ class FreeUseSettingsTile extends StatefulWidget {
 class _FreeUseSettingsTileState extends State<FreeUseSettingsTile> {
   bool _active = false;
   int _remaining = 0;
-  bool _started = false;
 
   @override
   void initState() {
@@ -23,12 +22,10 @@ class _FreeUseSettingsTileState extends State<FreeUseSettingsTile> {
 
   Future<void> _load() async {
     final svc = FreeUseService.instance;
-    final started = await svc.isStarted();
     final active = await svc.isActive();
     final remaining = await svc.remainingDays();
     if (mounted) {
       setState(() {
-        _started = started;
         _active = active;
         _remaining = remaining;
       });
@@ -37,7 +34,7 @@ class _FreeUseSettingsTileState extends State<FreeUseSettingsTile> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_started) return const SizedBox.shrink();
+    if (!_active) return const SizedBox.shrink();
 
     final statusText = _active ? '이용 중' : '중단';
     final statusColor =

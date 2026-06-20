@@ -51,20 +51,11 @@ Future<void> showFreeUseIntroPopup(BuildContext context) {
                 ),
                 SizedBox(height: 24),
                 Text(
-                  '알림을 허용하면',
+                  '알림을 허용한 주변 사람에게\n즉시 노출됩니다.',
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  '· 주변 친구를 알려줍니다\n· 무료이용 기간이 유지됩니다\n· 주변 이벤트 소식을 실시간으로 받을 수 있습니다\n· 알림은 설정에서 언제든 변경할 수 있습니다',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF777777),
-                    height: 1.85,
+                    color: Color(0xFFAAAAAA),
+                    height: 1.75,
                   ),
                 ),
               ],
