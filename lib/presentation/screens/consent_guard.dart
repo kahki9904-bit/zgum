@@ -21,7 +21,7 @@ class ConsentGuard extends ConsumerStatefulWidget {
 }
 
 class _ConsentGuardState extends ConsumerState<ConsentGuard> {
-  _Step _step = _Step.identity;
+  _Step _step = _Step.location;
 
   Future<void> _confirmIdentity() async {
     await ref.read(authStateProvider.notifier).adminVerify();

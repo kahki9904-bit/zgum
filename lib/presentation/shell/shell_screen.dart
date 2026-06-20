@@ -1864,6 +1864,81 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
 
     final paidEvent =
         event.copyWith(paymentStatus: PaymentStatus.paid, paidAt: now);
+
+    try {
+      await ref.read(firestorePartnerEventServiceProvider).save(paidEvent);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: '',
+        barrierColor: Colors.black54,
+        transitionDuration: const Duration(milliseconds: 200),
+        pageBuilder: (ctx, __, ___) => GestureDetector(
+          onTap: () => Navigator.of(ctx).pop(),
+          behavior: HitTestBehavior.opaque,
+          child: Center(
+            child: GestureDetector(
+              onTap: () {},
+              child: ZGumDialog(
+                heightFactor: 0.28,
+                actions: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(ctx).pop(),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A1A2E),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            '확인',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '등록 실패',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      '저장 중 오류가 발생했습니다.\n잠시 후 다시 시도해 주세요.',
+                      style: TextStyle(fontSize: 14, color: Color(0xFF555555)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        transitionBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+      );
+      return;
+    }
+
+    if (!mounted) return;
     _applyToMap(paidEvent);
     // 대기 상태 저장 → 이곳 패널 재오픈 시 대기 뷰로 표시됨
     ref.read(activePartnerEventProvider.notifier).state = paidEvent;
@@ -1872,7 +1947,6 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
   }
 
   void _applyToMap(PartnerEvent event) {
-    unawaited(ref.read(firestorePartnerEventServiceProvider).save(event));
 
     final mockCultural = CulturalEvent(
       id: event.id,

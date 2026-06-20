@@ -87,6 +87,12 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   // ── 이벤트별 만료 타이머 (4번: 즉시 삭제) ────────────────────────────────────
   final Map<String, Timer> _eventTimers = {};
 
+  // ── 공공 API 호출 간격 제한 ──────────────────────────────────────────────────
+  // TODO: 파트너 확보 후 간격 조정 (예: Duration(minutes: 5))
+  // showPublicApiMarkers = false 전환 시 함께 설정
+  static const _minPublicApiFetchInterval = Duration(minutes: 0); // 0 = 제한 없음
+  DateTime? _lastPublicApiFetch;
+
   // ── 검색 ──────────────────────────────────────────────────────────────────
   bool _searchOpen = false;
   final _searchCtrl = TextEditingController();
@@ -170,17 +176,26 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     if (!mounted) return;
     final isIdentityVerified = ref.read(authStateProvider).isIdentityVerified;
 
+    // 공공 API 호출 간격 체크 — _minPublicApiFetchInterval 조정으로 제한
+    final fetchTime = DateTime.now();
+    final canFetchPublic = _minPublicApiFetchInterval == Duration.zero ||
+        _lastPublicApiFetch == null ||
+        fetchTime.difference(_lastPublicApiFetch!) >= _minPublicApiFetchInterval;
+    if (canFetchPublic) _lastPublicApiFetch = fetchTime;
+
     // public / partner 를 각각 독립적으로 호출 — 한 쪽 실패가 다른 쪽을 막지 않음
     List<CulturalEvent> publicEvents = [];
-    try {
-      publicEvents = await _publicRepo.fetchNearbyEvents(
-        center: _center,
-        radiusKm: AppConstants.defaultRadiusKm,
-        isIdentityVerified: isIdentityVerified,
-      );
-    } catch (e, st) {
-      debugPrint('[MapRoom] public API 실패 — 빈 목록으로 계속: $e');
-      debugPrintStack(label: '[MapRoom] public stack', stackTrace: st);
+    if (canFetchPublic) {
+      try {
+        publicEvents = await _publicRepo.fetchNearbyEvents(
+          center: _center,
+          radiusKm: AppConstants.defaultRadiusKm,
+          isIdentityVerified: isIdentityVerified,
+        );
+      } catch (e, st) {
+        debugPrint('[MapRoom] public API 실패 — 빈 목록으로 계속: $e');
+        debugPrintStack(label: '[MapRoom] public stack', stackTrace: st);
+      }
     }
 
     List<CulturalEvent> kopisEvents = [];
