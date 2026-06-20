@@ -2,11 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/partner_event.dart';
 import '../services/firebase_partner_alert_service.dart';
 import '../services/partner_alert_service.dart';
+import '../../../services/firestore_partner_event_service.dart';
 
 // ── 구현체 교체 포인트 ──────────────────────────────────────────────────────────
 // Mock → Polling → Firebase: 이 한 줄만 바꾸면 전체 UI가 따라감
 final partnerAlertServiceProvider = Provider<PartnerAlertService>((ref) {
-  final service = FirebasePartnerAlertService();
+  final firestoreService = ref.watch(firestorePartnerEventServiceProvider);
+  final service = FirebasePartnerAlertService(service: firestoreService);
   ref.onDispose(service.dispose);
   return service;
 });

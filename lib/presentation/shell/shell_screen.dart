@@ -985,6 +985,8 @@ class _MapPanelContentState extends ConsumerState<_MapPanelContent> {
                               child: Image.file(
                                 File(featured.representativePhotoPath!),
                                 fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    const ColoredBox(color: Color(0xFFE0E0E0)),
                               ),
                             ),
                           ),
@@ -1022,6 +1024,8 @@ class _MapPanelContentState extends ConsumerState<_MapPanelContent> {
                                 ? Image.file(
                                     File(e.representativePhotoPath!),
                                     fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        const ColoredBox(color: Color(0xFFE0E0E0)),
                                   )
                                 : const ColoredBox(color: Color(0xFFE0E0E0)),
                           ),
