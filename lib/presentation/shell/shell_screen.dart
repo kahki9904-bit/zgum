@@ -36,6 +36,7 @@ import '../../features/friend/widgets/ieum_intro_popup.dart';
 import '../widgets/dialogs/camera_chooser_popup.dart';
 import '../widgets/dialogs/zgum_dialog.dart';
 import '../../services/firestore_partner_event_service.dart';
+import '../../services/device_id_service.dart';
 
 // 지금 패널/캡슐 크기 상수 (file-level — _NowBundle에서도 사용)
 const double _kCapsuleHeight = 40.0;
@@ -103,8 +104,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   // 앱 시작 시 내 이벤트 복원 후 캡슐 알림 활성화 (복원 전 깜박임 방지)
   Future<void> _initAlertReady() async {
     try {
+      final deviceId = await DeviceIdService.getId();
       final service = ref.read(firestorePartnerEventServiceProvider);
-      final events = await service.watchByPartner('local-device').first;
+      final events = await service.watchByPartner(deviceId).first;
       final active = events.where((e) => !e.isExpired).toList();
       if (active.isNotEmpty && mounted) {
         ref.read(activePartnerEventProvider.notifier).state = active.first;
@@ -1731,8 +1733,9 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
     if (!mounted) return;
     if (ref.read(activePartnerEventProvider) != null) return;
     try {
+      final deviceId = await DeviceIdService.getId();
       final service = ref.read(firestorePartnerEventServiceProvider);
-      final events = await service.watchByPartner('local-device').first;
+      final events = await service.watchByPartner(deviceId).first;
       final active = events.where((e) => !e.isExpired).toList();
       if (active.isNotEmpty && mounted) {
         ref.read(activePartnerEventProvider.notifier).state = active.first;
@@ -1883,9 +1886,10 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
     );
 
     final now = DateTime.now();
+    final deviceId = await DeviceIdService.getId();
     final event = PartnerEvent(
       id: now.millisecondsSinceEpoch.toString(),
-      partnerId: 'local-device',
+      partnerId: deviceId,
       title: title,
       venue: title,
       message: null,
