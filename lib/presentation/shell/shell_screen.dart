@@ -1614,24 +1614,6 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
     if (title.isEmpty) return;
     if (_photos.isEmpty) return;
 
-    // 무료이용 시작됐는데 알림이 꺼져있으면 등록 시 안내
-    final isStarted = await FreeUseService.instance.isStarted();
-    if (isStarted) {
-      final notifOn = await FreeUseService.instance.isNotificationEnabled();
-      if (!notifOn && mounted) {
-        await showFreeUseRegisterReminderPopup(context);
-        return;
-      }
-    }
-
-    // 무료이용 일일 한도 체크 (관리자 모드는 항상 통과)
-    final isAdmin = ref.read(adminModeProvider);
-    final isFreeActive = isAdmin || await FreeUseService.instance.isActive();
-    if (!isAdmin && isFreeActive) {
-      final canRegister = await FreeUseService.instance.canRegisterToday();
-      if (!canRegister) return;
-    }
-
     // 19세 이상 여부 확인
     if (!mounted) return;
     final isAdultOnly = await showGeneralDialog<bool>(
@@ -1711,6 +1693,24 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
           FadeTransition(opacity: animation, child: child),
     );
     if (isAdultOnly == null || !mounted) return;
+
+    // 무료이용 시작됐는데 알림이 꺼져있으면 등록 시 안내
+    final isStarted = await FreeUseService.instance.isStarted();
+    if (isStarted) {
+      final notifOn = await FreeUseService.instance.isNotificationEnabled();
+      if (!notifOn && mounted) {
+        await showFreeUseRegisterReminderPopup(context);
+        return;
+      }
+    }
+
+    // 무료이용 일일 한도 체크 (관리자 모드는 항상 통과)
+    final isAdmin = ref.read(adminModeProvider);
+    final isFreeActive = isAdmin || await FreeUseService.instance.isActive();
+    if (!isAdmin && isFreeActive) {
+      final canRegister = await FreeUseService.instance.canRegisterToday();
+      if (!canRegister) return;
+    }
 
     setState(() => _submitting = true);
 
