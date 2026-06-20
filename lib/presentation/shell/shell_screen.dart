@@ -1559,6 +1559,22 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _restoreActiveEvent());
+  }
+
+  Future<void> _restoreActiveEvent() async {
+    if (!mounted) return;
+    if (ref.read(activePartnerEventProvider) != null) return;
+    try {
+      final service = ref.read(firestorePartnerEventServiceProvider);
+      final events = await service.watchByPartner('local-device').first;
+      final active = events.where((e) => !e.isExpired).toList();
+      if (active.isNotEmpty && mounted) {
+        ref.read(activePartnerEventProvider.notifier).state = active.first;
+      }
+    } catch (e) {
+      debugPrint('[PartnerPanel] 활성 이벤트 복원 실패: $e');
+    }
   }
 
   Future<void> _takePhoto() async {

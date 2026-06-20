@@ -19,7 +19,7 @@ class FirestorePartnerEventService {
 
   Future<void> expire(String eventId) async {
     await _col.doc(eventId).update({
-      'expiresAtMs': DateTime.now().millisecondsSinceEpoch,
+      'expiresAtMs': 0,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }

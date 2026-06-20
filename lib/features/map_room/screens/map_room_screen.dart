@@ -725,6 +725,9 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
         activePartnerEventsStreamProvider, (prev, next) {
       _loadEvents();
     });
+    ref.listen<PartnerEvent?>(activePartnerEventProvider, (prev, next) {
+      if (prev != null && next == null) _loadEvents();
+    });
     ref.listen<CulturalEvent?>(partnerFocusProvider, (prev, next) {
       if (next != null) {
         ref.read(partnerFocusProvider.notifier).state = null;
