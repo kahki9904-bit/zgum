@@ -59,10 +59,6 @@
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>주변을 발견하는 역할만 합니다.</string>
 
-	<!-- 생체 인증 권한 — local_auth 플러그인 필수 -->
-	<key>NSFaceIDUsageDescription</key>
-	<string>앱에 안전하게 접근하기 위해 사용합니다.</string>
-
 	<!-- 카메라·사진 권한 — image_picker 플러그인 필수 -->
 	<key>NSCameraUsageDescription</key>
 	<string>흔적 사진을 찍을 때만 사용합니다.</string>
