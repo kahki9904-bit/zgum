@@ -193,8 +193,12 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   // 패널이 열릴 때 한 번만 호출 — 파트너 탭(2)은 작업 중일 수 있으므로 차단
   void _updatePendingAlert() {
     if (_page == 2) return;
+    // 내가 등록한 이벤트는 알림에서 제외
+    final myEventIds = ref.read(partnerMyEventsProvider).map((e) => e.id).toSet();
+    final activeEvent = ref.read(activePartnerEventProvider);
+    if (activeEvent != null) myEventIds.add(activeEvent.id);
     final alerts = (ref.read(partnerAlertProvider)
-        .where((e) => !e.seen && !e.isExpired)
+        .where((e) => !e.seen && !e.isExpired && !myEventIds.contains(e.id))
         .toList()
       ..sort((a, b) => b.startsAt.compareTo(a.startsAt)));
     if (alerts.isEmpty) return;
