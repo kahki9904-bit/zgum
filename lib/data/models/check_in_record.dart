@@ -24,6 +24,20 @@ class CheckInRecord {
     this.photoPath,
   });
 
+  CheckInRecord copyWith({
+    String? photoPath,
+  }) =>
+      CheckInRecord(
+        id: id,
+        eventId: eventId,
+        eventTitle: eventTitle,
+        venue: venue,
+        categoryLabel: categoryLabel,
+        checkedInAt: checkedInAt,
+        memo: memo,
+        photoPath: photoPath ?? this.photoPath,
+      );
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'eventId': eventId,

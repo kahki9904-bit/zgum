@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/check_in_record.dart';
 import '../../../data/repositories/check_in_repository.dart';
+import '../../../data/repositories/firebase_check_in_repository.dart';
 import '../../../data/repositories/local_check_in_repository.dart';
 
 class CheckInNotifier extends StateNotifier<List<CheckInRecord>> {
@@ -32,17 +33,15 @@ class CheckInNotifier extends StateNotifier<List<CheckInRecord>> {
     for (final r in expired) {
       await _repo.delete(r.id);
     }
-    state = state
-        .where((r) => now.difference(r.checkedInAt).inHours < 24)
-        .toList();
+    state =
+        state.where((r) => now.difference(r.checkedInAt).inHours < 24).toList();
   }
 
-  Set<String> get checkedInEventIds =>
-      state.map((r) => r.eventId).toSet();
+  Set<String> get checkedInEventIds => state.map((r) => r.eventId).toSet();
 }
 
 final checkInRepositoryProvider = Provider<CheckInRepository>(
-  (_) => LocalCheckInRepository(),
+  (_) => FirebaseCheckInRepository(local: LocalCheckInRepository()),
 );
 
 final checkInProvider =

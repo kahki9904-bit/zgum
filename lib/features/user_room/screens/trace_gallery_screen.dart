@@ -8,8 +8,7 @@ class TraceGalleryScreen extends ConsumerStatefulWidget {
   const TraceGalleryScreen({super.key});
 
   @override
-  ConsumerState<TraceGalleryScreen> createState() =>
-      _TraceGalleryScreenState();
+  ConsumerState<TraceGalleryScreen> createState() => _TraceGalleryScreenState();
 }
 
 class _TraceGalleryScreenState extends ConsumerState<TraceGalleryScreen> {
@@ -18,8 +17,7 @@ class _TraceGalleryScreenState extends ConsumerState<TraceGalleryScreen> {
   @override
   Widget build(BuildContext context) {
     final records = ref.watch(checkInProvider);
-    final sorted =
-        _newestFirst ? records : records.reversed.toList();
+    final sorted = _newestFirst ? records : records.reversed.toList();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -43,12 +41,10 @@ class _TraceGalleryScreenState extends ConsumerState<TraceGalleryScreen> {
         centerTitle: true,
         actions: [
           TextButton(
-            onPressed: () =>
-                setState(() => _newestFirst = !_newestFirst),
+            onPressed: () => setState(() => _newestFirst = !_newestFirst),
             child: Text(
               _newestFirst ? '과거순' : '최신순',
-              style: const TextStyle(
-                  color: Color(0xFFAAAAAA), fontSize: 13),
+              style: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 13),
             ),
           ),
         ],
@@ -64,8 +60,7 @@ class _TraceGalleryScreenState extends ConsumerState<TraceGalleryScreen> {
               itemCount: sorted.length,
               itemBuilder: (context, index) => _FeedPost(
                 record: sorted[index],
-                onDelete: (id) =>
-                    ref.read(checkInProvider.notifier).delete(id),
+                onDelete: (id) => ref.read(checkInProvider.notifier).delete(id),
               ),
             ),
     );
@@ -105,12 +100,12 @@ class _FeedPost extends StatelessWidget {
                 ),
                 child: Hero(
                   tag: 'trace_photo_${record.id}',
-                  child: Image.file(
-                    File(record.photoPath!),
+                  child: _TracePhoto(
+                    path: record.photoPath!,
                     width: double.infinity,
                     height: 360,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _textTile(),
+                    fallback: _textTile(),
                   ),
                 ),
               )
@@ -139,8 +134,7 @@ class _FeedPost extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 '$dateStr  ·  ${record.venue}',
-                style: const TextStyle(
-                    fontSize: 12, color: Color(0xFFAAAAAA)),
+                style: const TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),
               ),
               if (hasMemo) ...[
                 const SizedBox(height: 10),
@@ -187,21 +181,18 @@ class _FeedPost extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('기록 삭제', style: TextStyle(fontSize: 16)),
-        content: const Text('이 기록을 삭제할까요?',
-            style: TextStyle(fontSize: 14)),
+        content: const Text('이 기록을 삭제할까요?', style: TextStyle(fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('취소',
-                style: TextStyle(color: Color(0xFFAAAAAA))),
+            child: const Text('취소', style: TextStyle(color: Color(0xFFAAAAAA))),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               onDelete(record.id);
             },
-            child: const Text('삭제',
-                style: TextStyle(color: Color(0xFFE74C3C))),
+            child: const Text('삭제', style: TextStyle(color: Color(0xFFE74C3C))),
           ),
         ],
       ),
@@ -246,8 +237,8 @@ class _FullscreenPhotoScreen extends StatelessWidget {
               maxScale: 5.0,
               child: Hero(
                 tag: 'trace_photo_${record.id}',
-                child: Image.file(
-                  File(record.photoPath!),
+                child: _TracePhoto(
+                  path: record.photoPath!,
                   fit: BoxFit.contain,
                 ),
               ),
@@ -261,6 +252,46 @@ class _FullscreenPhotoScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TracePhoto extends StatelessWidget {
+  const _TracePhoto({
+    required this.path,
+    required this.fit,
+    this.width,
+    this.height,
+    this.fallback,
+  });
+
+  final String path;
+  final BoxFit fit;
+  final double? width;
+  final double? height;
+  final Widget? fallback;
+
+  bool get _isRemote =>
+      path.startsWith('http://') || path.startsWith('https://');
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isRemote) {
+      return Image.network(
+        path,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, __, ___) => fallback ?? const SizedBox.shrink(),
+      );
+    }
+
+    return Image.file(
+      File(path),
+      width: width,
+      height: height,
+      fit: fit,
+      errorBuilder: (_, __, ___) => fallback ?? const SizedBox.shrink(),
     );
   }
 }

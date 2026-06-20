@@ -19,8 +19,7 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final records = ref.watch(checkInProvider);
-    final sorted =
-        _newestFirst ? records : records.reversed.toList();
+    final sorted = _newestFirst ? records : records.reversed.toList();
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
 
@@ -40,8 +39,8 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
                     const Expanded(child: SizedBox()),
                     if (records.isNotEmpty) ...[
                       GestureDetector(
-                        onTap: () => setState(
-                            () => _newestFirst = !_newestFirst),
+                        onTap: () =>
+                            setState(() => _newestFirst = !_newestFirst),
                         child: Text(
                           _newestFirst ? '최신순' : '과거순',
                           style: const TextStyle(
@@ -134,8 +133,8 @@ class _FeedCard extends StatelessWidget {
             onTap: () {},
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.file(
-                File(record.photoPath!),
+              child: _TracePhoto(
+                path: record.photoPath!,
                 width: MediaQuery.sizeOf(context).width * 0.88,
                 fit: BoxFit.contain,
               ),
@@ -166,11 +165,10 @@ class _FeedCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (hasPhoto)
-            Image.file(
-              File(record.photoPath!),
+            _TracePhoto(
+              path: record.photoPath!,
               width: double.infinity,
               fit: BoxFit.fitWidth,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -219,6 +217,40 @@ class _FeedCard extends StatelessWidget {
   }
 }
 
+class _TracePhoto extends StatelessWidget {
+  const _TracePhoto({
+    required this.path,
+    required this.fit,
+    this.width,
+  });
+
+  final String path;
+  final BoxFit fit;
+  final double? width;
+
+  bool get _isRemote =>
+      path.startsWith('http://') || path.startsWith('https://');
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isRemote) {
+      return Image.network(
+        path,
+        width: width,
+        fit: fit,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      );
+    }
+
+    return Image.file(
+      File(path),
+      width: width,
+      fit: fit,
+      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+    );
+  }
+}
+
 class _TraceDetailPopup extends StatelessWidget {
   final CheckInRecord record;
   const _TraceDetailPopup({required this.record});
@@ -227,8 +259,7 @@ class _TraceDetailPopup extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
     final dt = record.checkedInAt;
-    final dateStr =
-        '${dt.year}년 ${dt.month}월 ${dt.day}일  '
+    final dateStr = '${dt.year}년 ${dt.month}월 ${dt.day}일  '
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     final hasMemo = record.memo != null && record.memo!.isNotEmpty;
     final hasPhoto = record.photoPath != null;
@@ -283,8 +314,8 @@ class _TraceDetailPopup extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     '$dateStr  ·  ${record.venue}',
-                    style: const TextStyle(
-                        fontSize: 13, color: Color(0xFFAAAAAA)),
+                    style:
+                        const TextStyle(fontSize: 13, color: Color(0xFFAAAAAA)),
                   ),
                   if (hasMemo) ...[
                     const SizedBox(height: 24),
@@ -355,6 +386,3 @@ class _SettingsSection extends StatelessWidget {
     );
   }
 }
-
-
-
