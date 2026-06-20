@@ -12,6 +12,13 @@ class PartnerPhoto {
   final String? title;
 
   const PartnerPhoto({required this.path, this.title});
+
+  Map<String, dynamic> toMap() => {'path': path, 'title': title};
+
+  factory PartnerPhoto.fromMap(Map<String, dynamic> map) => PartnerPhoto(
+        path: map['path'] as String,
+        title: map['title'] as String?,
+      );
 }
 
 class PartnerEvent extends Equatable {
@@ -114,6 +121,60 @@ class PartnerEvent extends Equatable {
   }
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'partnerId': partnerId,
+        'title': title,
+        'venue': venue,
+        'message': message,
+        'lat': location.latitude,
+        'lng': location.longitude,
+        'geoHash': geoHash,
+        'startsAtMs': startsAt.millisecondsSinceEpoch,
+        'expiresAtMs': expiresAt.millisecondsSinceEpoch,
+        'seen': seen,
+        'schemaVersion': schemaVersion,
+        'photos': photos.map((p) => p.toMap()).toList(),
+        'representativeIndex': representativeIndex,
+        'orderId': orderId,
+        'paymentStatus': paymentStatus.name,
+        'paidAtMs': paidAt?.millisecondsSinceEpoch,
+        'isAdultOnly': isAdultOnly,
+      };
+
+  factory PartnerEvent.fromMap(Map<String, dynamic> map) => PartnerEvent(
+        id: map['id'] as String,
+        partnerId: map['partnerId'] as String,
+        title: map['title'] as String,
+        venue: map['venue'] as String,
+        message: map['message'] as String?,
+        location: LatLng(
+          (map['lat'] as num).toDouble(),
+          (map['lng'] as num).toDouble(),
+        ),
+        geoHash: map['geoHash'] as String? ?? '',
+        startsAt: DateTime.fromMillisecondsSinceEpoch(map['startsAtMs'] as int),
+        expiresAt:
+            DateTime.fromMillisecondsSinceEpoch(map['expiresAtMs'] as int),
+        seen: map['seen'] as bool? ?? false,
+        schemaVersion: map['schemaVersion'] as int? ?? 1,
+        photos: (map['photos'] as List<dynamic>?)
+                ?.map((p) =>
+                    PartnerPhoto.fromMap(p as Map<String, dynamic>))
+                .toList() ??
+            [],
+        representativeIndex: map['representativeIndex'] as int? ?? 0,
+        orderId: map['orderId'] as String?,
+        paymentStatus: PaymentStatus.values.firstWhere(
+          (s) => s.name == (map['paymentStatus'] as String?),
+          orElse: () => PaymentStatus.pending,
+        ),
+        paidAt: map['paidAtMs'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(map['paidAtMs'] as int)
+            : null,
+        isAdultOnly: map['isAdultOnly'] as bool? ?? false,
+      );
 
   @override
   List<Object?> get props => [id];

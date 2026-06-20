@@ -18,7 +18,8 @@ import '../../../data/repositories/api_cultural_event_repository.dart';
 import '../../../data/repositories/cultural_event_repository.dart';
 import '../../../data/repositories/kopis_repository.dart';
 import '../../../dev/mock_cultural_event_repository.dart';
-import '../../../dev/mock_partner_event_store.dart';
+import '../../../services/firestore_partner_event_service.dart';
+import '../../alert/models/partner_event.dart';
 import '../../../data/repositories/sdsc_store_repository.dart';
 import '../../../services/location_service.dart';
 import '../../../services/time_service.dart';
@@ -207,15 +208,30 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       } catch (_) {}
     }
 
-    // DEV/MOCK ONLY: 파트너가 mock 결제 완료한 이벤트를 지도에 즉시 반영
-    // 운영 전환 시 이 줄 삭제 → Firestore 실시간 구독으로 대체
     if (!mounted) return;
-    final mockRegistered = ref.read(mockPartnerEventStoreProvider);
+    final firestorePartnerEvents =
+        ref.read(activePartnerEventsStreamProvider).valueOrNull ?? [];
+    final partnerFromFirestore = firestorePartnerEvents.map((PartnerEvent e) =>
+        CulturalEvent(
+          id: e.id,
+          title: e.title,
+          venue: e.venue,
+          address: '현재 위치',
+          description: e.title,
+          startDate: e.startsAt,
+          endDateTime: e.expiresAt,
+          location: e.location,
+          category: EventCategory.partner,
+          isFree: false,
+          source: EventSource.partner,
+          partnerMessage: e.message,
+          isAdultOnly: e.isAdultOnly,
+        )).toList();
     final all = [
       if (AppConstants.showPublicApiMarkers) ...publicEvents,
       if (AppConstants.showPublicApiMarkers) ...kopisEvents,
       ...partnerEvents,
-      ...mockRegistered,
+      ...partnerFromFirestore,
     ];
     final now = _timeService.now();
     final active = all
@@ -705,10 +721,9 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    // DEV/MOCK ONLY: 파트너 등록 이벤트 추가 시 마커 갱신
-    ref.listen<List<CulturalEvent>>(mockPartnerEventStoreProvider,
-        (prev, next) {
-      if (next.length != (prev?.length ?? 0)) _loadEvents();
+    ref.listen<AsyncValue<List<PartnerEvent>>>(
+        activePartnerEventsStreamProvider, (prev, next) {
+      _loadEvents();
     });
     ref.listen<CulturalEvent?>(partnerFocusProvider, (prev, next) {
       if (next != null) {

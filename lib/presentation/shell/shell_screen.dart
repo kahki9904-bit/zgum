@@ -36,6 +36,7 @@ import '../../promotions/free_use/free_use_alert_popup.dart';
 import '../../features/friend/widgets/ieum_intro_popup.dart';
 import '../widgets/dialogs/camera_chooser_popup.dart';
 import '../widgets/dialogs/zgum_dialog.dart';
+import '../../services/firestore_partner_event_service.dart';
 
 // 지금 패널/캡슐 크기 상수 (file-level — _NowBundle에서도 사용)
 const double _kCapsuleHeight = 40.0;
@@ -1740,6 +1741,8 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
   }
 
   void _applyToMap(PartnerEvent event) {
+    unawaited(ref.read(firestorePartnerEventServiceProvider).save(event));
+
     final mockCultural = CulturalEvent(
       id: event.id,
       title: event.title,
@@ -2238,6 +2241,8 @@ class _ActiveEventWaitingViewState
   void _finish() {
     _timer?.cancel();
     _timer = null;
+    unawaited(
+        ref.read(firestorePartnerEventServiceProvider).expire(widget.event.id));
     // 지도에서 제거
     final store = ref.read(mockPartnerEventStoreProvider);
     ref.read(mockPartnerEventStoreProvider.notifier).state =
@@ -2252,6 +2257,8 @@ class _ActiveEventWaitingViewState
   void _terminate() {
     _timer?.cancel();
     _timer = null;
+    unawaited(
+        ref.read(firestorePartnerEventServiceProvider).expire(widget.event.id));
     // 지도에서 제거, 그리드에는 저장하지 않음
     final store = ref.read(mockPartnerEventStoreProvider);
     ref.read(mockPartnerEventStoreProvider.notifier).state =
@@ -2273,6 +2280,9 @@ class _ActiveEventWaitingViewState
       if (isFreeActive) await FreeUseService.instance.recordRegistration();
 
       final newExpiresAt = widget.event.expiresAt.add(const Duration(hours: 1));
+      await ref
+          .read(firestorePartnerEventServiceProvider)
+          .extend(widget.event.id, newExpiresAt);
       final extendedEvent = widget.event.copyWith(expiresAt: newExpiresAt);
       ref.read(activePartnerEventProvider.notifier).state = extendedEvent;
 
