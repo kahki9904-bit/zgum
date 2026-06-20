@@ -42,7 +42,7 @@ Future<void> showFreeUseIntroPopup(BuildContext context) {
                 ),
                 SizedBox(height: 12),
                 Text(
-                  '3개월간 이벤트 등록이 무료입니다.\n하루 최대 3회 등록할 수 있습니다.',
+                  '6개월간 이벤트 등록이 무료입니다.\n하루 최대 3회 등록할 수 있습니다.',
                   style: TextStyle(
                     fontSize: 14,
                     color: Color(0xFF333333),

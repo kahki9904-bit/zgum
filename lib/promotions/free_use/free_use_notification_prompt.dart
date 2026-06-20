@@ -38,7 +38,7 @@ Future<void> showFreeUseNotificationPrompt(BuildContext context) async {
                 ),
                 SizedBox(height: 16),
                 Text(
-                  '파트너 무료이용이 시작됩니다.\n3개월간 하루 최대 3회 이벤트를 무료로 등록할 수 있습니다.',
+                  '파트너 무료이용이 시작됩니다.\n6개월간 하루 최대 3회 이벤트를 무료로 등록할 수 있습니다.',
                   style: TextStyle(
                     fontSize: 14,
                     color: Color(0xFF333333),

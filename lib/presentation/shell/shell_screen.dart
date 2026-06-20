@@ -1694,20 +1694,16 @@ class _PartnerPanelContentState extends ConsumerState<_PartnerPanelContent> {
     );
     if (isAdultOnly == null || !mounted) return;
 
-    // 무료이용 시작됐는데 알림이 꺼져있으면 등록 시 안내
-    final isStarted = await FreeUseService.instance.isStarted();
-    if (isStarted) {
-      final notifOn = await FreeUseService.instance.isNotificationEnabled();
-      if (!notifOn && mounted) {
-        await showFreeUseRegisterReminderPopup(context);
-        return;
-      }
-    }
-
-    // 무료이용 일일 한도 체크 (관리자 모드는 항상 통과)
+    // 무료이용은 알림 허용 상태에서만 시작/유지된다.
     final isAdmin = ref.read(adminModeProvider);
-    final isFreeActive = isAdmin || await FreeUseService.instance.isActive();
-    if (!isAdmin && isFreeActive) {
+    final isFreeActive = isAdmin ||
+        await FreeUseService.instance.activateWithNotificationPermission();
+    if (!mounted) return;
+    if (!isAdmin && !isFreeActive) {
+      await showFreeUseRegisterReminderPopup(context);
+      return;
+    }
+    if (!isAdmin) {
       final canRegister = await FreeUseService.instance.canRegisterToday();
       if (!canRegister) return;
     }

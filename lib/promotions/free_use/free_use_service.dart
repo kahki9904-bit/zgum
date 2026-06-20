@@ -2,14 +2,14 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 파트너 무료이용 행사 서비스.
-/// - 총 90일 크레딧, 알림 ON인 시간만 소모
+/// - 총 180일 크레딧, 알림 ON인 시간만 소모
 /// - 하루 최대 3회 등록
 /// 행사 종료 시 이 파일과 promotions/ 폴더 전체를 삭제.
 class FreeUseService {
   FreeUseService._();
   static final FreeUseService instance = FreeUseService._();
 
-  static const int totalDays = 90;
+  static const int totalDays = 180;
   static const int dailyLimit = 3;
 
   static const _kStartMs = 'promo_fu_start_ms';
@@ -80,6 +80,36 @@ class FreeUseService {
     final notifOn = await isNotificationEnabled();
     if (!notifOn) return false;
     return _remainingDays(prefs, startMs) > 0;
+  }
+
+  Future<bool> activateWithNotificationPermission() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kIntroShown, true);
+
+    var status = await Permission.notification.status;
+    if (!status.isGranted) {
+      status = await Permission.notification.request();
+    }
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final started = prefs.getInt(_kStartMs) != null;
+    final offSince = prefs.getInt(_kOffSinceMs);
+
+    if (!status.isGranted) {
+      if (started && offSince == null) {
+        await prefs.setInt(_kOffSinceMs, now);
+      }
+      return false;
+    }
+
+    if (!started) {
+      await _startCredit();
+    } else if (offSince != null) {
+      final pausedMs = prefs.getInt(_kPausedMs) ?? 0;
+      await prefs.setInt(_kPausedMs, pausedMs + now - offSince);
+      await prefs.remove(_kOffSinceMs);
+    }
+    return _remainingDays(prefs, prefs.getInt(_kStartMs)!) > 0;
   }
 
   Future<int> remainingDays() async {
