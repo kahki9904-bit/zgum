@@ -31,6 +31,10 @@ class PartnerAlertNotifier extends StateNotifier<List<PartnerEvent>> {
   Future<void> markAllAsSeen() => _service.markAllAsSeen();
 
   Future<void> refresh() => _service.refresh();
+
+  void addTestAlert(PartnerEvent event) {
+    state = [event, ...state];
+  }
 }
 
 final partnerAlertProvider =

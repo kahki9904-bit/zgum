@@ -254,6 +254,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     final active = all
         .where((e) => !EventFade.isFullyExpired(e.endDateTime, now))
         .toList();
+
     setState(() {
       _events = active;
       _eventById = {for (final e in active) e.id: e};

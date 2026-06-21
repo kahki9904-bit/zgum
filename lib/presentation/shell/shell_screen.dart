@@ -189,7 +189,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   void _closeNow() {
     if (!_nowPanelOpen.value) return;
     _nowPanelOpen.value = false;
-    if (_pendingAlert != null) setState(() => _pendingAlert = null);
+    if (_pendingAlert != null) {
+      ref.read(partnerAlertProvider.notifier).markAsSeen(_pendingAlert!.id);
+      setState(() => _pendingAlert = null);
+    }
     final rem = _panelAnim.value;
     _panelAnim.animateTo(0.0,
         duration: Duration(milliseconds: (rem * 280).round().clamp(80, 280)),
@@ -211,7 +214,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
 
   // 패널이 열릴 때 한 번만 호출 — 파트너 탭(2)은 작업 중일 수 있으므로 차단
   void _updatePendingAlert() {
-    if (_page == 2) return;
+    if (_page == 2 && ref.read(activePartnerEventProvider) != null) return;
     // 내가 등록한 이벤트는 알림에서 제외
     final myEventIds = ref.read(partnerMyEventsProvider).map((e) => e.id).toSet();
     final activeEvent = ref.read(activePartnerEventProvider);
@@ -302,6 +305,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     });
 
     final hasAlert = ref.watch(hasUnseenAlertProvider) && _alertReady;
+    final activePartnerEvent = ref.watch(activePartnerEventProvider);
     final media = MediaQuery.of(context);
     final availableHeight =
         media.size.height - media.padding.top - media.padding.bottom;
@@ -391,13 +395,11 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                           Positioned(
                             left: 0,
                             right: 0,
-                            bottom: Platform.isIOS ? 0 : bottomPadding,
-                            height: Platform.isIOS
-                                ? panelHeight +
-                                    _kCapsuleHeight +
-                                    _kPanelFloat +
-                                    bottomPadding
-                                : panelHeight + _kCapsuleHeight + _kPanelFloat,
+                            bottom: 0,
+                            height: panelHeight +
+                                _kCapsuleHeight +
+                                _kPanelFloat +
+                                bottomPadding,
                             child: AnimatedBuilder(
                               animation: _panelAnim,
                               builder: (_, child) => Transform.translate(
@@ -418,6 +420,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                                 panelAnim: _panelAnim,
                                 currentPage: _page,
                                 mapReady: _mapReady,
+                                isPartnerBusy: activePartnerEvent != null,
                                 onDragUpdate: _onNowDragUpdate,
                                 onDragEnd: _onNowDragEnd,
                                 onClose: _closeNow,
@@ -505,6 +508,7 @@ class _NowBundle extends StatelessWidget {
   final Animation<double> panelAnim;
   final int currentPage;
   final bool mapReady;
+  final bool isPartnerBusy;
   final GestureDragUpdateCallback onDragUpdate;
   final GestureDragEndCallback onDragEnd;
   final VoidCallback onClose;
@@ -519,6 +523,7 @@ class _NowBundle extends StatelessWidget {
     required this.panelAnim,
     required this.currentPage,
     required this.mapReady,
+    required this.isPartnerBusy,
     required this.onDragUpdate,
     required this.onDragEnd,
     required this.onClose,
@@ -547,6 +552,7 @@ class _NowBundle extends StatelessWidget {
     return _AndroidNowBundle(
       hasAlert: hasAlert,
       panelHeight: panelHeight,
+      bottomPadding: bottomPadding,
       panelAnim: panelAnim,
       mapReady: mapReady,
       onDragUpdate: onDragUpdate,
@@ -556,8 +562,8 @@ class _NowBundle extends StatelessWidget {
   }
 
   Widget _buildPanelContent() {
-    // 파트너 탭(2)은 등록/모니터링 중일 수 있으므로 알림 끼어들기 차단
-    if (pendingAlert != null && currentPage != 2) {
+    // 파트너 탭(2)은 이벤트 진행 중일 때만 알림 끼어들기 차단 (등록 안 한 상태에서는 알림 표시)
+    if (pendingAlert != null && !(currentPage == 2 && isPartnerBusy)) {
       return _AlertPanelContent(
         alert: pendingAlert!,
         onTap: () => onAlertConfirm?.call(pendingAlert!),
@@ -648,6 +654,7 @@ class _IosNowBundle extends StatelessWidget {
 class _AndroidNowBundle extends StatelessWidget {
   final bool hasAlert;
   final double panelHeight;
+  final double bottomPadding;
   final Animation<double> panelAnim;
   final bool mapReady;
   final GestureDragUpdateCallback onDragUpdate;
@@ -657,6 +664,7 @@ class _AndroidNowBundle extends StatelessWidget {
   const _AndroidNowBundle({
     required this.hasAlert,
     required this.panelHeight,
+    required this.bottomPadding,
     required this.panelAnim,
     required this.mapReady,
     required this.onDragUpdate,
@@ -688,7 +696,7 @@ class _AndroidNowBundle extends StatelessWidget {
                 bottom: 0,
                 left: 0,
                 right: 0,
-                height: panelHeight,
+                height: panelHeight + bottomPadding,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onVerticalDragUpdate: onDragUpdate,
@@ -851,7 +859,10 @@ class _MapPanelContentState extends ConsumerState<_MapPanelContent> {
         .read(mapEventsProvider)
         .where((e) => e.endDateTime.isAfter(now))
         .toList();
-    if (candidates.isEmpty) return;
+    if (candidates.isEmpty) {
+      HapticFeedback.lightImpact();
+      return;
+    }
     final unseen = candidates.where((e) => !_shownIds.contains(e.id)).toList();
     if (unseen.isEmpty) {
       _shownIds.clear();
