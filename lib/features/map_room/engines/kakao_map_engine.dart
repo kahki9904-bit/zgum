@@ -173,6 +173,7 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
   // 내 위치 마커 비트맵 캐시
   kakao.KImage? _userMarkerImage;
   kakao.Poi? _userLocationPoi;
+  bool _syncingUserMarker = false;
 
   Future<kakao.KImage> _getUserMarkerImage() async {
     if (_userMarkerImage != null) return _userMarkerImage!;
@@ -191,18 +192,24 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
   }
 
   Future<void> _syncUserMarker(kakao.KakaoMapController ctrl) async {
-    final existing = _userLocationPoi;
-    if (existing != null) {
-      await ctrl.labelLayer.removePoi(existing);
-      _userLocationPoi = null;
+    if (_syncingUserMarker) return;
+    _syncingUserMarker = true;
+    try {
+      final existing = _userLocationPoi;
+      if (existing != null) {
+        await ctrl.labelLayer.removePoi(existing);
+        _userLocationPoi = null;
+      }
+      final loc = widget.userLocation;
+      if (loc == null) return;
+      final icon = await _getUserMarkerImage();
+      _userLocationPoi = await ctrl.labelLayer.addPoi(
+        kakao.LatLng(loc.latitude, loc.longitude),
+        style: kakao.PoiStyle(icon: icon),
+      );
+    } finally {
+      _syncingUserMarker = false;
     }
-    final loc = widget.userLocation;
-    if (loc == null) return;
-    final icon = await _getUserMarkerImage();
-    _userLocationPoi = await ctrl.labelLayer.addPoi(
-      kakao.LatLng(loc.latitude, loc.longitude),
-      style: kakao.PoiStyle(icon: icon),
-    );
   }
 
   List<MapMarkerModel>? _pendingMarkers;

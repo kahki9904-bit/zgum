@@ -36,6 +36,7 @@ import '../providers/kakao_search_provider.dart';
 import '../../../core/providers/partner_my_events_provider.dart';
 import '../../../core/providers/active_partner_event_provider.dart';
 import '../../../core/providers/admin_mode_provider.dart';
+import '../../../core/providers/shell_page_provider.dart';
 
 class MapRoomScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSwipeToUserRoom;
@@ -754,6 +755,15 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     ref.listen<MapFilterState>(mapFilterProvider, (_, __) => _rebuildMarkers());
     ref.listen<AuthState>(authStateProvider, (_, __) => _loadEvents());
     ref.listen<bool>(hasUnseenAlertProvider, (_, __) => _updatePartnerPulse());
+    ref.listen<int>(shellPageProvider, (prev, next) {
+      if (next == 1 && prev != 1) {
+        setState(() {
+          _searchFocusCoord = null;
+          _searchFocusPlace = null;
+        });
+        _rebuildMarkers();
+      }
+    });
 
     final safePadding = MediaQuery.paddingOf(context).top;
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
