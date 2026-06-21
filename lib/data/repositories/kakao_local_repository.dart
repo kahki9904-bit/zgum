@@ -97,7 +97,9 @@ class ApiKakaoLocalRepository implements KakaoLocalRepository {
       queryParameters: {
         'query': query,
         'size': size.clamp(1, 5),
-        'sort': 'accuracy',
+        'sort': 'distance',
+        'x': center.longitude.toString(),
+        'y': center.latitude.toString(),
       },
     );
 
