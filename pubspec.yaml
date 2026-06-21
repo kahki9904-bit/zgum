@@ -54,6 +54,9 @@ dependencies:
   # 앱 버전 정보
   package_info_plus: ^8.0.0
 
+  # 제목 전광판 효과
+  marquee: ^2.2.3
+
   # 흔들기 감지
   sensors_plus: ^6.1.0
 

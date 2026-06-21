@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../promotions/free_use/free_use_settings_tile.dart';
-import '../../../promotions/free_use/free_use_notification_prompt.dart';
 import 'adult_verification_screen.dart';
 import 'notification_setting_screen.dart';
 import 'app_info_screen.dart';
@@ -66,9 +65,7 @@ class SettingsScreen extends ConsumerWidget {
                     _SettingRow(
                       icon: Icons.notifications_outlined,
                       label: context.l10n.settingNotifications,
-                      onTap: () async {
-                        await showFreeUseNotificationPrompt(context);
-                        if (!context.mounted) return;
+                      onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const NotificationSettingScreen()),

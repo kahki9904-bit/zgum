@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/check_in_record.dart';
 import '../providers/check_in_provider.dart';
+import '../../../presentation/widgets/popups/confirm/delete_confirm_popup.dart';
 
 class TraceGalleryScreen extends ConsumerStatefulWidget {
   const TraceGalleryScreen({super.key});
@@ -177,26 +178,9 @@ class _FeedPost extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('기록 삭제', style: TextStyle(fontSize: 16)),
-        content: const Text('이 기록을 삭제할까요?', style: TextStyle(fontSize: 14)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소', style: TextStyle(color: Color(0xFFAAAAAA))),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              onDelete(record.id);
-            },
-            child: const Text('삭제', style: TextStyle(color: Color(0xFFE74C3C))),
-          ),
-        ],
-      ),
-    );
+    showDeleteConfirmPopup(context).then((confirmed) {
+      if (confirmed == true) onDelete(record.id);
+    });
   }
 }
 

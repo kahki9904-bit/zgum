@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:marquee/marquee.dart';
 import '../../../core/extensions/context_extensions.dart';
 import 'event_content_base.dart';
 
-/// 파트너(소상공인) 이벤트 상세 레이아웃.
 class PartnerEventContent extends EventContentBase {
   const PartnerEventContent({
     super.key,
@@ -18,25 +18,39 @@ class PartnerEventContent extends EventContentBase {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        EventCategoryBadge(event.category, isAdultOnly: event.isAdultOnly),
-        const SizedBox(height: 10),
+        SizedBox(
+          height: 36,
+          child: Marquee(
+            text: event.title,
+            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            scrollAxis: Axis.horizontal,
+            blankSpace: 40.0,
+            velocity: 40.0,
+            startAfter: const Duration(seconds: 1),
+            pauseAfterRound: const Duration(seconds: 1),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          event.description,
+          style: theme.textTheme.bodyMedium?.copyWith(height: 1.75),
+        ),
+        const SizedBox(height: 14),
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Text(
-                event.title,
-                style: theme.textTheme.titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold, height: 1.3),
+                event.address,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                ),
               ),
             ),
             if (onNavigateTap != null)
               GestureDetector(
                 onTap: onNavigateTap,
                 child: Container(
-                  margin: const EdgeInsets.only(left: 8, top: 2),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: const Color(0xFF16213E),
                     borderRadius: BorderRadius.circular(8),
@@ -53,20 +67,7 @@ class PartnerEventContent extends EventContentBase {
               ),
           ],
         ),
-        const SizedBox(height: 14),
-
-        EventInfoRow(Icons.storefront_outlined, event.venue),
-        const SizedBox(height: 5),
-        EventInfoRow(Icons.map_outlined, event.address),
-
-        const SizedBox(height: 18),
-        const Divider(height: 1),
-        const SizedBox(height: 16),
-
-        Text(
-          event.description,
-          style: theme.textTheme.bodyMedium?.copyWith(height: 1.75),
-        ),
+        const SizedBox(height: 8),
       ],
     );
   }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../presentation/widgets/dialogs/zgum_dialog.dart';
+import '../../dialogs/zgum_dialog.dart';
 
 const _kIeumIntroShown = 'ieum_intro_shown';
 
@@ -31,7 +31,7 @@ Future<void> showIeumIntroPopup(BuildContext context) async {
         child: GestureDetector(
           onTap: () {},
           child: const ZGumDialog(
-            heightFactor: 0.48,
+            heightFactor: 0.60,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,

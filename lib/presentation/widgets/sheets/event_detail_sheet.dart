@@ -261,7 +261,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
 
     return Container(
       width: double.infinity,
-      constraints: BoxConstraints(maxHeight: screenHeight * 0.72),
+      constraints: BoxConstraints(maxHeight: screenHeight * 0.45),
       margin: const EdgeInsets.symmetric(horizontal: 20),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -338,21 +338,35 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
         ),
         if (widget.onCheckIn != null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: FilledButton(
-              onPressed: widget.isCheckedIn ? null : _openCamera,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(double.infinity, 54),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                backgroundColor: widget.isCheckedIn
-                    ? const Color(0xFFCCCCCC)
-                    : const Color(0xFF16213E),
-                textStyle: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Center(
+              child: SizedBox(
+                width: MediaQuery.sizeOf(context).width * 0.5,
+                child: GestureDetector(
+                  onTap: widget.isCheckedIn ? null : _openCamera,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    decoration: BoxDecoration(
+                      color: widget.isCheckedIn
+                          ? const Color(0xFFCCCCCC)
+                          : const Color(0xFF1A1A2E),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '지금',
+                      style: TextStyle(
+                        color: widget.isCheckedIn
+                            ? const Color(0xFF888888)
+                            : Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 2.0,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              child: const Text('지금'),
             ),
           ),
       ],
@@ -382,23 +396,14 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
             style: const TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              for (int i = 0; i < 3; i++) ...[
-                if (i > 0) const SizedBox(width: 6),
-                Expanded(
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: i == 0 && _capturedPhoto != null
-                          ? Image.file(_capturedPhoto!, fit: BoxFit.cover)
-                          : Container(color: const Color(0xFFF4F4F7)),
-                    ),
-                  ),
-                ),
-              ],
-            ],
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: _capturedPhoto != null
+                  ? Image.file(_capturedPhoto!, fit: BoxFit.cover)
+                  : Container(color: const Color(0xFFF4F4F7)),
+            ),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -578,7 +583,7 @@ class _FriendTraceBadge extends StatelessWidget {
       onTap: () {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('친구 $count명이 이 장소에 흔적을 남겼습니다'),
+            content: Text(count == 1 ? '친구가 이 장소에 흔적을 남겼습니다' : '친구들이 이 장소에 흔적을 남겼습니다'),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
             backgroundColor: const Color(0xFF16213E),

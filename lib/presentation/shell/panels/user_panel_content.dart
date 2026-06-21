@@ -9,6 +9,7 @@ import '../../../core/providers/user_location_provider.dart';
 import '../../../core/providers/shell_page_provider.dart';
 import '../../widgets/dialogs/ieum_accept_dialog.dart';
 import '../../widgets/dialogs/ieum_request_dialog.dart';
+import '../../widgets/popups/confirm/forget_confirm_popup.dart';
 import '../shell_constants.dart';
 
 class UserPanelContent extends ConsumerStatefulWidget {
@@ -69,36 +70,7 @@ class _UserPanelContentState extends ConsumerState<UserPanelContent> {
   }
 
   void _confirmForget(CheckInRecord record) {
-    showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-        content: const Text(
-          '정말 잊어도 될까요?',
-          style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A2E)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소',
-                style: TextStyle(color: Color(0xFFAAAAAA), fontSize: 13)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('확인',
-                style: TextStyle(
-                    color: Colors.red,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
-    ).then((confirmed) {
+    showForgetConfirmPopup(context).then((confirmed) {
       if (confirmed == true) {
         ref.read(checkInProvider.notifier).delete(record.id);
       }

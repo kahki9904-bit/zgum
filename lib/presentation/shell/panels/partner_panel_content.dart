@@ -17,6 +17,9 @@ import '../../../services/device_id_service.dart';
 import '../../../services/firestore_partner_event_service.dart';
 import '../../widgets/dialogs/camera_chooser_popup.dart';
 import '../../widgets/dialogs/zgum_dialog.dart';
+import '../../widgets/popups/confirm/age_confirm_popup.dart';
+import '../../widgets/popups/confirm/extend_confirm_popup.dart';
+import '../../widgets/popups/confirm/terminate_confirm_popup.dart';
 import '../shell_constants.dart';
 
 class PartnerPanelContent extends ConsumerStatefulWidget {
@@ -101,82 +104,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     if (_photos.isEmpty) return;
 
     if (!mounted) return;
-    final isAdultOnly = await showGeneralDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: '',
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (dialogContext, __, ___) => GestureDetector(
-        onTap: () => Navigator.of(dialogContext).pop(null),
-        behavior: HitTestBehavior.opaque,
-        child: Center(
-          child: GestureDetector(
-            onTap: () {},
-            child: ZGumDialog(
-              heightFactor: 0.30,
-              actions: Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(dialogContext).pop(false),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0F0F0),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Text('전체 이용가',
-                            style: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF888888),
-                                fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(dialogContext).pop(true),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1A1A2E),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Text('19세 이상',
-                            style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              child: const Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('이벤트 대상',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A2E))),
-                  SizedBox(height: 10),
-                  Text('이 이벤트가 19세 이상 대상인가요?',
-                      style: TextStyle(fontSize: 14, color: Color(0xFF555555))),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-      transitionBuilder: (_, animation, __, child) =>
-          FadeTransition(opacity: animation, child: child),
-    );
+    final isAdultOnly = await showAgeConfirmPopup(context);
     if (isAdultOnly == null || !mounted) return;
 
     final isAdmin = ref.read(adminModeProvider);
@@ -245,41 +173,16 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
           child: Center(
             child: GestureDetector(
               onTap: () {},
-              child: ZGumDialog(
-                heightFactor: 0.28,
-                actions: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => Navigator.of(ctx).pop(),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A2E),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            '확인',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                child: const Column(
+              child: const ZGumDialog(
+                heightFactor: 0.22,
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       '등록 실패',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF1A1A2E),
                       ),
@@ -800,87 +703,21 @@ class _ActiveEventWaitingViewState
   }
 
   void _showExtendConfirm() {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierColor: const Color(0x66000000),
-      builder: (_) => Center(
-        child: ZGumDialog(
-          heightFactor: 0.38,
-          centerContent: true,
-          actions: ZGumButton(
-            label: '확인',
-            onTap: () {
-              Navigator.of(context).pop();
-              _extend();
-            },
-          ),
-          child: const Text(
-            '1회 1시간 연장가능',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A2E),
-            ),
-          ),
-        ),
-      ),
-    );
+    showExtendConfirmPopup(context).then((confirmed) {
+      if (confirmed == true) _extend();
+    });
   }
 
   void _showTerminateConfirm() {
     final hours =
         widget.event.expiresAt.difference(widget.event.startsAt).inHours;
     final withinThreshold = _withinRefundThreshold();
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierColor: const Color(0x66000000),
-      builder: (_) => Center(
-        child: ZGumDialog(
-          heightFactor: 0.38,
-          centerContent: true,
-          actions: ZGumButton(
-            label: '확인',
-            onTap: () {
-              Navigator.of(context).pop();
-              _terminate();
-            },
-          ),
-          child: withinThreshold
-              ? Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      '시간이 남아있습니다.',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A2E),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '$hours시간 재등록 1회 가능',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF888888),
-                      ),
-                    ),
-                  ],
-                )
-              : Text(
-                  '${_formatDuration(_remaining)} 남아있습니다.\n종료하시겠습니까?',
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                ),
-        ),
-      ),
-    );
+    final message = withinThreshold
+        ? '시간이 남아있습니다.\n$hours시간 재등록 1회 가능'
+        : '${_formatDuration(_remaining)} 남아있습니다.\n종료하시겠습니까?';
+    showTerminateConfirmPopup(context, message).then((confirmed) {
+      if (confirmed == true) _terminate();
+    });
   }
 
   void _finish() {

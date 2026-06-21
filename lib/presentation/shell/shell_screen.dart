@@ -18,8 +18,8 @@ import '../widgets/trace_checkin_dialog.dart';
 import '../../services/gesture_exclusion_service.dart';
 import '../../core/providers/active_partner_event_provider.dart';
 import '../../promotions/free_use/free_use_service.dart';
-import '../../promotions/free_use/free_use_intro_popup.dart';
-import '../../features/friend/widgets/ieum_intro_popup.dart';
+import '../widgets/popups/once/ieum_intro_popup.dart';
+import '../widgets/popups/once/partner_intro_popup.dart';
 import '../../services/firestore_partner_event_service.dart';
 import '../../services/device_id_service.dart';
 import 'shell_constants.dart';
@@ -79,12 +79,12 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     if (!shown && mounted) await showIeumIntroPopup(context);
   }
 
-  Future<void> _showFreeUseIntroIfNeeded() async {
-    final shown = await FreeUseService.instance.isIntroShown();
-    if (!shown && mounted) showFreeUseIntroPopup(context);
+  Future<void> _showPartnerIntroIfNeeded() async {
+    final shown = await isPartnerIntroShown();
+    if (!shown && mounted) await showPartnerIntroPopup(context);
   }
 
-  // 앱 시작 시 내 이벤트 복원 후 캡슐 알림 활성화 (복원 전 깜박임 방지)
+// 앱 시작 시 내 이벤트 복원 후 캡슐 알림 활성화 (복원 전 깜박임 방지)
   Future<void> _initAlertReady() async {
     try {
       final deviceId = await DeviceIdService.getId();
@@ -324,7 +324,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                 WidgetsBinding.instance
                     .addPostFrameCallback((_) => _syncExclusionRects());
                 if (p == 0) _showIeumIntroIfNeeded();
-                if (p == 2) _showFreeUseIntroIfNeeded();
+                if (p == 2) _showPartnerIntroIfNeeded();
               },
               children: [
                 _SwipeWrapper(
