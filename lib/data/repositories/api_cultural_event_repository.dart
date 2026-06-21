@@ -103,6 +103,36 @@ class ApiCulturalEventRepository implements CulturalEventRepository {
     }
   }
 
+  // ── 키워드 검색 (전국·위치 무관) ────────────────────────────────────────────────
+
+  Future<List<CulturalEvent>> searchByKeyword(String query) async {
+    final key = AppConfig.tourApiKey.trim();
+    if (key.isEmpty || query.trim().length < 2) return [];
+
+    final url = StringBuffer('${AppConfig.tourApiBaseUrl}/searchKeyword1')
+      ..write('?serviceKey=$key')
+      ..write('&MobileOS=ETC')
+      ..write('&MobileApp=${Uri.encodeComponent(AppConstants.appName)}')
+      ..write('&_type=json')
+      ..write('&contentTypeId=15')
+      ..write('&keyword=${Uri.encodeComponent(query.trim())}')
+      ..write('&numOfRows=10')
+      ..write('&pageNo=1');
+
+    try {
+      final response = await _dio.get<String>(url.toString());
+      final body = response.data ?? '';
+      if (body.trimLeft().startsWith('<')) return [];
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      final results = _parseResponse(json);
+      debugPrint('[TourAPI] 키워드 검색 "$query" → ${results.length}건');
+      return results;
+    } catch (e) {
+      debugPrint('[TourAPI] 키워드 검색 실패: $e');
+      return [];
+    }
+  }
+
   // ── JSON → 모델 파싱 ──────────────────────────────────────────────────────────
 
   List<CulturalEvent> _parseResponse(Map<String, dynamic> json) {

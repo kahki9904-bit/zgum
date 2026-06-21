@@ -37,6 +37,7 @@ import '../../../core/providers/partner_my_events_provider.dart';
 import '../../../core/providers/active_partner_event_provider.dart';
 import '../../../core/providers/admin_mode_provider.dart';
 import '../../../core/providers/shell_page_provider.dart';
+import '../../../core/providers/unified_search_provider.dart';
 
 class MapRoomScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSwipeToUserRoom;
@@ -399,8 +400,9 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     setState(() => _searchQuery = query);
     _searchDebounce?.cancel();
     if (query.trim().length >= 2) {
-      _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+      _searchDebounce = Timer(const Duration(milliseconds: 400), () {
         _runKakaoSearch(query);
+        ref.read(unifiedSearchProvider.notifier).search(query);
       });
     }
   }
@@ -429,6 +431,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       _searchCtrl.clear();
     });
     ref.read(kakaoSearchProvider.notifier).clear();
+    ref.read(unifiedSearchProvider.notifier).clear();
   }
 
   void _toggleSearch() {
@@ -485,17 +488,24 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
           query: query,
           center: _centerCoord,
         );
+    ref.read(unifiedSearchProvider.notifier).search(query);
   }
 
   Widget _buildSearchPanel() {
     final kakaoState = ref.watch(kakaoSearchProvider);
+    final unifiedState = ref.watch(unifiedSearchProvider);
     final zgumItems = _searchResults;
     final remaining = (5 - zgumItems.length).clamp(0, 5);
     final kakaoItems = remaining > 0
         ? kakaoState.results.take(remaining).toList()
         : <MapMarkerModel>[];
+    final kopisItems = unifiedState.kopisResults.take(5).toList();
+    final tourItems = unifiedState.tourResults.take(5).toList();
 
-    final bool hasAnyResult = zgumItems.isNotEmpty || kakaoItems.isNotEmpty;
+    final bool hasAnyResult = zgumItems.isNotEmpty ||
+        kakaoItems.isNotEmpty ||
+        kopisItems.isNotEmpty ||
+        tourItems.isNotEmpty;
 
     return Column(
       children: [
@@ -524,6 +534,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                           _searchCtrl.clear();
                           setState(() => _searchQuery = '');
                           ref.read(kakaoSearchProvider.notifier).clear();
+                          ref.read(unifiedSearchProvider.notifier).clear();
                         },
                       )
                     : null,
@@ -548,11 +559,48 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                   children: [
+                    // 주변 이벤트 (20km 내 로컬)
                     ...zgumItems.map((e) => _searchResultTile(
                           title: e.title,
                           subtitle: e.venue,
                           onTap: () => _selectResult(e),
                         )),
+                    // 공연·행사 (KOPIS + Tour API 전국 검색)
+                    if (unifiedState.isLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Center(
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFFBBBBBB),
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (kopisItems.isNotEmpty || tourItems.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8, bottom: 4),
+                        child: Text(
+                          '공연·행사',
+                          style: TextStyle(
+                              fontSize: 11, color: Color(0xFFAAAAAA)),
+                        ),
+                      ),
+                      ...kopisItems.map((r) => _searchResultTile(
+                            title: r.title,
+                            subtitle: '${r.venue}  ${r.startDate}~${r.endDate}',
+                            onTap: () => _selectKopisResult(r),
+                          )),
+                      ...tourItems.map((e) => _searchResultTile(
+                            title: e.title,
+                            subtitle: e.venue,
+                            onTap: () => _selectResult(e),
+                          )),
+                    ],
+                    // 장소 (카카오)
                     if (kakaoState.isLoading)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 16),
@@ -575,12 +623,24 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                                 fontSize: 12, color: Color(0xFFCCCCCC))),
                       )
                     else ...[
-                      ...kakaoItems.map((m) => _searchResultTile(
-                            title: m.title,
-                            subtitle: m.venue,
-                            onTap: () => _selectKakaoPlace(m),
-                          )),
-                      if (!hasAnyResult && kakaoState.hasSearched)
+                      if (kakaoItems.isNotEmpty) ...[
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8, bottom: 4),
+                          child: Text(
+                            '장소',
+                            style: TextStyle(
+                                fontSize: 11, color: Color(0xFFAAAAAA)),
+                          ),
+                        ),
+                        ...kakaoItems.map((m) => _searchResultTile(
+                              title: m.title,
+                              subtitle: m.venue,
+                              onTap: () => _selectKakaoPlace(m),
+                            )),
+                      ],
+                      if (!hasAnyResult &&
+                          kakaoState.hasSearched &&
+                          unifiedState.hasSearched)
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 12),
                           child: Text(
@@ -594,6 +654,84 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                 ),
         ),
       ],
+    );
+  }
+
+  void _selectKopisResult(KopisSearchResult result) {
+    // 이미 지도에 로드된 이벤트면 해당 마커로 이동
+    final matched = _events.firstWhere(
+      (e) => e.id == 'kopis_${result.mt20id}',
+      orElse: () => _events.firstWhere(
+        (e) => e.title == result.title,
+        orElse: () => CulturalEvent(
+          id: '',
+          title: '',
+          venue: '',
+          address: '',
+          description: '',
+          startDate: DateTime.now(),
+          endDateTime: DateTime.now(),
+          location: _center,
+          category: EventCategory.show,
+          isFree: false,
+          source: EventSource.public,
+        ),
+      ),
+    );
+
+    _closeSearch();
+
+    if (matched.id.isNotEmpty) {
+      _selectResult(matched);
+      return;
+    }
+
+    // 지도에 없는 경우: 공연 정보 시트 표시
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              result.title,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1A1A2E),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              result.venue,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF888888)),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${result.startDate} ~ ${result.endDate}',
+              style: const TextStyle(fontSize: 13, color: Color(0xFFAAAAAA)),
+            ),
+            if (result.genre.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                result.genre,
+                style: const TextStyle(fontSize: 12, color: Color(0xFFCCCCCC)),
+              ),
+            ],
+            const SizedBox(height: 16),
+            const Text(
+              '현재 위치 반경 밖의 공연입니다.',
+              style: TextStyle(fontSize: 12, color: Color(0xFFCCCCCC)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

@@ -6,6 +6,25 @@ import '../../core/geo_utils.dart';
 import '../models/cultural_event.dart';
 import 'cultural_event_repository.dart';
 
+/// 키워드 검색 결과 모델 (좌표 없이 제목·장소·기간만 보유).
+class KopisSearchResult {
+  final String mt20id;
+  final String title;
+  final String venue;
+  final String startDate;
+  final String endDate;
+  final String genre;
+
+  const KopisSearchResult({
+    required this.mt20id,
+    required this.title,
+    required this.venue,
+    required this.startDate,
+    required this.endDate,
+    required this.genre,
+  });
+}
+
 /// KOPIS 공연예술통합전산망 기반 구현체.
 ///
 /// 3개 엔드포인트 사용:
@@ -151,6 +170,44 @@ class KopisRepository implements CulturalEventRepository {
       };
     } catch (_) {
       return null;
+    }
+  }
+
+  // ── 5. 공연명 키워드 검색 (전국·위치 무관) ──────────────────────────────────────
+
+  Future<List<KopisSearchResult>> searchByKeyword(String query) async {
+    final key = AppConfig.kopisApiKey.trim();
+    if (key.isEmpty || query.trim().length < 2) return [];
+
+    final url = '${AppConfig.kopisApiBaseUrl}/pblprfr'
+        '?service=$key'
+        '&shprfnm=${Uri.encodeComponent(query.trim())}'
+        '&rows=10'
+        '&cpage=1'
+        '&newsql=Y';
+
+    try {
+      final res = await _dio.get<String>(url);
+      final results = <KopisSearchResult>[];
+      for (final m
+          in RegExp(r'<db>(.*?)</db>', dotAll: true).allMatches(res.data ?? '')) {
+        final db = m.group(1) ?? '';
+        final mt20id = _tag(db, 'mt20id');
+        if (mt20id.isEmpty) continue;
+        results.add(KopisSearchResult(
+          mt20id: mt20id,
+          title: _tag(db, 'prfnm'),
+          venue: _tag(db, 'fcltynm'),
+          startDate: _tag(db, 'prfpdfrom'),
+          endDate: _tag(db, 'prfpdto'),
+          genre: _tag(db, 'genrenm'),
+        ));
+      }
+      debugPrint('[KOPIS] 키워드 검색 "$query" → ${results.length}건');
+      return results;
+    } catch (e) {
+      debugPrint('[KOPIS] 키워드 검색 실패: $e');
+      return [];
     }
   }
 
