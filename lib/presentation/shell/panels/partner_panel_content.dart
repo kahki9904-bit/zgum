@@ -3,11 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../data/models/cultural_event.dart';
-import '../../../dev/mock_partner_event_store.dart';
 import '../../../features/alert/models/partner_event.dart';
-import '../../../core/providers/partner_focus_provider.dart';
-import '../../../core/providers/shell_page_provider.dart';
 import '../../../core/providers/admin_mode_provider.dart';
 import '../../../core/providers/active_partner_event_provider.dart';
 import '../../../core/providers/partner_my_events_provider.dart';
@@ -205,32 +201,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     }
 
     if (!mounted) return;
-    _applyToMap(paidEvent);
-    ref.read(shellPageProvider.notifier).state = 1;
     widget.onClose();
-  }
-
-  void _applyToMap(PartnerEvent event) {
-    final mockCultural = CulturalEvent(
-      id: event.id,
-      title: event.title,
-      venue: event.venue,
-      address: '현재 위치',
-      description: event.title,
-      startDate: event.startsAt,
-      endDateTime: event.expiresAt,
-      location: event.location,
-      category: EventCategory.partner,
-      isFree: false,
-      source: EventSource.partner,
-      partnerMessage: event.message,
-    );
-    ref.read(mockPartnerEventStoreProvider.notifier).state = [
-      ...ref.read(mockPartnerEventStoreProvider),
-      mockCultural,
-    ];
-    ref.read(partnerFocusPendingProvider.notifier).state = true;
-    ref.read(partnerFocusProvider.notifier).state = mockCultural;
   }
 
   void _showDescOverlay(int index) {
@@ -725,9 +696,6 @@ class _ActiveEventWaitingViewState
     _timer = null;
     unawaited(
         ref.read(firestorePartnerEventServiceProvider).expire(widget.event.id));
-    final store = ref.read(mockPartnerEventStoreProvider);
-    ref.read(mockPartnerEventStoreProvider.notifier).state =
-        store.where((e) => e.id != widget.event.id).toList();
     final list = ref.read(partnerMyEventsProvider);
     ref.read(partnerMyEventsProvider.notifier).state = [widget.event, ...list];
     ref.read(activePartnerEventProvider.notifier).state = null;
@@ -739,9 +707,6 @@ class _ActiveEventWaitingViewState
     _timer = null;
     unawaited(
         ref.read(firestorePartnerEventServiceProvider).expire(widget.event.id));
-    final store = ref.read(mockPartnerEventStoreProvider);
-    ref.read(mockPartnerEventStoreProvider.notifier).state =
-        store.where((e) => e.id != widget.event.id).toList();
     ref.read(activePartnerEventProvider.notifier).state = null;
     widget.onClose();
   }
@@ -764,26 +729,6 @@ class _ActiveEventWaitingViewState
           .extend(widget.event.id, newExpiresAt);
       final extendedEvent = widget.event.copyWith(expiresAt: newExpiresAt);
       ref.read(activePartnerEventProvider.notifier).state = extendedEvent;
-
-      final store = ref.read(mockPartnerEventStoreProvider);
-      ref.read(mockPartnerEventStoreProvider.notifier).state = store.map((e) {
-        if (e.id != widget.event.id) return e;
-        return CulturalEvent(
-          id: e.id,
-          title: e.title,
-          venue: e.venue,
-          address: e.address,
-          description: e.description,
-          startDate: e.startDate,
-          endDateTime: newExpiresAt,
-          location: e.location,
-          category: e.category,
-          isFree: e.isFree,
-          source: e.source,
-          partnerMessage: e.partnerMessage,
-          isAdultOnly: e.isAdultOnly,
-        );
-      }).toList();
     } finally {
       if (mounted) setState(() => _extending = false);
     }

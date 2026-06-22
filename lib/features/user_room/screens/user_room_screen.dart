@@ -2,7 +2,10 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/user_location_provider.dart';
 import '../../../data/models/check_in_record.dart';
+import '../../../features/friend/providers/friend_provider.dart';
+import '../../../presentation/widgets/dialogs/ieum_request_dialog.dart';
 import '../providers/check_in_provider.dart';
 import 'settings_screen.dart';
 
@@ -15,6 +18,17 @@ class UserRoomScreen extends ConsumerStatefulWidget {
 
 class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
   bool _newestFirst = true;
+
+  void _showIeumRequestDialog() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => IeumRequestDialog(
+        location: ref.read(userLocationProvider),
+        repo: ref.read(friendRepositoryProvider),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +50,26 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    GestureDetector(
+                      onTap: _showIeumRequestDialog,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1A2E),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Text(
+                          '이음',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 2.0,
+                          ),
+                        ),
+                      ),
+                    ),
                     const Expanded(child: SizedBox()),
                     if (records.isNotEmpty) ...[
                       GestureDetector(
@@ -74,7 +108,6 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
                 ),
             ],
           ),
-          // FriendButton → ShellScreen 공통 지금 탭으로 통합 예정, 임시 숨김
         ],
       ),
     );

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/partner_my_events_provider.dart';
 import '../../../features/alert/models/partner_event.dart';
 import '../../../features/alert/providers/event_stats_provider.dart';
+import '../../../presentation/shell/panels/partner_panel_content.dart';
 import 'partner_dashboard_screen.dart';
 
 class PartnerRoomScreen extends ConsumerStatefulWidget {
@@ -16,6 +17,47 @@ class PartnerRoomScreen extends ConsumerStatefulWidget {
 
 class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
   bool _newestFirst = true;
+
+  void _openRegister(BuildContext context) {
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 250),
+      pageBuilder: (ctx, __, ___) => GestureDetector(
+        onTap: () => Navigator.of(ctx).pop(),
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: GestureDetector(
+            onTap: () {},
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: double.infinity,
+                height: MediaQuery.sizeOf(context).height * 0.75,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: PartnerPanelContent(
+                    onClose: () => Navigator.of(ctx).pop(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      transitionBuilder: (_, animation, __, child) => FadeTransition(
+        opacity: animation,
+        child: child,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +79,26 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                GestureDetector(
+                  onTap: () => _openRegister(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A2E),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Text(
+                      '등록',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 2.0,
+                      ),
+                    ),
+                  ),
+                ),
                 const Expanded(child: SizedBox()),
                 if (myEvents.isNotEmpty) ...[
                   GestureDetector(

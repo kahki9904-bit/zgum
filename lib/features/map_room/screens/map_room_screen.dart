@@ -26,11 +26,9 @@ import '../../../services/time_service.dart';
 import '../../../presentation/widgets/sheets/event_detail_sheet.dart';
 import '../../../presentation/widgets/sheets/kakao_place_detail_sheet.dart';
 import '../../../data/models/check_in_record.dart';
-import '../../alert/providers/alert_provider.dart';
 import '../../user_room/providers/auth_provider.dart';
 import '../../user_room/providers/check_in_provider.dart';
 import '../engines/kakao_map_engine.dart';
-import '../../../core/providers/partner_focus_provider.dart';
 import '../providers/map_filter_provider.dart';
 import '../providers/kakao_search_provider.dart';
 import '../../../core/providers/partner_my_events_provider.dart';
@@ -120,7 +118,6 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   bool _isLoadingRoute = false;
 
   // 파트너 이벤트 포커스: 지도 이동 후 팝업 표시까지 대기 시간 (조정 가능)
-  static const Duration _kPartnerFocusDelay = Duration(milliseconds: 300);
 
   @override
   void initState() {
@@ -263,14 +260,6 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     _scheduleEventTimers(active);
     _rebuildMarkers();
     _updatePartnerPulse();
-    // 파트너 이벤트 등록 완료 후 포커스 요청 처리
-    final focusTarget = ref.read(partnerFocusProvider);
-    if (focusTarget != null) {
-      ref.read(partnerFocusProvider.notifier).state = null;
-      Future.delayed(const Duration(milliseconds: 400), () {
-        if (mounted) _focusEvent(focusTarget);
-      });
-    }
   }
 
   // ── 이벤트별 정확한 만료 타이머 ────────────────────────────────────────────
@@ -452,33 +441,12 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
 
   void _updatePartnerPulse() {
     final hasPartner = _events.any((e) => e.source == EventSource.partner);
-    final hasUnseenAlert = ref.read(hasUnseenAlertProvider);
-    if ((hasPartner && !_partnerEventSeen) || hasUnseenAlert) {
+    if (hasPartner && !_partnerEventSeen) {
       _pulseController.repeat(reverse: true);
     } else {
       _pulseController.stop();
       _pulseController.reset();
     }
-  }
-
-  void _focusEvent(CulturalEvent event) {
-    ref.read(partnerFocusPendingProvider.notifier).state = false;
-    _mapCtrl.move(
-      MapCoordinate(event.location.latitude, event.location.longitude),
-      AppConstants.defaultZoom,
-    );
-    setState(() {
-      _highlightedEventId = event.id;
-      _searchFocusCoord = null;
-      _searchFocusPlace = null;
-    });
-    _rebuildMarkers();
-    // 지도가 이동을 처리한 후 팝업 표시 (동시 실행 시 WebView 렌더 충돌 방지)
-    Future.delayed(_kPartnerFocusDelay, () async {
-      if (!mounted) return;
-      await _showEventSheet(event);
-      if (mounted) _rebuildMarkers();
-    });
   }
 
   // ── 검색 패널 ──────────────────────────────────────────────────────────────
@@ -883,17 +851,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     ref.listen<PartnerEvent?>(activePartnerEventProvider, (prev, next) {
       if (prev != null && next == null) _loadEvents();
     });
-    ref.listen<CulturalEvent?>(partnerFocusProvider, (prev, next) {
-      if (next != null) {
-        ref.read(partnerFocusProvider.notifier).state = null;
-        Future.delayed(const Duration(milliseconds: 200), () {
-          if (mounted) _focusEvent(next);
-        });
-      }
-    });
     ref.listen<MapFilterState>(mapFilterProvider, (_, __) => _rebuildMarkers());
     ref.listen<AuthState>(authStateProvider, (_, __) => _loadEvents());
-    ref.listen<bool>(hasUnseenAlertProvider, (_, __) => _updatePartnerPulse());
     ref.listen<int>(shellPageProvider, (prev, next) {
       if (next == 1 && prev != 1) {
         setState(() {

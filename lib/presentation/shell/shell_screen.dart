@@ -5,28 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/partner_focus_provider.dart';
 import '../../core/providers/shell_page_provider.dart';
-import '../../core/providers/partner_my_events_provider.dart';
-import '../../data/models/cultural_event.dart';
-import '../../dev/mock_partner_event_store.dart';
-import '../../features/alert/models/partner_event.dart';
-import '../../features/alert/providers/alert_provider.dart';
-import '../../features/alert/providers/geofence_provider.dart';
 import '../../features/map_room/screens/map_room_screen.dart';
 import '../../features/partner_room/screens/partner_room_screen.dart';
 import '../../features/user_room/screens/user_room_screen.dart';
-import '../widgets/trace_checkin_dialog.dart';
 import '../../services/gesture_exclusion_service.dart';
-import '../../core/providers/active_partner_event_provider.dart';
 import '../../promotions/free_use/free_use_service.dart';
 import '../widgets/popups/once/ieum_intro_popup.dart';
 import '../widgets/popups/once/partner_intro_popup.dart';
-import '../../services/firestore_partner_event_service.dart';
-import '../../services/device_id_service.dart';
 import 'shell_constants.dart';
-import 'panels/alert_panel_content.dart';
-import 'panels/user_panel_content.dart';
 import 'panels/map_panel_content.dart';
-import 'panels/partner_panel_content.dart';
 
 
 class ShellScreen extends ConsumerStatefulWidget {
@@ -41,8 +28,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   final _pc = PageController(initialPage: 1);
   final _mapKey = GlobalKey<MapRoomScreenState>();
   int _page = 1;
-  bool _tracePopupShowing = false;
-  bool _alertReady = false;
   // ValueNotifier: 패널 열림 상태 변경이 PageView rebuild를 유발하지 않도록 분리
   final _nowPanelOpen = ValueNotifier<bool>(false);
   // AnimationController: Transform.translate 기반 — 레이아웃 변경 없이 페인트만 이동
@@ -51,7 +36,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   bool _tabVisible = false;
   bool _showNowTab = false;
   bool _mapReady = false;
-  PartnerEvent? _pendingAlert;
 
   void _onRouteAnimationComplete() {
     setState(() => _tabVisible = true);
@@ -84,19 +68,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     if (!shown && mounted) await showPartnerIntroPopup(context);
   }
 
-// 앱 시작 시 내 이벤트 복원 후 캡슐 알림 활성화 (복원 전 깜박임 방지)
-  Future<void> _initAlertReady() async {
-    try {
-      final deviceId = await DeviceIdService.getId();
-      final service = ref.read(firestorePartnerEventServiceProvider);
-      final events = await service.watchByPartner(deviceId).first;
-      final active = events.where((e) => !e.isExpired).toList();
-      if (active.isNotEmpty && mounted) {
-        ref.read(activePartnerEventProvider.notifier).state = active.first;
-      }
-    } catch (_) {}
-    if (mounted) setState(() => _alertReady = true);
-  }
 
   @override
   void initState() {
@@ -124,9 +95,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _syncExclusionRects();
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _initAlertReady();
-    });
   }
 
   @override
@@ -140,6 +108,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   }
 
   void _goTo(int page) {
+    if (page == 0 && _nowPanelOpen.value) _closeNow();
     _pc.animateToPage(
       page,
       duration: const Duration(milliseconds: 320),
@@ -172,10 +141,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   void _closeNow() {
     if (!_nowPanelOpen.value) return;
     _nowPanelOpen.value = false;
-    if (_pendingAlert != null) {
-      ref.read(partnerAlertProvider.notifier).markAsSeen(_pendingAlert!.id);
-      setState(() => _pendingAlert = null);
-    }
     final rem = _panelAnim.value;
     _panelAnim.animateTo(0.0,
         duration: Duration(milliseconds: (rem * 280).round().clamp(80, 280)),
@@ -183,6 +148,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   }
 
   void _toggleNow() {
+    if (_page == 0 || _page == 2) return;
     if (_nowPanelOpen.value) {
       _closeNow();
     } else {
@@ -191,50 +157,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       _panelAnim.animateTo(1.0,
           duration: Duration(milliseconds: (rem * 300).round().clamp(80, 300)),
           curve: Curves.easeOut);
-      _updatePendingAlert();
     }
-  }
-
-  // 패널이 열릴 때 한 번만 호출 — 파트너 탭(2)은 작업 중일 수 있으므로 차단
-  void _updatePendingAlert() {
-    if (_page == 2 && ref.read(activePartnerEventProvider) != null) return;
-    // 내가 등록한 이벤트는 알림에서 제외
-    final myEventIds = ref.read(partnerMyEventsProvider).map((e) => e.id).toSet();
-    final activeEvent = ref.read(activePartnerEventProvider);
-    if (activeEvent != null) myEventIds.add(activeEvent.id);
-    final alerts = (ref.read(partnerAlertProvider)
-        .where((e) => !e.seen && !e.isExpired && !myEventIds.contains(e.id))
-        .toList()
-      ..sort((a, b) => b.startsAt.compareTo(a.startsAt)));
-    if (alerts.isEmpty) return;
-    setState(() => _pendingAlert = alerts.first);
-  }
-
-  // 사용자가 알림 카드를 탭했을 때 — 지도로 이동 후 패널 닫기
-  void _confirmAlert(PartnerEvent alert) {
-    final cultural = CulturalEvent(
-      id: alert.id,
-      title: alert.title,
-      venue: alert.venue,
-      address: '현재 위치',
-      description: alert.title,
-      startDate: alert.startsAt,
-      endDateTime: alert.expiresAt,
-      location: alert.location,
-      category: EventCategory.partner,
-      isFree: false,
-      source: EventSource.partner,
-      partnerMessage: alert.message,
-    );
-    final store = ref.read(mockPartnerEventStoreProvider);
-    if (!store.any((e) => e.id == cultural.id)) {
-      ref.read(mockPartnerEventStoreProvider.notifier).state = [...store, cultural];
-    }
-    ref.read(partnerFocusPendingProvider.notifier).state = true;
-    ref.read(partnerFocusProvider.notifier).state = cultural;
-    ref.read(partnerAlertProvider.notifier).markAsSeen(alert.id);
-    _goTo(1);
-    _closeNow();
   }
 
   void _onNowDragUpdate(DragUpdateDetails d) {
@@ -244,6 +167,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   }
 
   void _onNowDragEnd(DragEndDetails d) {
+    if (_page == 0) return;
     final vel = d.primaryVelocity ?? 0;
     if (vel < -300 || (_panelAnim.value >= 0.4 && vel < 300)) {
       _nowPanelOpen.value = true;
@@ -251,7 +175,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       _panelAnim.animateTo(1.0,
           duration: Duration(milliseconds: (rem * 300).round().clamp(80, 300)),
           curve: Curves.easeOut);
-      _updatePendingAlert();
     } else {
       _nowPanelOpen.value = false;
       final rem = _panelAnim.value;
@@ -261,34 +184,13 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     }
   }
 
-  /// 지오펜스 3분 체류 달성 시 자동으로 흔적 팝업 표시
-  void _showTracePopup(PartnerEvent event) {
-    if (_tracePopupShowing || !mounted) return;
-    final myEventIds = ref.read(partnerMyEventsProvider).map((e) => e.id).toSet();
-    final activeEvent = ref.read(activePartnerEventProvider);
-    if (activeEvent != null) myEventIds.add(activeEvent.id);
-    if (myEventIds.contains(event.id)) return;
-    _tracePopupShowing = true;
-    showTraceCheckInDialog(context, event)
-        .whenComplete(() => _tracePopupShowing = false);
-  }
-
   @override
   Widget build(BuildContext context) {
-    // 지오펜스 상태 변화 감지 → 자동 팝업 (어느 탭에 있어도 작동)
-    ref.listen<PartnerEvent?>(geofenceProvider, (prev, next) {
-      if (next != null && prev == null) {
-        _showTracePopup(next);
-      }
-    });
-
     // shellPageProvider 변화 감지 → 페이지 이동
     ref.listen<int>(shellPageProvider, (prev, next) {
       if (prev != next) _goTo(next);
     });
 
-    final hasAlert = ref.watch(hasUnseenAlertProvider) && _alertReady;
-    final activePartnerEvent = ref.watch(activePartnerEventProvider);
     final media = MediaQuery.of(context);
     final availableHeight =
         media.size.height - media.padding.top - media.padding.bottom;
@@ -351,10 +253,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
           if (_tabVisible)
             Positioned.fill(
               child: AnimatedOpacity(
-                opacity: _showNowTab ? 1.0 : 0.0,
+                opacity: (_showNowTab && _page == 1) ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 250),
                 child: IgnorePointer(
-                  ignoring: !_showNowTab,
+                  ignoring: !_showNowTab || _page != 1,
                   child: RepaintBoundary(
                     child: ValueListenableBuilder<bool>(
                       valueListenable: _nowPanelOpen,
@@ -395,20 +297,15 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                               ),
                               child: _NowBundle(
                                 isOpen: isOpen,
-                                hasAlert: hasAlert,
                                 panelHeight: panelHeight,
-                                bottomPadding:
-                                    Platform.isIOS ? bottomPadding : 0,
-                                onToggle: Platform.isIOS ? _toggleNow : null,
+                                bottomPadding: bottomPadding,
+                                onToggle: _toggleNow,
                                 panelAnim: _panelAnim,
                                 currentPage: _page,
                                 mapReady: _mapReady,
-                                isPartnerBusy: activePartnerEvent != null,
                                 onDragUpdate: _onNowDragUpdate,
                                 onDragEnd: _onNowDragEnd,
                                 onClose: _closeNow,
-                                pendingAlert: _pendingAlert,
-                                onAlertConfirm: _confirmAlert,
                               ),
                             ),
                           ),
@@ -484,45 +381,36 @@ class _SwipeWrapperState extends State<_SwipeWrapper> {
 
 class _NowBundle extends StatelessWidget {
   final bool isOpen;
-  final bool hasAlert;
   final double panelHeight;
   final double bottomPadding;
   final VoidCallback? onToggle;
   final Animation<double> panelAnim;
   final int currentPage;
   final bool mapReady;
-  final bool isPartnerBusy;
   final GestureDragUpdateCallback onDragUpdate;
   final GestureDragEndCallback onDragEnd;
   final VoidCallback onClose;
-  final PartnerEvent? pendingAlert;
-  final void Function(PartnerEvent)? onAlertConfirm;
 
   const _NowBundle({
     required this.isOpen,
-    required this.hasAlert,
     required this.panelHeight,
     required this.bottomPadding,
     required this.panelAnim,
     required this.currentPage,
     required this.mapReady,
-    required this.isPartnerBusy,
     required this.onDragUpdate,
     required this.onDragEnd,
     required this.onClose,
     this.onToggle,
-    this.pendingAlert,
-    this.onAlertConfirm,
   });
 
   @override
   Widget build(BuildContext context) {
     final content = _buildPanelContent();
 
-    if (onToggle != null) {
+    if (Platform.isIOS) {
       return _IosNowBundle(
         isOpen: isOpen,
-        hasAlert: hasAlert,
         panelHeight: panelHeight,
         bottomPadding: bottomPadding,
         panelAnim: panelAnim,
@@ -533,11 +421,12 @@ class _NowBundle extends StatelessWidget {
     }
 
     return _AndroidNowBundle(
-      hasAlert: hasAlert,
+      isOpen: isOpen,
       panelHeight: panelHeight,
       bottomPadding: bottomPadding,
       panelAnim: panelAnim,
       mapReady: mapReady,
+      onToggle: onToggle,
       onDragUpdate: onDragUpdate,
       onDragEnd: onDragEnd,
       content: content,
@@ -545,29 +434,12 @@ class _NowBundle extends StatelessWidget {
   }
 
   Widget _buildPanelContent() {
-    // 파트너 탭(2)은 이벤트 진행 중일 때만 알림 끼어들기 차단 (등록 안 한 상태에서는 알림 표시)
-    if (pendingAlert != null && !(currentPage == 2 && isPartnerBusy)) {
-      return AlertPanelContent(
-        alert: pendingAlert!,
-        onTap: () => onAlertConfirm?.call(pendingAlert!),
-        onClose: onClose,
-      );
-    }
-    switch (currentPage) {
-      case 2:
-        if (!isOpen) return const SizedBox.shrink();
-        return PartnerPanelContent(onClose: onClose);
-      case 0:
-        return UserPanelContent(onClose: onClose);
-      default:
-        return MapPanelContent(onClose: onClose, isOpen: isOpen);
-    }
+    return MapPanelContent(onClose: onClose, isOpen: isOpen);
   }
 }
 
 class _IosNowBundle extends StatelessWidget {
   final bool isOpen;
-  final bool hasAlert;
   final double panelHeight;
   final double bottomPadding;
   final Animation<double> panelAnim;
@@ -577,7 +449,6 @@ class _IosNowBundle extends StatelessWidget {
 
   const _IosNowBundle({
     required this.isOpen,
-    required this.hasAlert,
     required this.panelHeight,
     required this.bottomPadding,
     required this.panelAnim,
@@ -619,7 +490,6 @@ class _IosNowBundle extends StatelessWidget {
                   behavior: HitTestBehavior.opaque,
                   onTap: onToggle,
                   child: _NowCapsule(
-                    hasAlert: hasAlert,
                     isOpen: isOpen,
                     mapReady: mapReady,
                     buttonStyle: true,
@@ -635,17 +505,18 @@ class _IosNowBundle extends StatelessWidget {
 }
 
 class _AndroidNowBundle extends StatelessWidget {
-  final bool hasAlert;
+  final bool isOpen;
   final double panelHeight;
   final double bottomPadding;
   final Animation<double> panelAnim;
   final bool mapReady;
+  final VoidCallback? onToggle;
   final GestureDragUpdateCallback onDragUpdate;
   final GestureDragEndCallback onDragEnd;
   final Widget content;
 
   const _AndroidNowBundle({
-    required this.hasAlert,
+    required this.isOpen,
     required this.panelHeight,
     required this.bottomPadding,
     required this.panelAnim,
@@ -653,6 +524,7 @@ class _AndroidNowBundle extends StatelessWidget {
     required this.onDragUpdate,
     required this.onDragEnd,
     required this.content,
+    this.onToggle,
   });
 
   @override
@@ -668,8 +540,8 @@ class _AndroidNowBundle extends StatelessWidget {
         child: _NowPanelSheet(child: content),
         builder: (_, sheet) {
           final capsuleBottom = lerpDouble(
-            panelHeight + kShellPanelFloat,
-            panelHeight - kShellCapsuleHeight,
+            panelHeight + kShellPanelFloat + bottomPadding,
+            panelHeight - kShellCapsuleHeight + bottomPadding,
             panelAnim.value,
           )!;
 
@@ -701,14 +573,15 @@ class _AndroidNowBundle extends StatelessWidget {
                     width: touchWidth,
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
+                      onTap: onToggle,
                       onVerticalDragUpdate: onDragUpdate,
                       onVerticalDragEnd: onDragEnd,
                       child: Align(
                         alignment: Alignment.center,
                         child: _NowCapsule(
-                          hasAlert: hasAlert,
-                          isOpen: false,
+                          isOpen: isOpen,
                           mapReady: mapReady,
+                          buttonStyle: true,
                         ),
                       ),
                     ),
@@ -795,13 +668,11 @@ class _PanelScrollIndicator extends StatelessWidget {
 
 
 class _NowCapsule extends StatefulWidget {
-  final bool hasAlert;
   final bool isOpen;
   final bool mapReady;
   final bool buttonStyle;
 
   const _NowCapsule({
-    required this.hasAlert,
     required this.isOpen,
     required this.mapReady,
     this.buttonStyle = false,
@@ -812,23 +683,13 @@ class _NowCapsule extends StatefulWidget {
 }
 
 class _NowCapsuleState extends State<_NowCapsule>
-    with TickerProviderStateMixin {
-  late final AnimationController _blink;
-  late final Animation<double> _blinkAnim;
+    with SingleTickerProviderStateMixin {
   late final AnimationController _light;
   late final Animation<double> _lightAnim;
 
   @override
   void initState() {
     super.initState();
-    _blink = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 400));
-    _blinkAnim = Tween<double>(begin: 0.35, end: 1.0).animate(
-      CurvedAnimation(parent: _blink, curve: Curves.easeInOut),
-    );
-    if (widget.hasAlert) _blink.repeat(reverse: true);
-
-    // State 재생성 시 이미 완료 상태로 시작해 재실행 방지
     _light = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
@@ -851,18 +712,10 @@ class _NowCapsuleState extends State<_NowCapsule>
         if (mounted) _light.forward();
       });
     }
-    if (widget.hasAlert && !old.hasAlert) {
-      _blink.repeat(reverse: true);
-    } else if (!widget.hasAlert && old.hasAlert) {
-      _blink
-        ..stop()
-        ..value = 1.0;
-    }
   }
 
   @override
   void dispose() {
-    _blink.dispose();
     _light.dispose();
     super.dispose();
   }
@@ -870,14 +723,11 @@ class _NowCapsuleState extends State<_NowCapsule>
   @override
   Widget build(BuildContext context) {
     final capsuleWidth = MediaQuery.sizeOf(context).width * 0.50;
-    const normalColor = Color(0xFF16213E);
-    const alertColor = Color(0xFF2D6BE4);
+    const color = Color(0xFF16213E);
 
     return AnimatedBuilder(
-      animation: Listenable.merge([_blinkAnim, _lightAnim]),
+      animation: _lightAnim,
       builder: (_, __) {
-        final color = widget.hasAlert ? alertColor : normalColor;
-        final blinkOpacity = widget.hasAlert ? _blinkAnim.value : 1.0;
         final progress = _lightAnim.value;
         final halfW = capsuleWidth / 2;
 
@@ -889,7 +739,7 @@ class _NowCapsuleState extends State<_NowCapsule>
             width: 84,
             height: 34,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: blinkOpacity * 0.88),
+              color: color.withValues(alpha: 0.88),
               borderRadius: BorderRadius.circular(17),
               boxShadow: const [
                 BoxShadow(
@@ -917,7 +767,7 @@ class _NowCapsuleState extends State<_NowCapsule>
             height: 6,
             child: progress >= 1.0
                 ? ColoredBox(
-                    color: color.withValues(alpha: blinkOpacity * 0.70))
+                    color: color.withValues(alpha: 0.70))
                 : Stack(
                     children: [
                       // 좌측 끝 → 중앙으로
@@ -928,7 +778,7 @@ class _NowCapsuleState extends State<_NowCapsule>
                         width: fillWidth,
                         child: ColoredBox(
                             color:
-                                color.withValues(alpha: blinkOpacity * 0.70)),
+                                color.withValues(alpha: 0.70)),
                       ),
                       // 우측 끝 → 중앙으로
                       Positioned(
@@ -938,7 +788,7 @@ class _NowCapsuleState extends State<_NowCapsule>
                         width: fillWidth,
                         child: ColoredBox(
                             color:
-                                color.withValues(alpha: blinkOpacity * 0.70)),
+                                color.withValues(alpha: 0.70)),
                       ),
                     ],
                   ),
