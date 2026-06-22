@@ -25,6 +25,7 @@ import '../../../services/location_service.dart';
 import '../../../services/time_service.dart';
 import '../../../presentation/widgets/sheets/event_detail_sheet.dart';
 import '../../../presentation/widgets/sheets/kakao_place_detail_sheet.dart';
+import '../../../data/models/check_in_record.dart';
 import '../../alert/providers/alert_provider.dart';
 import '../../user_room/providers/auth_provider.dart';
 import '../../user_room/providers/check_in_provider.dart';
@@ -243,22 +244,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
           partnerMessage: e.message,
           isAdultOnly: e.isAdultOnly,
         )).toList();
-    // 테스트용 — 흔적 남기기 패널 확인 후 삭제
-    final testEvent = CulturalEvent(
-      id: 'test_trace_event_001',
-      title: '흔적 테스트 이벤트',
-      venue: '테스트 장소',
-      address: '현재 위치',
-      description: '패널 흔적 남기기 테스트용',
-      startDate: DateTime.now(),
-      endDateTime: DateTime.now().add(const Duration(hours: 24)),
-      location: _center,
-      category: EventCategory.show,
-      isFree: true,
-      source: EventSource.partner,
-    );
     final all = [
-      testEvent,
       if (AppConstants.showPublicApiMarkers) ...publicEvents,
       if (AppConstants.showPublicApiMarkers) ...kopisEvents,
       ...partnerEvents,
@@ -840,8 +826,23 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
           .read(checkInProvider.notifier)
           .checkedInEventIds
           .contains(event.id),
-      canCheckIn: !isMyEvent,
       friendTraceCount: 0,
+      onCheckIn: isMyEvent
+          ? null
+          : (String? memo, String? photoPath) {
+              final record = CheckInRecord.fromEvent(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                eventId: event.id,
+                eventTitle: event.title,
+                venue: event.venue,
+                category: event.category,
+                checkedInAt: DateTime.now(),
+                memo: memo,
+                photoPath: photoPath,
+              );
+              ref.read(checkInProvider.notifier).save(record);
+              _rebuildMarkers();
+            },
       onNavigate: (_isNavigating || _isLoadingRoute)
           ? null
           : () => _startNavigation(event),

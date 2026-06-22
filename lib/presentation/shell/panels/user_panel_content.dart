@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/check_in_record.dart';
-import '../../../features/alert/providers/event_stats_provider.dart';
 import '../../../features/friend/data/models/friend_request.dart';
 import '../../../features/friend/providers/friend_provider.dart';
 import '../../../features/user_room/providers/check_in_provider.dart';
@@ -27,24 +26,8 @@ class _UserPanelContentState extends ConsumerState<UserPanelContent> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(checkInProvider.notifier).cleanupExpired();
-      _cleanupPendingTrace();
       _checkPendingRequest();
     });
-  }
-
-  void _cleanupPendingTrace() {
-    final pending = ref.read(panelPendingTraceProvider);
-    if (pending == null) return;
-    if (DateTime.now().difference(pending.checkedInAt).inHours >= 24) {
-      ref.read(panelPendingTraceProvider.notifier).state = null;
-    }
-  }
-
-  Future<void> _keep(CheckInRecord record) async {
-    await ref.read(checkInProvider.notifier).save(record);
-    ref.read(eventStatsProvider.notifier).recordTrace(record.eventId);
-    ref.read(panelPendingTraceProvider.notifier).state = null;
-    widget.onClose();
   }
 
   Future<void> _checkPendingRequest() async {
@@ -86,21 +69,21 @@ class _UserPanelContentState extends ConsumerState<UserPanelContent> {
     );
   }
 
-  void _confirmForget() {
+  void _confirmForget(CheckInRecord record) {
     showForgetConfirmPopup(context).then((confirmed) {
       if (confirmed == true) {
-        ref.read(panelPendingTraceProvider.notifier).state = null;
+        ref.read(checkInProvider.notifier).delete(record.id);
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final pending = ref.watch(panelPendingTraceProvider);
+    final records = ref.watch(checkInProvider);
     final now = DateTime.now();
-    final latest = pending != null &&
-            now.difference(pending.checkedInAt).inHours < 24
-        ? pending
+    final latest = records.isNotEmpty &&
+            now.difference(records.first.checkedInAt).inHours < 24
+        ? records.first
         : null;
     final friendCount = ref.watch(friendCountProvider);
     final count = friendCount.whenOrNull(data: (v) => v) ?? 0;
@@ -148,13 +131,16 @@ class _UserPanelContentState extends ConsumerState<UserPanelContent> {
                     _SmallAction(
                       label: '남기기',
                       color: const Color(0xFF1A1A2E),
-                      onTap: () => _keep(latest),
+                      onTap: () {
+                        widget.onClose();
+                        ref.read(shellPageProvider.notifier).state = 0;
+                      },
                     ),
                     const SizedBox(width: 8),
                     _SmallAction(
                       label: '잊기',
                       color: const Color(0xFFAAAAAA),
-                      onTap: () => _confirmForget(),
+                      onTap: () => _confirmForget(latest),
                     ),
                   ],
                 )

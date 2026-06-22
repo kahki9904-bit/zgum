@@ -287,23 +287,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       if (prev != next) _goTo(next);
     });
 
-    // 흔적 저장 완료 → 사용자 탭으로 이동 + 패널 자동 열기
-    ref.listen<bool>(traceJustCompletedProvider, (_, completed) {
-      if (!completed) return;
-      ref.read(traceJustCompletedProvider.notifier).state = false;
-      _goTo(0);
-      setState(() => _pendingAlert = null);
-      if (!_nowPanelOpen.value) {
-        _nowPanelOpen.value = true;
-        final rem = 1.0 - _panelAnim.value;
-        _panelAnim.animateTo(
-          1.0,
-          duration: Duration(milliseconds: (rem * 300).round().clamp(80, 300)),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-
     final hasAlert = ref.watch(hasUnseenAlertProvider) && _alertReady;
     final activePartnerEvent = ref.watch(activePartnerEventProvider);
     final media = MediaQuery.of(context);
