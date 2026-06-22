@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import '../dialogs/camera_chooser_popup.dart';
 import '../../../core/event_fade.dart';
 import '../../../core/extensions/context_extensions.dart';
@@ -8,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import '../../../data/models/check_in_record.dart';
 import '../../../data/models/cultural_event.dart';
 import '../../../services/time_service.dart';
 import 'event_content_base.dart';
@@ -24,7 +24,7 @@ class EventDetailSheet {
     LatLng? userLocation,
     VoidCallback? onNavigate,
     bool isCheckedIn = false,
-    void Function(String? memo, String? photoPath)? onCheckIn,
+    bool canCheckIn = false,
     int friendTraceCount = 0,
   }) async {
     if (!context.mounted) return;
@@ -49,7 +49,7 @@ class EventDetailSheet {
                 userLocation: userLocation,
                 onNavigate: onNavigate,
                 isCheckedIn: isCheckedIn,
-                onCheckIn: onCheckIn,
+                canCheckIn: canCheckIn,
                 friendTraceCount: friendTraceCount,
               ),
             ),
@@ -97,7 +97,7 @@ class _SheetWrapper extends ConsumerStatefulWidget {
   final LatLng? userLocation;
   final VoidCallback? onNavigate;
   final bool isCheckedIn;
-  final void Function(String? memo, String? photoPath)? onCheckIn;
+  final bool canCheckIn;
   final int friendTraceCount;
 
   const _SheetWrapper({
@@ -106,7 +106,7 @@ class _SheetWrapper extends ConsumerStatefulWidget {
     this.userLocation,
     this.onNavigate,
     this.isCheckedIn = false,
-    this.onCheckIn,
+    this.canCheckIn = false,
     this.friendTraceCount = 0,
   });
 
@@ -117,24 +117,11 @@ class _SheetWrapper extends ConsumerStatefulWidget {
 class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
   bool _interestSet = false;
 
-  // 흔적 폼 상태
-  bool _showForm = false;
-  File? _capturedPhoto;
-  final _memoCtrl = TextEditingController();
-  bool _saving = false;
-
-  @override
-  void dispose() {
-    _memoCtrl.dispose();
-    super.dispose();
-  }
-
   bool get _showTimer {
     if (widget.event.source == EventSource.partner) return true;
     return widget.event.endDateTime.difference(widget.timeService.now()) <
         const Duration(hours: 24);
   }
-
 
   Future<void> _openCamera() async {
     final shown = await isCameraChooserPopupShown();
@@ -145,16 +132,26 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
       maxWidth: 1200,
       imageQuality: 85,
     );
-    if (!mounted) return;
+    if (!mounted || picked == null) return;
 
     final message = await _showMessagePopup();
     if (!mounted) return;
 
-    setState(() {
-      _capturedPhoto = picked != null ? File(picked.path) : null;
-      _memoCtrl.text = message ?? '';
-      _showForm = true;
-    });
+    final record = CheckInRecord.fromEvent(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      eventId: widget.event.id,
+      eventTitle: widget.event.title,
+      venue: widget.event.venue,
+      category: widget.event.category,
+      checkedInAt: DateTime.now(),
+      memo: message,
+      photoPath: picked.path,
+    );
+    ref.read(panelPendingTraceProvider.notifier).state = record;
+    final traceNotifier = ref.read(traceJustCompletedProvider.notifier);
+    Navigator.pop(context);
+    await Future.delayed(const Duration(milliseconds: 350));
+    traceNotifier.state = true;
   }
 
   Future<String?> _showMessagePopup() async {
@@ -232,29 +229,6 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
     return result;
   }
 
-  Future<void> _saveTrace() async {
-    setState(() => _saving = true);
-    widget.onCheckIn?.call(
-      _memoCtrl.text.trim().isEmpty ? null : _memoCtrl.text.trim(),
-      _capturedPhoto?.path,
-    );
-    final pageNotifier = ref.read(shellPageProvider.notifier);
-    if (!mounted) return;
-    Navigator.pop(context);
-    // 다이얼로그 종료 애니메이션(280ms)이 완전히 끝난 뒤 페이지 이동
-    await Future.delayed(const Duration(milliseconds: 350));
-    pageNotifier.state = 0;
-  }
-
-  void _cancelTrace() {
-    setState(() {
-      _showForm = false;
-      _capturedPhoto = null;
-      _memoCtrl.clear();
-      _saving = false;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
@@ -275,7 +249,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
           ),
         ],
       ),
-      child: _showForm ? _traceFormView() : _detailView(context),
+      child: _detailView(context),
     );
   }
 
@@ -336,142 +310,47 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
             children: [content],
           ),
         ),
-        if (widget.onCheckIn != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Center(
-              child: SizedBox(
-                width: MediaQuery.sizeOf(context).width * 0.5,
-                child: GestureDetector(
-                  onTap: widget.isCheckedIn ? null : _openCamera,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    decoration: BoxDecoration(
-                      color: widget.isCheckedIn
-                          ? const Color(0xFFCCCCCC)
-                          : const Color(0xFF1A1A2E),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '지금',
-                      style: TextStyle(
-                        color: widget.isCheckedIn
-                            ? const Color(0xFF888888)
-                            : Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 2.0,
+        if (widget.canCheckIn)
+          Builder(builder: (context) {
+            final pending = ref.watch(panelPendingTraceProvider);
+            final blocked = widget.isCheckedIn || pending?.eventId == widget.event.id;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Center(
+                child: SizedBox(
+                  width: MediaQuery.sizeOf(context).width * 0.5,
+                  child: GestureDetector(
+                    onTap: blocked ? null : _openCamera,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      decoration: BoxDecoration(
+                        color: blocked
+                            ? const Color(0xFFCCCCCC)
+                            : const Color(0xFF1A1A2E),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '지금',
+                        style: TextStyle(
+                          color: blocked
+                              ? const Color(0xFF888888)
+                              : Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 2.0,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          }),
       ],
     );
   }
 
-  Widget _traceFormView() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            widget.event.title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF1A1A2E),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            widget.event.venue,
-            style: const TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),
-          ),
-          const SizedBox(height: 16),
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: _capturedPhoto != null
-                  ? Image.file(_capturedPhoto!, fit: BoxFit.cover)
-                  : Container(color: const Color(0xFFF4F4F7)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _memoCtrl,
-            maxLines: 3,
-            maxLength: 100,
-            style: const TextStyle(fontSize: 14, color: Color(0xFF333333)),
-            decoration: InputDecoration(
-              hintText: '한 줄 메모 (선택)',
-              hintStyle: const TextStyle(
-                  color: Color(0xFFCCCCCC), fontSize: 14),
-              filled: true,
-              fillColor: const Color(0xFFF8F8F8),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.all(12),
-              counterStyle:
-                  const TextStyle(color: Color(0xFFCCCCCC), fontSize: 11),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _cancelTrace,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF888888),
-                    side: const BorderSide(color: Color(0xFFDDDDDD)),
-                    minimumSize: const Size(double.infinity, 52),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: const Text('취소',
-                      style: TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _saving ? null : _saveTrace,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF16213E),
-                    minimumSize: const Size(double.infinity, 52),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: _saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text('지금',
-                          style: TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w700)),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ── 정보 바 ────────────────────────────────────────────────────────────────────

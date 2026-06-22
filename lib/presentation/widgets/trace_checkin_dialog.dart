@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'dialogs/camera_chooser_popup.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,9 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/providers/shell_page_provider.dart';
 import '../../data/models/check_in_record.dart';
 import '../../features/alert/models/partner_event.dart';
-import '../../features/alert/providers/event_stats_provider.dart';
 import '../../features/alert/providers/geofence_provider.dart';
-import '../../features/user_room/providers/check_in_provider.dart';
 
 /// 지오펜스 3분 체류 감지 후 자동 표시되는 흔적 팝업
 Future<void> showTraceCheckInDialog(
@@ -43,8 +40,6 @@ Future<void> showTraceCheckInDialog(
   );
 }
 
-enum _TraceStage { intro, form }
-
 class _TraceSheet extends ConsumerStatefulWidget {
   final PartnerEvent event;
   const _TraceSheet({required this.event});
@@ -54,37 +49,45 @@ class _TraceSheet extends ConsumerStatefulWidget {
 }
 
 class _TraceSheetState extends ConsumerState<_TraceSheet> {
-  final _memoCtrl = TextEditingController();
-  String? _photoPath;
-  bool _loading = false;
   bool _done = false;
-  _TraceStage _stage = _TraceStage.intro;
-
-  @override
-  void dispose() {
-    _memoCtrl.dispose();
-    super.dispose();
-  }
 
   Future<void> _openCamera() async {
     final shown = await isCameraChooserPopupShown();
     if (!shown && mounted) await showCameraChooserPopup(context);
     if (!mounted) return;
+
     final file = await ImagePicker().pickImage(
       source: ImageSource.camera,
       maxWidth: 1200,
       imageQuality: 85,
     );
-    if (!mounted) return;
+    if (!mounted || file == null) return;
 
     final message = await _showMessagePopup();
     if (!mounted) return;
 
-    setState(() {
-      _photoPath = file?.path;
-      _memoCtrl.text = message ?? '';
-      _stage = _TraceStage.form;
-    });
+    final record = CheckInRecord(
+      id: 'trace_${DateTime.now().millisecondsSinceEpoch}',
+      eventId: widget.event.id,
+      eventTitle: widget.event.title,
+      venue: widget.event.venue,
+      categoryLabel: '파트너 이벤트',
+      checkedInAt: DateTime.now(),
+      memo: message,
+      photoPath: file.path,
+    );
+
+    ref.read(panelPendingTraceProvider.notifier).state = record;
+    ref.read(geofenceProvider.notifier).dismiss();
+
+    if (!mounted) return;
+    setState(() => _done = true);
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
+    final traceNotifier = ref.read(traceJustCompletedProvider.notifier);
+    Navigator.pop(context);
+    await Future.delayed(const Duration(milliseconds: 350));
+    traceNotifier.state = true;
   }
 
   Future<String?> _showMessagePopup() async {
@@ -162,38 +165,6 @@ class _TraceSheetState extends ConsumerState<_TraceSheet> {
     return result;
   }
 
-  Future<void> _submit() async {
-    setState(() => _loading = true);
-
-    final record = CheckInRecord(
-      id: 'trace_${DateTime.now().millisecondsSinceEpoch}',
-      eventId: widget.event.id,
-      eventTitle: widget.event.title,
-      venue: widget.event.venue,
-      categoryLabel: '파트너 이벤트',
-      checkedInAt: DateTime.now(),
-      memo: _memoCtrl.text.trim().isEmpty ? null : _memoCtrl.text.trim(),
-      photoPath: _photoPath,
-    );
-
-    await ref.read(checkInProvider.notifier).save(record);
-    ref.read(eventStatsProvider.notifier).recordTrace(widget.event.id);
-    ref.read(geofenceProvider.notifier).dismiss();
-
-    if (!mounted) return;
-    setState(() {
-      _loading = false;
-      _done = true;
-    });
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (!mounted) return;
-    final pageNotifier = ref.read(shellPageProvider.notifier);
-    Navigator.pop(context);
-    // 다이얼로그 종료 애니메이션(280ms)이 완전히 끝난 뒤 페이지 이동
-    await Future.delayed(const Duration(milliseconds: 350));
-    pageNotifier.state = 0;
-  }
-
   void _dismiss() {
     ref.read(geofenceProvider.notifier).dismiss();
     Navigator.pop(context);
@@ -221,9 +192,7 @@ class _TraceSheetState extends ConsumerState<_TraceSheet> {
             ),
           ],
         ),
-        child: _done
-            ? _doneView()
-            : (_stage == _TraceStage.intro ? _introView() : _formView()),
+        child: _done ? _doneView() : _introView(),
       ),
     );
   }
@@ -306,113 +275,6 @@ class _TraceSheetState extends ConsumerState<_TraceSheet> {
                     '지금',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _formView() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            widget.event.title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF1A1A2E),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            widget.event.venue,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF888888)),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              for (int i = 0; i < 3; i++) ...[
-                if (i > 0) const SizedBox(width: 6),
-                Expanded(
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: i == 0 && _photoPath != null
-                          ? Image.file(File(_photoPath!), fit: BoxFit.cover)
-                          : Container(color: const Color(0xFFF4F4F7)),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _memoCtrl,
-            maxLines: 3,
-            style: const TextStyle(fontSize: 14),
-            decoration: InputDecoration(
-              hintText: '한 줄 메모 (선택)',
-              hintStyle:
-                  const TextStyle(fontSize: 13, color: Color(0xFFCCCCCC)),
-              filled: true,
-              fillColor: const Color(0xFFF8F8F8),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.all(14),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _dismiss,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF888888),
-                    side: const BorderSide(color: Color(0xFFDDDDDD)),
-                    minimumSize: const Size(double.infinity, 52),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: const Text(
-                    '취소',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _loading ? null : _submit,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF16213E),
-                    minimumSize: const Size(double.infinity, 52),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: _loading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text(
-                          '지금',
-                          style: TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w700),
-                        ),
                 ),
               ),
             ],
