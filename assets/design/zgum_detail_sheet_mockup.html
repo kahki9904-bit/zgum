@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Z:GUM Detail Sheet Mockup</title>
+  <style>
+    :root {
+      --ink: #071426;
+      --navy: #16213e;
+      --cyan: #9eeeff;
+      --muted: #9aa4ad;
+      --line: #edf0f4;
+      --soft: #f6f8fb;
+      --paper: #ffffff;
+      --bg: #eef2f7;
+      --warm: #fff8ec;
+      --warm-line: #ffd580;
+      --warm-ink: #ff8c00;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+        "Noto Sans KR", "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    .board {
+      width: min(1080px, 100%);
+      margin: 0 auto;
+      padding: 28px 18px 42px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .lead {
+      margin: 0 0 24px;
+      color: rgba(7, 20, 38, 0.62);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .screens {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+      align-items: start;
+    }
+
+    .screen {
+      display: grid;
+      justify-items: center;
+      gap: 12px;
+    }
+
+    .label {
+      width: min(390px, 100%);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .label h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    .label span {
+      color: rgba(7, 20, 38, 0.56);
+      font-size: 12px;
+    }
+
+    .phone {
+      width: min(390px, 100%);
+      min-height: 790px;
+      max-height: 790px;
+      overflow: hidden;
+      border-radius: 30px;
+      border: 1px solid rgba(7, 20, 38, 0.08);
+      box-shadow: 0 18px 50px rgba(7, 20, 38, 0.16);
+      background:
+        linear-gradient(rgba(7, 20, 38, 0.44), rgba(7, 20, 38, 0.44)),
+        radial-gradient(circle at 56% 42%, rgba(158, 238, 255, 0.9) 0 3px, transparent 4px),
+        radial-gradient(circle at 36% 56%, rgba(255, 255, 255, 0.9) 0 3px, transparent 4px),
+        radial-gradient(circle at 70% 62%, rgba(255, 255, 255, 0.88) 0 3px, transparent 4px),
+        linear-gradient(135deg, #dff8ff, #9eeeff 36%, #16213e);
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+
+    .sheet {
+      width: 100%;
+      max-height: 560px;
+      overflow: hidden;
+      border-radius: 24px;
+      background: var(--paper);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .photo-strip {
+      margin: 16px 0 0;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .photo-thumb {
+      aspect-ratio: 0.85;
+      border-radius: 10px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 64% 28%, rgba(255,255,255,0.74), transparent 21%),
+        linear-gradient(135deg, #dff8ff, #9eeeff 36%, #16213e);
+    }
+
+    .photo-thumb:nth-child(2) {
+      background:
+        radial-gradient(circle at 26% 24%, rgba(255,255,255,0.78), transparent 22%),
+        linear-gradient(135deg, #f8fbff, #bcd6e2 42%, #071426);
+    }
+
+    .photo-thumb:nth-child(3) {
+      background:
+        linear-gradient(rgba(7, 20, 38, 0.1), rgba(7, 20, 38, 0.2)),
+        linear-gradient(135deg, #eefbff, #87dff0 40%, #16213e);
+    }
+
+    .partner-msg {
+      margin: 12px 20px 0;
+      padding: 10px 12px;
+      border: 1px solid var(--warm-line);
+      border-radius: 10px;
+      background: var(--warm);
+      color: #555;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .store {
+      color: var(--warm-ink);
+      font-size: 15px;
+      flex: 0 0 auto;
+    }
+
+    .friend {
+      padding: 7px 20px;
+      border-bottom: 1px solid #d8e2ff;
+      background: #f0f4ff;
+      color: #3a5fcd;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .content {
+      padding: 16px 20px 10px;
+      overflow: auto;
+      flex: 1;
+    }
+
+    .title-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 21px;
+      line-height: 1.25;
+      font-weight: 900;
+    }
+
+    .chip {
+      padding: 6px 8px;
+      border-radius: 999px;
+      background: #eefbff;
+      color: var(--navy);
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .desc {
+      margin: 14px 0 0;
+      color: #333;
+      font-size: 14px;
+      line-height: 1.72;
+    }
+
+    .meta-box {
+      margin: 16px 0 0;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fbfcff;
+      display: grid;
+      gap: 8px;
+    }
+
+    .meta-row {
+      display: grid;
+      grid-template-columns: 48px 1fr auto;
+      gap: 7px;
+      align-items: center;
+      color: rgba(7, 20, 38, 0.7);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .meta-row strong {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .navigate {
+      padding: 5px 8px;
+      border-radius: 8px;
+      background: var(--navy);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .stats {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .stat {
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--soft);
+      color: #555;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .now-area {
+      padding: 8px 0 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .now {
+      width: 50%;
+      padding: 15px 0;
+      border-radius: 16px;
+      background: var(--ink);
+      color: white;
+      text-align: center;
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 2px;
+    }
+
+    .place-empty {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.75;
+    }
+
+    .note {
+      width: min(390px, 100%);
+      margin: 0;
+      color: rgba(7, 20, 38, 0.62);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 760px) {
+      .screens { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <h1>Z:GUM 상세페이지 시안</h1>
+    <p class="lead">지도 마커 또는 목록 항목을 탭했을 때 정보를 보여주는 상세 시트입니다. 사진탭 화면, 5단계 팝업과 분리합니다.</p>
+
+    <section class="screens">
+      <article class="screen">
+        <div class="label">
+          <h2>이벤트 상세</h2>
+          <span>마커/목록 탭</span>
+        </div>
+        <div class="phone">
+          <section class="sheet">
+            <div class="partner-msg"><span class="store">□</span><span>파트너 메시지</span></div>
+            <div class="friend">● <span>2</span></div>
+            <div class="content">
+              <div class="title-row">
+                <h2 class="title">흔적 테스트 이벤트</h2>
+                <span class="chip">진행 중</span>
+              </div>
+              <p class="desc">이벤트 설명 영역입니다. 사용자가 지금 갈 수 있는지, 무엇을 볼 수 있는지 바로 읽히게 둡니다.</p>
+              <div class="photo-strip">
+                <div class="photo-thumb"></div>
+                <div class="photo-thumb"></div>
+                <div class="photo-thumb"></div>
+              </div>
+              <div class="meta-box">
+                <div class="meta-row">
+                  <strong>장소</strong>
+                  <span>현재 위치</span>
+                  <span class="navigate">길찾기</span>
+                </div>
+                <div class="meta-row">
+                  <strong>시작</strong>
+                  <span>2026년 6월 23일  02:10</span>
+                  <span></span>
+                </div>
+                <div class="meta-row">
+                  <strong>종료</strong>
+                  <span>2026년 6월 23일  05:10</span>
+                  <span></span>
+                </div>
+              </div>
+              <div class="stats">
+                <span class="stat">방문 12</span>
+                <span class="stat">흔적 4</span>
+              </div>
+            </div>
+            <div class="now-area"><div class="now">지금</div></div>
+          </section>
+        </div>
+        <p class="note">이벤트 마커나 이벤트 목록을 눌렀을 때 나오는 정보 중심 상세.</p>
+      </article>
+
+    </section>
+  </main>
+</body>
+</html>

@@ -1,13 +1,11 @@
-import 'dart:async';
 import 'dart:io';
 import '../dialogs/camera_chooser_popup.dart';
-import '../../../core/event_fade.dart';
-import '../../../core/extensions/context_extensions.dart';
 import '../../../core/providers/shell_page_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:marquee/marquee.dart';
 import '../../../data/models/cultural_event.dart';
 import '../../../services/time_service.dart';
 import 'event_content_base.dart';
@@ -25,7 +23,6 @@ class EventDetailSheet {
     VoidCallback? onNavigate,
     bool isCheckedIn = false,
     void Function(String? memo, String? photoPath)? onCheckIn,
-    int friendTraceCount = 0,
   }) async {
     if (!context.mounted) return;
 
@@ -50,7 +47,6 @@ class EventDetailSheet {
                 onNavigate: onNavigate,
                 isCheckedIn: isCheckedIn,
                 onCheckIn: onCheckIn,
-                friendTraceCount: friendTraceCount,
               ),
             ),
           ),
@@ -98,7 +94,6 @@ class _SheetWrapper extends ConsumerStatefulWidget {
   final VoidCallback? onNavigate;
   final bool isCheckedIn;
   final void Function(String? memo, String? photoPath)? onCheckIn;
-  final int friendTraceCount;
 
   const _SheetWrapper({
     required this.event,
@@ -107,7 +102,6 @@ class _SheetWrapper extends ConsumerStatefulWidget {
     this.onNavigate,
     this.isCheckedIn = false,
     this.onCheckIn,
-    this.friendTraceCount = 0,
   });
 
   @override
@@ -128,13 +122,6 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
     _memoCtrl.dispose();
     super.dispose();
   }
-
-  bool get _showTimer {
-    if (widget.event.source == EventSource.partner) return true;
-    return widget.event.endDateTime.difference(widget.timeService.now()) <
-        const Duration(hours: 24);
-  }
-
 
   Future<void> _openCamera() async {
     final shown = await isCameraChooserPopupShown();
@@ -163,70 +150,76 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
 
     await showDialog<void>(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogCtx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '한 줄 메시지',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ctrl,
-              maxLength: 100,
-              autofocus: true,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF333333)),
-              decoration: InputDecoration(
-                hintText: '이 순간을 기록해보세요',
-                hintStyle: const TextStyle(
-                    fontSize: 13, color: Color(0xFFCCCCCC)),
-                filled: true,
-                fillColor: const Color(0xFFF8F8F8),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        final dialog = AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '한 줄 메시지',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A1A2E),
                 ),
-                contentPadding: const EdgeInsets.all(12),
-                counterStyle: const TextStyle(
-                    fontSize: 11, color: Color(0xFFCCCCCC)),
               ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ctrl,
+                maxLength: 100,
+                autofocus: true,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF333333)),
+                decoration: InputDecoration(
+                  hintText: '이 순간을 기록해보세요',
+                  hintStyle:
+                      const TextStyle(fontSize: 13, color: Color(0xFFCCCCCC)),
+                  filled: true,
+                  fillColor: const Color(0xFFF8F8F8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
+                  counterStyle:
+                      const TextStyle(fontSize: 11, color: Color(0xFFCCCCCC)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                result = null;
+                Navigator.pop(dialogCtx);
+              },
+              child: const Text('건너뛰기',
+                  style: TextStyle(color: Color(0xFFAAAAAA))),
+            ),
+            FilledButton(
+              onPressed: () {
+                result = ctrl.text.trim().isEmpty ? null : ctrl.text.trim();
+                Navigator.pop(dialogCtx);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF16213E),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('완료'),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              result = null;
-              Navigator.pop(dialogCtx);
-            },
-            child: const Text('건너뛰기',
-                style: TextStyle(color: Color(0xFFAAAAAA))),
-          ),
-          FilledButton(
-            onPressed: () {
-              result =
-                  ctrl.text.trim().isEmpty ? null : ctrl.text.trim();
-              Navigator.pop(dialogCtx);
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF16213E),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('완료'),
-          ),
-        ],
-      ),
+        );
+        if (!Platform.isIOS) return dialog;
+        return MediaQuery(
+          data: MediaQuery.of(dialogCtx).copyWith(viewInsets: EdgeInsets.zero),
+          child: dialog,
+        );
+      },
     );
 
     return result;
@@ -293,7 +286,6 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
       onInterestTap: () => setState(() => _interestSet = true),
       onNavigateTap: navigateCallback,
     );
-    final showTimer = _showTimer;
 
     return Column(
       children: [
@@ -313,22 +305,25 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
                     size: 15, color: Color(0xFFFF8C00)),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    widget.event.partnerMessage!,
-                    style: const TextStyle(
-                        fontSize: 13, color: Color(0xFF555555)),
+                  child: SizedBox(
+                    height: 18,
+                    child: Marquee(
+                      text: widget.event.partnerMessage!,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF555555),
+                        height: 1.25,
+                      ),
+                      scrollAxis: Axis.horizontal,
+                      blankSpace: 40,
+                      velocity: 26,
+                      startAfter: const Duration(milliseconds: 900),
+                      pauseAfterRound: const Duration(milliseconds: 900),
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-        if (widget.friendTraceCount > 0)
-          _FriendTraceBadge(count: widget.friendTraceCount),
-        if (showTimer)
-          _InfoBar(
-            endDateTime: widget.event.endDateTime,
-            timeService: widget.timeService,
-            showTimer: showTimer,
           ),
         Expanded(
           child: ListView(
@@ -469,152 +464,6 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── 정보 바 ────────────────────────────────────────────────────────────────────
-
-class _InfoBar extends StatefulWidget {
-  final DateTime endDateTime;
-  final TimeService timeService;
-  final bool showTimer;
-
-  const _InfoBar({
-    required this.endDateTime,
-    required this.timeService,
-    required this.showTimer,
-  });
-
-  @override
-  State<_InfoBar> createState() => _InfoBarState();
-}
-
-class _InfoBarState extends State<_InfoBar> {
-  Timer? _timer;
-  late Duration _remaining;
-
-  @override
-  void initState() {
-    super.initState();
-    _remaining = _calcRemaining();
-    if (widget.showTimer) {
-      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (!mounted) return;
-        setState(() => _remaining = _calcRemaining());
-      });
-    }
-  }
-
-  Duration _calcRemaining() {
-    return widget.endDateTime.difference(widget.timeService.now());
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  bool get _isUrgent =>
-      _remaining > Duration.zero && _remaining < const Duration(hours: 1);
-
-  String _timerLabel(BuildContext context) {
-    if (_remaining > Duration.zero) {
-      if (_remaining >= const Duration(days: 1)) {
-        return context.l10n.timerDaysLeft(_remaining.inDays, _remaining.inHours % 24);
-      }
-      final h = _remaining.inHours;
-      final m = (_remaining.inMinutes % 60).toString().padLeft(2, '0');
-      final s = (_remaining.inSeconds % 60).toString().padLeft(2, '0');
-      return h > 0 ? '$h:$m:$s' : '$m:$s';
-    }
-    final neg = EventFade.negativeLabel(widget.endDateTime, widget.timeService.now());
-    return neg ?? context.l10n.timerEnded;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final timerColor = _isUrgent
-        ? const Color(0xFFE74C3C)
-        : _remaining <= Duration.zero
-            ? const Color(0xFF999999)
-            : const Color(0xFF555555);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(
-        color: timerColor.withValues(alpha: 0.08),
-        border: Border(
-          bottom: BorderSide(color: timerColor.withValues(alpha: 0.2)),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.timer_outlined, size: 15, color: timerColor),
-          const SizedBox(width: 7),
-          Text(
-            _timerLabel(context),
-            style: TextStyle(
-              color: timerColor,
-              fontWeight: FontWeight.w800,
-              fontSize: 15,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── 친구 흔적 배지 ────────────────────────────────────────────────────────────────
-
-class _FriendTraceBadge extends StatelessWidget {
-  final int count;
-
-  const _FriendTraceBadge({required this.count});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(count == 1 ? '친구가 이 장소에 흔적을 남겼습니다' : '친구들이 이 장소에 흔적을 남겼습니다'),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: const Color(0xFF16213E),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
-        decoration: const BoxDecoration(
-          color: Color(0xFFF0F4FF),
-          border: Border(
-            bottom: BorderSide(color: Color(0xFFD8E2FF), width: 0.8),
-          ),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.person, size: 18, color: Color(0xFF3A5FCD)),
-            const SizedBox(width: 4),
-            Text(
-              '$count',
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF3A5FCD),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

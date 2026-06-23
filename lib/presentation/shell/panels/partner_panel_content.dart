@@ -177,16 +177,12 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                   children: [
                     Text(
                       '등록 실패',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A2E),
-                      ),
+                      style: ZGumDialogTextStyles.sectionTitle,
                     ),
                     SizedBox(height: 10),
                     Text(
                       '저장 중 오류가 발생했습니다.\n잠시 후 다시 시도해 주세요.',
-                      style: TextStyle(fontSize: 14, color: Color(0xFF555555)),
+                      style: ZGumDialogTextStyles.confirmBody,
                     ),
                   ],
                 ),
@@ -273,125 +269,133 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
       return _ActiveEventWaitingView(
           event: activeEvent, onClose: widget.onClose);
     }
-    final formTopPadding = Platform.isIOS ? 24.0 : kShellPanelHandleContentGap;
-    final titleToPhotosGap = Platform.isIOS ? 28.0 : 40.0;
-    final photosToControlsGap = Platform.isIOS ? 24.0 : 32.0;
+    final formTopPadding = Platform.isIOS ? 18.0 : kShellPanelHandleContentGap;
+    final titleToPhotosGap = Platform.isIOS ? 14.0 : 40.0;
+    final photosToControlsGap = Platform.isIOS ? 10.0 : 32.0;
+    final bottomSafe = MediaQuery.paddingOf(context).bottom;
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       behavior: HitTestBehavior.opaque,
-      child: SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(
-          24,
-          formTopPadding,
-          24,
-          28 + MediaQuery.paddingOf(context).bottom,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '제목',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF555555)),
+      child: Stack(
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              24,
+              formTopPadding,
+              24,
+              82 + bottomSafe,
             ),
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: _showTitleOverlay,
-              child: Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8F8F8),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _titleCtrl,
-                  builder: (_, value, __) => Text(
-                    value.text.isEmpty ? '필수' : value.text,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: value.text.isEmpty
-                          ? const Color(0xFFCCCCCC)
-                          : const Color(0xFF1A1A2E),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: titleToPhotosGap),
-            Row(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (int i = 0; i < 3; i++) ...[
-                  if (i > 0) const SizedBox(width: 6),
-                  Expanded(
-                      child: AspectRatio(
-                          aspectRatio: 0.85, child: _buildPhotoCell(i))),
-                ],
-              ],
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                for (int i = 0; i < 3; i++) ...[
-                  if (i > 0) const SizedBox(width: 6),
-                  Expanded(
-                    child: i < _photos.length
-                        ? _buildDescField(i)
-                        : const SizedBox(height: 32),
-                  ),
-                ],
-              ],
-            ),
-            SizedBox(height: photosToControlsGap),
-            Row(
-              children: [
                 const Text(
-                  '노출시간',
+                  '제목',
                   style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF555555)),
                 ),
-                const SizedBox(width: 12),
-                ...[60, 120, 180].map((min) {
-                  final selected = _selectedMinutes == min;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedMinutes = min),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? const Color(0xFF16213E)
-                              : const Color(0xFFF4F4F7),
-                          borderRadius: BorderRadius.circular(7),
-                        ),
-                        child: Text(
-                          '${min ~/ 60}시간',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: selected
-                                ? Colors.white
-                                : const Color(0xFF888888),
-                          ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: _showTitleOverlay,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F8F8),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _titleCtrl,
+                      builder: (_, value, __) => Text(
+                        value.text.isEmpty ? '필수' : value.text,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: value.text.isEmpty
+                              ? const Color(0xFFCCCCCC)
+                              : const Color(0xFF1A1A2E),
                         ),
                       ),
                     ),
-                  );
-                }),
-                const Spacer(),
+                  ),
+                ),
+                SizedBox(height: titleToPhotosGap),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (int i = 0; i < 3; i++) ...[
+                      if (i > 0) const SizedBox(width: 6),
+                      Expanded(
+                          child: AspectRatio(
+                              aspectRatio: 1.2, child: _buildPhotoCell(i))),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    for (int i = 0; i < 3; i++) ...[
+                      if (i > 0) const SizedBox(width: 6),
+                      Expanded(
+                        child: i < _photos.length
+                            ? _buildDescField(i)
+                            : const SizedBox(height: 26),
+                      ),
+                    ],
+                  ],
+                ),
+                SizedBox(height: photosToControlsGap),
+                Row(
+                  children: [
+                    const Text(
+                      '노출시간',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF555555)),
+                    ),
+                    const SizedBox(width: 12),
+                    ...[60, 120, 180].map((min) {
+                      final selected = _selectedMinutes == min;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedMinutes = min),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? const Color(0xFF16213E)
+                                  : const Color(0xFFF4F4F7),
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: Text(
+                              '${min ~/ 60}시간',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: selected
+                                    ? Colors.white
+                                    : const Color(0xFF888888),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    const Spacer(),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 16),
-            Center(
+          ),
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 18 + bottomSafe,
+            child: Center(
               child: SizedBox(
                 width: MediaQuery.sizeOf(context).width * 0.5,
                 child: FutureBuilder<(bool, bool)>(
@@ -434,8 +438,8 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -567,7 +571,8 @@ class _TitleInputBar extends StatefulWidget {
 class _TitleInputBarState extends State<_TitleInputBar> {
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final bottom =
+        Platform.isIOS ? 0.0 : MediaQuery.viewInsetsOf(context).bottom;
     return Stack(
       children: [
         Positioned.fill(

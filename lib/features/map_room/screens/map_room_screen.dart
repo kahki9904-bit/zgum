@@ -12,6 +12,8 @@ import '../../../core/interfaces/map_engine.dart';
 import '../../../core/providers/user_location_provider.dart';
 import '../../../core/models/map_marker_model.dart';
 import '../../../data/adapters/cultural_event_adapter.dart';
+import '../../../core/shell_gesture_layout.dart';
+import '../../../core/providers/partner_focus_provider.dart';
 import '../../../data/models/cultural_event.dart';
 import '../../../core/app_config.dart';
 import '../../../data/repositories/api_cultural_event_repository.dart';
@@ -145,7 +147,40 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
 
   void recenterOnUser() {
     if (!mounted || _locationAcquiring) return;
+    _stopNavigation();
+    setState(() {
+      _highlightedEventId = null;
+      _searchFocusCoord = null;
+      _searchFocusName = null;
+      _searchFocusPlace = null;
+      _searchOpen = false;
+    });
     _mapCtrl.move(_centerCoord, AppConstants.defaultZoom);
+    _rebuildMarkers();
+  }
+
+  void _focusPartnerEvent(CulturalEvent event) {
+    if (!mounted) return;
+    _stopNavigation();
+    _mapCtrl.move(
+      MapCoordinate(event.location.latitude, event.location.longitude),
+      AppConstants.defaultZoom,
+    );
+    setState(() {
+      _highlightedEventId = event.id;
+      _searchFocusCoord = null;
+      _searchFocusName = null;
+      _searchFocusPlace = null;
+      _searchOpen = false;
+    });
+    _rebuildMarkers();
+    ref.read(partnerFocusProvider.notifier).state = null;
+    ref.read(partnerFocusPendingProvider.notifier).state = false;
+    Future.delayed(const Duration(milliseconds: 150), () async {
+      if (!mounted) return;
+      await _showEventSheet(event);
+      if (mounted) _rebuildMarkers();
+    });
   }
 
   Future<void> _init() async {
@@ -179,7 +214,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     final fetchTime = DateTime.now();
     final canFetchPublic = _minPublicApiFetchInterval == Duration.zero ||
         _lastPublicApiFetch == null ||
-        fetchTime.difference(_lastPublicApiFetch!) >= _minPublicApiFetchInterval;
+        fetchTime.difference(_lastPublicApiFetch!) >=
+            _minPublicApiFetchInterval;
     if (canFetchPublic) _lastPublicApiFetch = fetchTime;
 
     // public / partner 를 각각 독립적으로 호출 — 한 쪽 실패가 다른 쪽을 막지 않음
@@ -225,22 +261,23 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     if (!mounted) return;
     final firestorePartnerEvents =
         ref.read(activePartnerEventsStreamProvider).valueOrNull ?? [];
-    final partnerFromFirestore = firestorePartnerEvents.map((PartnerEvent e) =>
-        CulturalEvent(
-          id: e.id,
-          title: e.title,
-          venue: e.venue,
-          address: '현재 위치',
-          description: e.title,
-          startDate: e.startsAt,
-          endDateTime: e.expiresAt,
-          location: e.location,
-          category: EventCategory.partner,
-          isFree: false,
-          source: EventSource.partner,
-          partnerMessage: e.message,
-          isAdultOnly: e.isAdultOnly,
-        )).toList();
+    final partnerFromFirestore = firestorePartnerEvents
+        .map((PartnerEvent e) => CulturalEvent(
+              id: e.id,
+              title: e.title,
+              venue: e.venue,
+              address: '현재 위치',
+              description: e.title,
+              startDate: e.startsAt,
+              endDateTime: e.expiresAt,
+              location: e.location,
+              category: EventCategory.partner,
+              isFree: false,
+              source: EventSource.partner,
+              partnerMessage: e.message,
+              isAdultOnly: e.isAdultOnly,
+            ))
+        .toList();
     final all = [
       if (AppConstants.showPublicApiMarkers) ...publicEvents,
       if (AppConstants.showPublicApiMarkers) ...kopisEvents,
@@ -554,8 +591,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                         padding: EdgeInsets.only(top: 8, bottom: 4),
                         child: Text(
                           '공연·행사',
-                          style: TextStyle(
-                              fontSize: 11, color: Color(0xFFAAAAAA)),
+                          style:
+                              TextStyle(fontSize: 11, color: Color(0xFFAAAAAA)),
                         ),
                       ),
                       ...kopisItems.map((r) => _searchResultTile(
@@ -794,7 +831,6 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
           .read(checkInProvider.notifier)
           .checkedInEventIds
           .contains(event.id),
-      friendTraceCount: 0,
       onCheckIn: isMyEvent
           ? null
           : (String? memo, String? photoPath) {
@@ -853,13 +889,14 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     });
     ref.listen<MapFilterState>(mapFilterProvider, (_, __) => _rebuildMarkers());
     ref.listen<AuthState>(authStateProvider, (_, __) => _loadEvents());
+    ref.listen<CulturalEvent?>(partnerFocusProvider, (prev, next) {
+      if (next != null) _focusPartnerEvent(next);
+    });
     ref.listen<int>(shellPageProvider, (prev, next) {
       if (next == 1 && prev != 1) {
-        setState(() {
-          _searchFocusCoord = null;
-          _searchFocusPlace = null;
-        });
-        _rebuildMarkers();
+        if (!ref.read(partnerFocusPendingProvider)) {
+          recenterOnUser();
+        }
       }
     });
 
@@ -904,13 +941,15 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               left: 0,
               top: 0,
               bottom: 0,
-              width: MediaQuery.sizeOf(context).width * 0.15,
+              width: MediaQuery.sizeOf(context).width *
+                  ShellGestureLayoutSpec.current.mapEdgeSwipeWidthFactor,
               child: GestureDetector(
                 behavior: Platform.isIOS
                     ? HitTestBehavior.translucent
                     : HitTestBehavior.opaque,
                 onHorizontalDragEnd: (details) {
-                  if ((details.primaryVelocity ?? 0) > 400) {
+                  if ((details.primaryVelocity ?? 0) >
+                      ShellGestureLayoutSpec.current.mapEdgeSwipeVelocity) {
                     widget.onSwipeToUserRoom?.call();
                   }
                 },
@@ -920,13 +959,15 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               right: 0,
               top: 0,
               bottom: 0,
-              width: MediaQuery.sizeOf(context).width * 0.15,
+              width: MediaQuery.sizeOf(context).width *
+                  ShellGestureLayoutSpec.current.mapEdgeSwipeWidthFactor,
               child: GestureDetector(
                 behavior: Platform.isIOS
                     ? HitTestBehavior.translucent
                     : HitTestBehavior.opaque,
                 onHorizontalDragEnd: (details) {
-                  if ((details.primaryVelocity ?? 0) < -400) {
+                  if ((details.primaryVelocity ?? 0) <
+                      -ShellGestureLayoutSpec.current.mapEdgeSwipeVelocity) {
                     widget.onSwipeToPartnerRoom?.call();
                   }
                 },

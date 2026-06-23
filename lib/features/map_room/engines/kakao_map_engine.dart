@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:kakao_map_sdk/kakao_map_sdk.dart' as kakao;
 
 import '../../../core/interfaces/map_engine.dart';
+import '../../../core/map_marker_layout.dart';
 import '../../../core/models/map_marker_model.dart';
 
 int _zoomToLevel(double zoom) => zoom.round().clamp(6, 21);
@@ -141,33 +142,42 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
     );
   }
 
-  // 이벤트 마커 비트맵 캐시
-  kakao.KImage? _markerImage;
+  // 이벤트/검색 마커 비트맵 캐시
+  final Map<int, kakao.KImage> _markerImages = {};
 
-  Future<kakao.KImage> _getMarkerImage() async {
-    if (_markerImage != null) return _markerImage!;
-    final double tapSize = Platform.isIOS ? 48.0 : 44.0;
-    final double iconSize = Platform.isIOS ? 26.0 : 28.0;
+  Future<kakao.KImage> _getMarkerImage(MapMarkerModel marker) async {
+    final isSearch = _isSearchMarker(marker);
+    final fillColor =
+        isSearch ? Colors.white : Color(widget.colorForMarker(marker));
+    final borderColor =
+        isSearch ? Color(widget.colorForMarker(marker)) : Colors.white;
+    final centerColor = isSearch
+        ? Color(widget.colorForMarker(marker))
+        : const Color(0xFF9EEEFF);
+    final cacheKey = Object.hash(
+      fillColor.toARGB32(),
+      borderColor.toARGB32(),
+      centerColor.toARGB32(),
+    );
+    final cached = _markerImages[cacheKey];
+    if (cached != null) return cached;
+    final spec = MapMarkerLayoutSpec.current;
+    final double tapSize = spec.bitmapSize;
     final markerWidget = SizedBox(
       width: tapSize,
       height: tapSize,
       child: Center(
-        child: DecoratedBox(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-          ),
-          child: SizedBox(
-            width: tapSize,
-            height: tapSize,
-            child: Icon(Icons.location_on, size: iconSize),
-          ),
+        child: _KakaoDropMarker(
+          fillColor: fillColor,
+          borderColor: borderColor,
+          centerColor: centerColor,
         ),
       ),
     );
-    _markerImage =
+    final image =
         await kakao.KImage.fromWidget(markerWidget, Size(tapSize, tapSize));
-    return _markerImage!;
+    _markerImages[cacheKey] = image;
+    return image;
   }
 
   // 내 위치 마커 비트맵 캐시
@@ -177,13 +187,17 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
 
   Future<kakao.KImage> _getUserMarkerImage() async {
     if (_userMarkerImage != null) return _userMarkerImage!;
-    final double tapSize = Platform.isIOS ? 48.0 : 44.0;
-    final double iconSize = Platform.isIOS ? 26.0 : 28.0;
+    final spec = MapMarkerLayoutSpec.current;
+    final double tapSize = spec.bitmapSize;
     final markerWidget = SizedBox(
       width: tapSize,
       height: tapSize,
       child: Center(
-        child: Icon(Icons.location_on, size: iconSize),
+        child: _KakaoDropMarker(
+          fillColor: const Color(0xFF52606C),
+          borderColor: Colors.white,
+          centerColor: Colors.white.withValues(alpha: 0.78),
+        ),
       ),
     );
     _userMarkerImage =
@@ -228,9 +242,9 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
       _activePois.clear();
 
       final markersToSync = List.of(widget.markers);
-      final icon = await _getMarkerImage();
       for (final m in markersToSync) {
         if (!mounted) break;
+        final icon = await _getMarkerImage(m);
         final poi = await ctrl.labelLayer.addPoi(
           kakao.LatLng(m.location.latitude, m.location.longitude),
           style: kakao.PoiStyle(icon: icon),
@@ -250,6 +264,10 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
       }
     }
   }
+
+  bool _isSearchMarker(MapMarkerModel marker) =>
+      marker.category == MarkerCategory.other ||
+      marker.category == MarkerCategory.cinema;
 
   Future<void> _syncRoute(kakao.KakaoMapController ctrl) async {
     final existing = _activeRoute;
@@ -331,6 +349,71 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
       },
       onMapClick: (_, position) => _handleIosMapTap(position),
       onTerrainClick: (_, position) => _handleIosMapTap(position),
+    );
+  }
+}
+
+class _KakaoDropMarker extends StatelessWidget {
+  const _KakaoDropMarker({
+    required this.fillColor,
+    required this.borderColor,
+    required this.centerColor,
+  });
+
+  final Color fillColor;
+  final Color borderColor;
+  final Color centerColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: -0.785398,
+      child: Container(
+        width: MapMarkerLayoutSpec.current.pinSize,
+        height: MapMarkerLayoutSpec.current.pinSize,
+        decoration: BoxDecoration(
+          color: fillColor,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(999),
+            topRight: const Radius.circular(999),
+            bottomLeft: const Radius.circular(999),
+            bottomRight:
+                Radius.circular(MapMarkerLayoutSpec.current.tailRadius),
+          ),
+          border: Border.all(
+            color: borderColor,
+            width: MapMarkerLayoutSpec.current.borderWidth,
+          ),
+          boxShadow: MapMarkerLayoutSpec.current.shadowBlur <= 0
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: MapMarkerLayoutSpec.current.shadowBlur,
+                    offset: Offset(
+                      0,
+                      MapMarkerLayoutSpec.current.shadowOffsetY,
+                    ),
+                  ),
+                ],
+        ),
+        child: Center(
+          child: Container(
+            width: MapMarkerLayoutSpec.current.centerSize,
+            height: MapMarkerLayoutSpec.current.centerSize,
+            decoration: BoxDecoration(
+              color: centerColor,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: fillColor == Colors.white
+                    ? Colors.transparent
+                    : Colors.white.withValues(alpha: 0.84),
+                width: MapMarkerLayoutSpec.current.borderWidth * 0.75,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

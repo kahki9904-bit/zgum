@@ -2,10 +2,12 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/grid_room_layout.dart';
 import '../../../core/providers/user_location_provider.dart';
 import '../../../data/models/check_in_record.dart';
 import '../../../features/friend/providers/friend_provider.dart';
 import '../../../presentation/widgets/dialogs/ieum_request_dialog.dart';
+import '../../../presentation/widgets/zgum_orb_button.dart';
 import '../providers/check_in_provider.dart';
 import 'settings_screen.dart';
 
@@ -18,6 +20,8 @@ class UserRoomScreen extends ConsumerStatefulWidget {
 
 class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
   bool _newestFirst = true;
+  bool _singleColumn = false;
+  bool _showTileText = false;
 
   void _showIeumRequestDialog() {
     showDialog<void>(
@@ -33,7 +37,23 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final records = ref.watch(checkInProvider);
-    final sorted = _newestFirst ? records : records.reversed.toList();
+    final latest = records.isEmpty
+        ? null
+        : records.reduce(
+            (a, b) => a.checkedInAt.isAfter(b.checkedInAt) ? a : b,
+          );
+    final rest = records.where((r) => r.id != latest?.id).toList()
+      ..sort(
+        (a, b) => _newestFirst
+            ? b.checkedInAt.compareTo(a.checkedInAt)
+            : a.checkedInAt.compareTo(b.checkedInAt),
+      );
+    final sorted = [
+      if (latest != null) latest,
+      ...rest,
+    ];
+    final latestId = latest?.id;
+    final layout = GridRoomLayoutSpec.current;
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
 
@@ -44,52 +64,60 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: topPad + 20),
+              SizedBox(height: topPad + layout.topOffset),
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 20, 12),
+                padding: layout.headerPadding,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    GestureDetector(
-                      onTap: _showIeumRequestDialog,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1A1A2E),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Text(
-                          '이음',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 2.0,
+                    Expanded(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _IeumOrb(onTap: _showIeumRequestDialog),
+                          const SizedBox(width: 18),
+                          const Flexible(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '흔적',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Color(0xFF071426),
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1.0,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
-                    const Expanded(child: SizedBox()),
-                    if (records.isNotEmpty) ...[
-                      GestureDetector(
-                        onTap: () =>
-                            setState(() => _newestFirst = !_newestFirst),
-                        child: Text(
-                          _newestFirst ? '최신순' : '과거순',
-                          style: const TextStyle(
-                              color: Color(0xFFAAAAAA), fontSize: 13),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                    ],
+                    const SizedBox(width: 14),
                     const _SettingsSection(),
                   ],
                 ),
               ),
+              _TraceGridControls(
+                layout: layout,
+                newestFirst: _newestFirst,
+                singleColumn: _singleColumn,
+                showTileText: _showTileText,
+                onToggleSort: () =>
+                    setState(() => _newestFirst = !_newestFirst),
+                onToggleColumn: () =>
+                    setState(() => _singleColumn = !_singleColumn),
+                onToggleText: () =>
+                    setState(() => _showTileText = !_showTileText),
+              ),
               if (records.isEmpty)
                 const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 34),
                   child: Center(
                     child: Text(
                       '아직 기록한 순간이 없습니다',
@@ -99,11 +127,21 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
                 )
               else
                 Expanded(
-                  child: ListView.builder(
-                    padding: EdgeInsets.only(bottom: botPad + 16),
+                  child: GridView.builder(
+                    padding: EdgeInsets.only(top: 0, bottom: botPad + 16),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: _singleColumn ? 1 : 3,
+                      mainAxisSpacing: 2,
+                      crossAxisSpacing: 2,
+                    ),
                     itemCount: sorted.length,
-                    itemBuilder: (context, index) =>
-                        _FeedCard(record: sorted[index]),
+                    itemBuilder: (context, index) => _TraceGridTile(
+                      record: sorted[index],
+                      index: index,
+                      totalCount: sorted.length,
+                      showText: _showTileText,
+                      showForget: sorted[index].id == latestId,
+                    ),
                   ),
                 ),
             ],
@@ -114,20 +152,150 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
   }
 }
 
-// ── 구역 3: 피드 카드 ───────────────────────────────────────────────────────
+class _IeumOrb extends StatelessWidget {
+  const _IeumOrb({required this.onTap});
 
-class _FeedCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ZGumOrbButton(label: '이음', onTap: onTap);
+  }
+}
+
+class _TraceGridControls extends StatelessWidget {
+  const _TraceGridControls({
+    required this.layout,
+    required this.newestFirst,
+    required this.singleColumn,
+    required this.showTileText,
+    required this.onToggleSort,
+    required this.onToggleColumn,
+    required this.onToggleText,
+  });
+
+  final GridRoomLayoutSpec layout;
+  final bool newestFirst;
+  final bool singleColumn;
+  final bool showTileText;
+  final VoidCallback onToggleSort;
+  final VoidCallback onToggleColumn;
+  final VoidCallback onToggleText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: layout.controlHeight,
+      padding: layout.controlPadding,
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Color(0xFFF0F2F5)),
+          bottom: BorderSide(color: Color(0xFFF0F2F5)),
+        ),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: onToggleSort,
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              height: layout.controlHeight,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    newestFirst ? '최신순' : '오래된순',
+                    style: const TextStyle(
+                      color: Color(0xFF071426),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      height: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '정렬',
+                    style: TextStyle(
+                      color: Color(0xFFB5BEC7),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      height: 1.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+          _GridToolButton(
+            icon: singleColumn ? Icons.grid_on_rounded : Icons.crop_square,
+            onTap: onToggleColumn,
+          ),
+          const SizedBox(width: 10),
+          _GridToolButton(
+            icon: showTileText
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
+            onTap: onToggleText,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GridToolButton extends StatelessWidget {
+  const _GridToolButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF6F8FB),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFEDF0F4)),
+        ),
+        child: Icon(icon, size: 19, color: const Color(0xFF9AA4AD)),
+      ),
+    );
+  }
+}
+
+// ── 구역 3: 흔적 그리드 ─────────────────────────────────────────────────────
+
+class _TraceGridTile extends StatelessWidget {
   final CheckInRecord record;
+  final int index;
+  final int totalCount;
+  final bool showText;
+  final bool showForget;
 
-  const _FeedCard({required this.record});
+  const _TraceGridTile({
+    required this.record,
+    required this.index,
+    required this.totalCount,
+    required this.showText,
+    required this.showForget,
+  });
 
-  void _openDetail(BuildContext context) {
+  void _openPhotoViewer(BuildContext context) {
     showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
       barrierLabel: '',
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 280),
+      barrierColor: Colors.black.withValues(alpha: 0.68),
+      transitionDuration: const Duration(milliseconds: 220),
       pageBuilder: (dialogContext, __, ___) => GestureDetector(
         onTap: () => Navigator.of(dialogContext).pop(),
         behavior: HitTestBehavior.opaque,
@@ -136,7 +304,12 @@ class _FeedCard extends StatelessWidget {
             onTap: () {},
             child: Material(
               color: Colors.transparent,
-              child: _TraceDetailPopup(record: record),
+              child: _TracePhotoViewer(
+                record: record,
+                index: index,
+                totalCount: totalCount,
+                showForget: showForget,
+              ),
             ),
           ),
         ),
@@ -150,156 +323,95 @@ class _FeedCard extends StatelessWidget {
     );
   }
 
-  void _showPhotoPopup(BuildContext context) {
-    if (record.photoPath == null) return;
-    showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: '',
-      barrierColor: Colors.black.withValues(alpha: 0.75),
-      transitionDuration: const Duration(milliseconds: 220),
-      pageBuilder: (dialogContext, __, ___) => GestureDetector(
-        onTap: () => Navigator.of(dialogContext).pop(),
-        behavior: HitTestBehavior.opaque,
-        child: Center(
-          child: GestureDetector(
-            onTap: () {},
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: _TracePhoto(
-                path: record.photoPath!,
-                width: MediaQuery.sizeOf(context).width * 0.88,
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
-        ),
-      ),
-      transitionBuilder: (_, animation, __, child) => ScaleTransition(
-        scale: Tween<double>(begin: 0.85, end: 1.0).animate(
-          CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
-        ),
-        child: FadeTransition(opacity: animation, child: child),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final hasPhoto = record.photoPath != null;
-    final dt = record.checkedInAt;
-    final dateStr = '${dt.month}.${dt.day.toString().padLeft(2, '0')}';
-    final hasMemo = record.memo != null && record.memo!.isNotEmpty;
 
     return GestureDetector(
-      onTap: () => _openDetail(context),
-      onLongPress: () => _showPhotoPopup(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      onTap: () => _openPhotoViewer(context),
+      child: Stack(
+        fit: StackFit.expand,
         children: [
           if (hasPhoto)
             _TracePhoto(
               path: record.photoPath!,
               width: double.infinity,
-              fit: BoxFit.fitWidth,
+              height: double.infinity,
+              fit: BoxFit.cover,
+            )
+          else
+            Container(
+              color: const Color(0xFFF4F6FB),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.all(10),
+              child: Text(
+                record.eventTitle,
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFF16213E),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
+                ),
+              ),
             ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          if (showText)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(8, 24, 8, 8),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x00000000), Color(0x99000000)],
+                  ),
+                ),
+                child: Text(
                   record.eventTitle,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
-                    height: 1.3,
-                  ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${record.venue}  ·  $dateStr',
                   style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFFAAAAAA),
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    height: 1.25,
                   ),
                 ),
-                if (hasMemo) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    record.memo!,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF666666),
-                      height: 1.5,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
+              ),
             ),
-          ),
-          const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
         ],
       ),
     );
   }
 }
 
-class _TracePhoto extends StatelessWidget {
-  const _TracePhoto({
-    required this.path,
-    required this.fit,
-    this.width,
+class _TracePhotoViewer extends ConsumerWidget {
+  const _TracePhotoViewer({
+    required this.record,
+    required this.index,
+    required this.totalCount,
+    required this.showForget,
   });
 
-  final String path;
-  final BoxFit fit;
-  final double? width;
-
-  bool get _isRemote =>
-      path.startsWith('http://') || path.startsWith('https://');
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isRemote) {
-      return Image.network(
-        path,
-        width: width,
-        fit: fit,
-        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-      );
-    }
-
-    return Image.file(
-      File(path),
-      width: width,
-      fit: fit,
-      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-    );
-  }
-}
-
-class _TraceDetailPopup extends StatelessWidget {
   final CheckInRecord record;
-  const _TraceDetailPopup({required this.record});
+  final int index;
+  final int totalCount;
+  final bool showForget;
 
   @override
-  Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.sizeOf(context).height;
+  Widget build(BuildContext context, WidgetRef ref) {
     final dt = record.checkedInAt;
-    final dateStr = '${dt.year}년 ${dt.month}월 ${dt.day}일  '
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    final dateStr = '${dt.month}.${dt.day.toString().padLeft(2, '0')}';
     final hasMemo = record.memo != null && record.memo!.isNotEmpty;
     final hasPhoto = record.photoPath != null;
 
     return Container(
       width: double.infinity,
-      height: screenHeight * 0.72,
       margin: const EdgeInsets.symmetric(horizontal: 20),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -314,51 +426,162 @@ class _TraceDetailPopup extends StatelessWidget {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            height: 200,
-            width: double.infinity,
-            child: hasPhoto
-                ? Image.file(
-                    File(record.photoPath!),
-                    fit: BoxFit.cover,
+          AspectRatio(
+            aspectRatio: 1,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (hasPhoto)
+                  _TracePhoto(
+                    path: record.photoPath!,
                     width: double.infinity,
-                    errorBuilder: (_, __, ___) => _noPhotoHeader(),
+                    height: double.infinity,
+                    fit: BoxFit.cover,
                   )
-                : _noPhotoHeader(),
+                else
+                  Container(
+                    color: const Color(0xFFF4F6FB),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      record.eventTitle,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF16213E),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0x00000000),
+                          Color(0x00000000),
+                          Color(0xCCFFFFFF),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                if (showForget)
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    child: GestureDetector(
+                      onTap: () {
+                        ref.read(checkInProvider.notifier).delete(record.id);
+                        Navigator.of(context).pop();
+                      },
+                      child: Container(
+                        height: 34,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color:
+                              const Color(0xFF071426).withValues(alpha: 0.86),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          '잊기',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                Positioned(
+                  right: 12,
+                  top: 12,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.42),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+          Transform.translate(
+            offset: const Offset(0, -30),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    record.eventTitle,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1A1A2E),
-                      height: 1.3,
-                      letterSpacing: -0.3,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          record.eventTitle,
+                          style: const TextStyle(
+                            color: Color(0xFF071426),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEEFBFF),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          '${index + 1} / $totalCount',
+                          style: const TextStyle(
+                            color: Color(0xFF16213E),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '$dateStr  ·  ${record.venue}',
-                    style:
-                        const TextStyle(fontSize: 13, color: Color(0xFFAAAAAA)),
+                    '${record.venue}  ·  $dateStr',
+                    style: const TextStyle(
+                      color: Color(0xFF9AA4AD),
+                      fontSize: 12,
+                      height: 1.45,
+                    ),
                   ),
                   if (hasMemo) ...[
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 10),
                     Text(
                       record.memo!,
                       style: const TextStyle(
-                        fontSize: 16,
                         color: Color(0xFF333333),
-                        height: 1.85,
-                        letterSpacing: -0.2,
+                        fontSize: 14,
+                        height: 1.6,
                       ),
                     ),
                   ],
@@ -366,26 +589,47 @@ class _TraceDetailPopup extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 2),
         ],
       ),
     );
   }
+}
 
-  Widget _noPhotoHeader() {
-    return Container(
-      color: const Color(0xFFF4F6FB),
-      alignment: Alignment.center,
-      padding: const EdgeInsets.all(24),
-      child: Text(
-        record.eventTitle,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF3A5FCD),
-          height: 1.4,
-        ),
-      ),
+class _TracePhoto extends StatelessWidget {
+  const _TracePhoto({
+    required this.path,
+    required this.fit,
+    this.width,
+    this.height,
+  });
+
+  final String path;
+  final BoxFit fit;
+  final double? width;
+  final double? height;
+
+  bool get _isRemote =>
+      path.startsWith('http://') || path.startsWith('https://');
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isRemote) {
+      return Image.network(
+        path,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      );
+    }
+
+    return Image.file(
+      File(path),
+      width: width,
+      height: height,
+      fit: fit,
+      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
     );
   }
 }

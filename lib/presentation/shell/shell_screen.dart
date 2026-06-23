@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/partner_focus_provider.dart';
 import '../../core/providers/shell_page_provider.dart';
+import '../../core/shell_gesture_layout.dart';
 import '../../features/map_room/screens/map_room_screen.dart';
 import '../../features/partner_room/screens/partner_room_screen.dart';
 import '../../features/user_room/screens/user_room_screen.dart';
@@ -117,10 +118,13 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     setState(() => _page = page);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _syncExclusionRects();
-      if (page == 1 && !ref.read(partnerFocusPendingProvider)) {
-        _mapKey.currentState?.recenterOnUser();
-      }
+      _recenterMapOnReturn(page);
     });
+  }
+
+  void _recenterMapOnReturn(int page) {
+    if (page != 1 || ref.read(partnerFocusPendingProvider)) return;
+    _mapKey.currentState?.recenterOnUser();
   }
 
   void _syncExclusionRects() {
@@ -131,7 +135,11 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     }
     final size = MediaQuery.sizeOf(context);
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    const w = 40.0;
+    final w = ShellGestureLayoutSpec.current.androidBackExclusionWidth;
+    if (w <= 0) {
+      GestureExclusionService.clearExclusionRects();
+      return;
+    }
     GestureExclusionService.setExclusionRects([
       Rect.fromLTWH(0, 0, w, size.height),
       Rect.fromLTWH(size.width - w, 0, w, size.height),
@@ -223,8 +231,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
               onPageChanged: (p) {
                 setState(() => _page = p);
                 ref.read(shellPageProvider.notifier).state = p;
-                WidgetsBinding.instance
-                    .addPostFrameCallback((_) => _syncExclusionRects());
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _syncExclusionRects();
+                  _recenterMapOnReturn(p);
+                });
                 if (p == 0) _showIeumIntroIfNeeded();
                 if (p == 2) _showPartnerIntroIfNeeded();
               },
@@ -354,9 +364,13 @@ class _SwipeWrapperState extends State<_SwipeWrapper> {
         },
         onPointerMove: (e) {
           if (_triggered || _startX == null || _startY == null) return;
+          final gesture = ShellGestureLayoutSpec.current;
           final dx = e.position.dx - _startX!;
           final dy = (e.position.dy - _startY!).abs();
-          if (dx.abs() < 60 || dx.abs() < dy * 1.2) return;
+          if (dx.abs() < gesture.pageSwipeDistance ||
+              dx.abs() < dy * gesture.pageSwipeAxisRatio) {
+            return;
+          }
           _triggered = true;
           _startX = null;
           _startY = null;

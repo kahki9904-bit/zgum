@@ -30,11 +30,8 @@ Future<void> showCameraChooserPopup(BuildContext context) async {
             heightFactor: 0.38,
             child: Text(
               '기기 설정에서 카메라 기본값을 해제하면\n원하는 앱으로 찍을 수 있습니다.',
-              style: TextStyle(
-                fontSize: 15,
-                color: Color(0xFF555555),
-                height: 1.75,
-              ),
+              textAlign: TextAlign.center,
+              style: ZGumDialogTextStyles.confirmBody,
             ),
           ),
         ),

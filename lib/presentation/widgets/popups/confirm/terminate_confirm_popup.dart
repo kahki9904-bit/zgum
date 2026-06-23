@@ -20,7 +20,7 @@ Future<bool?> showTerminateConfirmPopup(BuildContext context, String message) {
               onTap: () => Navigator.of(dialogContext).pop(true),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                height: 48,
                 decoration: BoxDecoration(
                   color: const Color(0xFF1A1A2E),
                   borderRadius: BorderRadius.circular(12),
@@ -29,7 +29,7 @@ Future<bool?> showTerminateConfirmPopup(BuildContext context, String message) {
                 child: const Text(
                   '확인',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
                   ),
@@ -38,10 +38,8 @@ Future<bool?> showTerminateConfirmPopup(BuildContext context, String message) {
             ),
             child: Text(
               message,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF555555),
-              ),
+              textAlign: TextAlign.center,
+              style: ZGumDialogTextStyles.confirmBody,
             ),
           ),
         ),

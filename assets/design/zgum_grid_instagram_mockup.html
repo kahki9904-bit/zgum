@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Z:GUM 1/3 Instagram Grid Mockup</title>
+  <style>
+    :root {
+      --ink: #071426;
+      --navy: #16213e;
+      --cyan: #9eeeff;
+      --muted: #9aa4ad;
+      --line: #edf0f4;
+      --soft: #f6f8fb;
+      --paper: #ffffff;
+      --bg: #eef2f7;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+        "Noto Sans KR", "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    .board {
+      width: min(1080px, 100%);
+      margin: 0 auto;
+      padding: 28px 18px 42px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .lead {
+      margin: 0 0 24px;
+      color: rgba(7, 20, 38, 0.62);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .screens {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(320px, 1fr));
+      gap: 30px;
+      align-items: start;
+    }
+
+    .screen {
+      display: grid;
+      justify-items: center;
+      gap: 12px;
+    }
+
+    .label {
+      width: min(390px, 100%);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .label h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    .label span {
+      color: rgba(7, 20, 38, 0.56);
+      font-size: 12px;
+    }
+
+    .phone {
+      width: min(390px, 100%);
+      min-height: 790px;
+      max-height: 790px;
+      overflow: hidden;
+      border-radius: 30px;
+      background: var(--paper);
+      border: 1px solid rgba(7, 20, 38, 0.08);
+      box-shadow: 0 18px 50px rgba(7, 20, 38, 0.16);
+    }
+
+    .status {
+      height: 42px;
+    }
+
+    .topbar {
+      height: 54px;
+      padding: 0 18px 0 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .page-no {
+      color: var(--navy);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .sort {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 19px;
+      font-weight: 800;
+    }
+
+    .head {
+      padding: 0 20px 18px;
+      display: grid;
+      grid-template-columns: 82px 1fr;
+      gap: 16px;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .orb {
+      width: 82px;
+      height: 82px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 43%, var(--ink) 0 23%, transparent 24%),
+        radial-gradient(circle at 50% 43%, #ffffff 0 46%, transparent 47%),
+        radial-gradient(ellipse at 50% 78%, rgba(158, 238, 255, 0.82) 0 19%, transparent 20%),
+        linear-gradient(135deg, #10213b, #071426 64%);
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 17px;
+      font-weight: 900;
+      box-shadow: inset 0 0 0 4px #fff, 0 0 0 1px #e8edf7;
+    }
+
+    .head h3 {
+      margin: 0 0 8px;
+      font-size: 21px;
+      line-height: 1.25;
+      font-weight: 900;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 15px;
+      line-height: 1.1;
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .desc {
+      grid-column: 1 / -1;
+      margin: 2px 0 0;
+      color: #68737c;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .tabs {
+      height: 42px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tab {
+      display: grid;
+      place-items: center;
+      color: #c2c9cf;
+      font-size: 17px;
+      position: relative;
+    }
+
+    .tab.active {
+      color: var(--ink);
+    }
+
+    .tab.active::after {
+      content: "";
+      position: absolute;
+      left: 34%;
+      right: 34%;
+      bottom: 0;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--ink);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      background: #fff;
+      max-height: 520px;
+      overflow: hidden;
+    }
+
+    .tile {
+      aspect-ratio: 1;
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 64% 28%, rgba(255,255,255,0.74), transparent 21%),
+        linear-gradient(135deg, #dff8ff, #9eeeff 36%, #16213e);
+    }
+
+    .tile:nth-child(2n) {
+      background:
+        radial-gradient(circle at 25% 24%, rgba(255,255,255,0.78), transparent 22%),
+        linear-gradient(135deg, #f8fbff, #bcd6e2 42%, #071426);
+    }
+
+    .tile:nth-child(3n) {
+      background:
+        linear-gradient(rgba(7, 20, 38, 0.1), rgba(7, 20, 38, 0.2)),
+        linear-gradient(135deg, #eefbff, #87dff0 40%, #16213e);
+    }
+
+    .tile.blank {
+      background: #f4f6fb;
+      display: grid;
+      place-items: center;
+      padding: 10px;
+      color: var(--navy);
+      font-size: 11px;
+      font-weight: 900;
+      text-align: center;
+      line-height: 1.35;
+    }
+
+    .tile.add {
+      background: var(--soft);
+      border: 1.5px dashed #d8dfe6;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 26px;
+      font-weight: 700;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: auto 0 0;
+      min-height: 44%;
+      padding: 24px 8px 8px;
+      display: flex;
+      align-items: end;
+      background: linear-gradient(transparent, rgba(0,0,0,0.62));
+      color: #fff;
+      font-size: 11px;
+      line-height: 1.25;
+      font-weight: 900;
+    }
+
+    .badge {
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: rgba(7, 20, 38, 0.88);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .note {
+      width: min(390px, 100%);
+      margin: 0;
+      color: rgba(7, 20, 38, 0.62);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 760px) {
+      .screens {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <h1>Z:GUM 1/3 그리드 시안</h1>
+    <p class="lead">1 사용자페이지와 3 파트너페이지를 같은 인스타그램식 그리드 감성으로 맞춘 시안입니다.</p>
+
+    <section class="screens">
+      <article class="screen">
+        <div class="label">
+          <h2>1 사용자페이지</h2>
+          <span>흔적 그리드</span>
+        </div>
+
+        <div class="phone">
+          <div class="status"></div>
+          <div class="topbar">
+            <span class="page-no">1</span>
+            <div class="top-actions">
+              <span class="icon-btn">⚙</span>
+            </div>
+          </div>
+
+          <section class="head">
+            <div class="orb">이음</div>
+            <div>
+              <h3>기록한 순간</h3>
+              <div class="metrics">
+                <div class="metric"><strong>12</strong><span>흔적</span></div>
+                <div class="metric"><strong>4</strong><span>장소</span></div>
+                <div class="metric"><strong>최신순</strong><span>정렬</span></div>
+              </div>
+            </div>
+            <p class="desc">사진과 메모가 있는 흔적을 같은 크기로 모아보기</p>
+          </section>
+
+          <nav class="tabs">
+            <div class="tab active">▦</div>
+            <div class="tab">□</div>
+            <div class="tab">T</div>
+          </nav>
+
+          <section class="grid">
+            <div class="tile"><span class="badge">삭제</span><span class="overlay">흔적 테스트 이벤트</span></div>
+            <div class="tile"><span class="overlay">파트너 이벤트</span></div>
+            <div class="tile blank">아직 기록한 순간이 없습니다</div>
+            <div class="tile"><span class="overlay">문화·공연 이벤트</span></div>
+            <div class="tile"><span class="overlay">이 순간</span></div>
+            <div class="tile"><span class="overlay">현재 위치 · 6.23</span></div>
+            <div class="tile"><span class="overlay">서울시 중구</span></div>
+            <div class="tile"><span class="overlay">홍대입구</span></div>
+            <div class="tile blank">과거순</div>
+            <div class="tile"><span class="overlay">성수동</span></div>
+            <div class="tile"><span class="overlay">오늘의 흔적</span></div>
+            <div class="tile"><span class="overlay">공연장 앞</span></div>
+            <div class="tile"><span class="overlay">전시 관람</span></div>
+            <div class="tile"><span class="overlay">카페 팝업</span></div>
+            <div class="tile blank">스크롤 계속</div>
+          </section>
+        </div>
+        <p class="note">프로필 사진 위치는 회원 프로필이 아니라 이음 진입 단추로 사용.</p>
+      </article>
+
+      <article class="screen">
+        <div class="label">
+          <h2>3 파트너페이지</h2>
+          <span>이벤트 그리드</span>
+        </div>
+
+        <div class="phone">
+          <div class="status"></div>
+          <div class="topbar">
+            <span class="page-no">3</span>
+            <div class="top-actions">
+              <span class="icon-btn">＋</span>
+            </div>
+          </div>
+
+          <section class="head">
+            <div class="orb">등록</div>
+            <div>
+              <h3>기록</h3>
+              <div class="metrics">
+                <div class="metric"><strong>9</strong><span>이벤트</span></div>
+                <div class="metric"><strong>1</strong><span>진행 중</span></div>
+                <div class="metric"><strong>최신순</strong><span>정렬</span></div>
+              </div>
+            </div>
+            <p class="desc">패널/등록폼과 분리된 바탕화면 개념의 이벤트 그리드</p>
+          </section>
+
+          <nav class="tabs">
+            <div class="tab active">▦</div>
+            <div class="tab">□</div>
+            <div class="tab">T</div>
+          </nav>
+
+          <section class="grid">
+            <div class="tile"><span class="badge">ON</span><span class="overlay">이벤트 진행 중</span></div>
+            <div class="tile"><span class="overlay">제목</span></div>
+            <div class="tile"><span class="badge">3장</span><span class="overlay">내용</span></div>
+            <div class="tile"><span class="overlay">무료이용</span></div>
+            <div class="tile"><span class="overlay">등록</span></div>
+            <div class="tile blank">필수</div>
+            <div class="tile"><span class="overlay">1시간</span></div>
+            <div class="tile"><span class="overlay">2시간</span></div>
+            <div class="tile"><span class="overlay">3시간</span></div>
+            <div class="tile"><span class="overlay">이벤트 제목</span></div>
+            <div class="tile"><span class="badge">종료</span><span class="overlay">종료 완료</span></div>
+            <div class="tile add">＋</div>
+            <div class="tile"><span class="overlay">오늘 등록</span></div>
+            <div class="tile"><span class="overlay">파트너 메시지</span></div>
+            <div class="tile blank">스크롤 계속</div>
+          </section>
+        </div>
+        <p class="note">3번도 1번과 같은 그리드 문법. 등록은 원형 진입 단추로 배치.</p>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

@@ -24,6 +24,29 @@ abstract class EventContentBase extends StatelessWidget {
   });
 }
 
+class EventDetailTextStyles {
+  const EventDetailTextStyles._();
+
+  static const title = TextStyle(
+    fontSize: 21,
+    fontWeight: FontWeight.w800,
+    color: Color(0xFF1A1A2E),
+    height: 1.25,
+  );
+
+  static const description = TextStyle(
+    fontSize: 14,
+    color: Color(0xFF333333),
+    height: 1.72,
+  );
+
+  static const address = TextStyle(
+    fontSize: 13,
+    color: Color(0x8C1A1A2E),
+    height: 1.45,
+  );
+}
+
 // ── 공용 헬퍼 위젯 ─────────────────────────────────────────────────────────────
 
 class EventCategoryBadge extends StatelessWidget {

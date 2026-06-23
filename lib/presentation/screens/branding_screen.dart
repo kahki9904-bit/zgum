@@ -50,17 +50,17 @@ class _BrandBlock extends StatelessWidget {
   static const _subtitleText = '지금 시작하세요';
 
   static const _titleStyle = TextStyle(
-    fontSize: 60,
+    fontSize: 58,
     fontWeight: FontWeight.w900,
-    color: Color(0xFF1E90FF),
+    color: Color(0xFF071426),
     letterSpacing: 1,
     height: 1.0,
   );
 
   static const _subtitleBase = TextStyle(
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: FontWeight.w300,
-    color: Colors.black,
+    color: Color(0xFF7D8B95),
     height: 1.0,
   );
 
@@ -108,6 +108,21 @@ class _BrandBlock extends StatelessWidget {
               style: _subtitleBase.copyWith(
                 letterSpacing: spacing.clamp(0.0, 30.0),
               ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 30),
+        Container(
+          width: 96,
+          height: 3,
+          decoration: const BoxDecoration(
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+            gradient: LinearGradient(
+              colors: [
+                Color(0x009EEEFF),
+                Color(0xFF9EEEFF),
+                Color(0x009EEEFF),
+              ],
             ),
           ),
         ),

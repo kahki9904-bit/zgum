@@ -2,10 +2,15 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/grid_room_layout.dart';
+import '../../../core/popup_layout.dart';
+import '../../../core/providers/active_partner_event_provider.dart';
 import '../../../core/providers/partner_my_events_provider.dart';
 import '../../../features/alert/models/partner_event.dart';
 import '../../../features/alert/providers/event_stats_provider.dart';
 import '../../../presentation/shell/panels/partner_panel_content.dart';
+import '../../../presentation/widgets/dialogs/zgum_dialog.dart';
+import '../../../presentation/widgets/zgum_orb_button.dart';
 import 'partner_dashboard_screen.dart';
 
 class PartnerRoomScreen extends ConsumerStatefulWidget {
@@ -17,8 +22,13 @@ class PartnerRoomScreen extends ConsumerStatefulWidget {
 
 class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
   bool _newestFirst = true;
+  bool _singleColumn = false;
 
-  void _openRegister(BuildContext context) {
+  void _openRegister(BuildContext context, PartnerEvent? activeEvent) {
+    if (activeEvent != null) {
+      ref.read(activePartnerEventProvider.notifier).state = activeEvent;
+    }
+    final popup = PopupLayoutSpec.current;
     showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -35,16 +45,19 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
               color: Colors.transparent,
               child: Container(
                 width: double.infinity,
-                height: MediaQuery.sizeOf(context).height * 0.75,
-                margin: const EdgeInsets.symmetric(horizontal: 16),
+                height: MediaQuery.sizeOf(context).height *
+                    popup.registerFormFactor,
+                margin: popup.registerFormMargin,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(popup.registerFormRadius),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: PartnerPanelContent(
-                    onClose: () => Navigator.of(ctx).pop(),
+                  borderRadius: BorderRadius.circular(popup.registerFormRadius),
+                  child: ZGumFaintIconBackground(
+                    child: PartnerPanelContent(
+                      onClose: () => Navigator.of(ctx).pop(),
+                    ),
                   ),
                 ),
               ),
@@ -63,54 +76,78 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
   Widget build(BuildContext context) {
     final topPad = MediaQuery.paddingOf(context).top;
     final botPad = MediaQuery.paddingOf(context).bottom;
+    final layout = GridRoomLayoutSpec.current;
     final myEvents = ref.watch(partnerMyEventsProvider);
-    final sorted = _newestFirst
-        ? List<PartnerEvent>.from(myEvents)
-        : myEvents.reversed.toList();
+    final now = DateTime.now();
+    final watchedActiveEvent = ref.watch(activePartnerEventProvider);
+    PartnerEvent? fallbackActiveEvent;
+    for (final event in myEvents) {
+      if (event.paymentStatus == PaymentStatus.paid &&
+          event.expiresAt.isAfter(now)) {
+        fallbackActiveEvent = event;
+        break;
+      }
+    }
+    final activeEvent = watchedActiveEvent ?? fallbackActiveEvent;
+    final latest = myEvents.isEmpty
+        ? null
+        : myEvents.reduce(
+            (a, b) => a.startsAt.isAfter(b.startsAt) ? a : b,
+          );
+    final rest = myEvents.where((e) => e.id != latest?.id).toList()
+      ..sort(
+        (a, b) => _newestFirst
+            ? b.startsAt.compareTo(a.startsAt)
+            : a.startsAt.compareTo(b.startsAt),
+      );
+    final sorted = [
+      if (latest != null) latest,
+      ...rest,
+    ];
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: topPad + 20),
+          SizedBox(height: topPad + layout.topOffset),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 20, 12),
+            padding: layout.headerPadding,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                GestureDetector(
-                  onTap: () => _openRegister(context),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A1A2E),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Text(
-                      '등록',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 2.0,
+                Expanded(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _RegisterOrb(
+                        label: activeEvent == null ? '이곳' : '변경',
+                        onTap: () => _openRegister(context, activeEvent),
                       ),
-                    ),
+                      const SizedBox(width: 18),
+                      const Flexible(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '기록',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Color(0xFF071426),
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                height: 1.0,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const Expanded(child: SizedBox()),
-                if (myEvents.isNotEmpty) ...[
-                  GestureDetector(
-                    onTap: () => setState(() => _newestFirst = !_newestFirst),
-                    child: Text(
-                      _newestFirst ? '최신순' : '과거순',
-                      style: const TextStyle(
-                          color: Color(0xFFAAAAAA), fontSize: 13),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                ],
+                const SizedBox(width: 14),
                 GestureDetector(
                   onTap: () => Navigator.push(
                     context,
@@ -135,9 +172,17 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
               ],
             ),
           ),
+          _PartnerGridControls(
+            layout: layout,
+            newestFirst: _newestFirst,
+            singleColumn: _singleColumn,
+            onToggleSort: () => setState(() => _newestFirst = !_newestFirst),
+            onToggleColumn: () =>
+                setState(() => _singleColumn = !_singleColumn),
+          ),
           if (sorted.isEmpty)
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 34),
               child: Center(
                 child: Text(
                   '등록된 이벤트가 없습니다',
@@ -147,11 +192,16 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
             )
           else
             Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.only(bottom: botPad + 16),
+              child: GridView.builder(
+                padding: EdgeInsets.only(top: 0, bottom: botPad + 16),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: _singleColumn ? 1 : 3,
+                  mainAxisSpacing: 2,
+                  crossAxisSpacing: 2,
+                ),
                 itemCount: sorted.length,
                 itemBuilder: (context, index) =>
-                    _EventFeedCard(event: sorted[index]),
+                    _EventGridTile(event: sorted[index]),
               ),
             ),
         ],
@@ -160,11 +210,122 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
   }
 }
 
-// ── 이벤트 피드 카드 ────────────────────────────────────────────────────────────
+class _RegisterOrb extends StatelessWidget {
+  const _RegisterOrb({required this.label, required this.onTap});
 
-class _EventFeedCard extends ConsumerWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ZGumOrbButton(label: label, onTap: onTap);
+  }
+}
+
+class _PartnerGridControls extends StatelessWidget {
+  const _PartnerGridControls({
+    required this.layout,
+    required this.newestFirst,
+    required this.singleColumn,
+    required this.onToggleSort,
+    required this.onToggleColumn,
+  });
+
+  final GridRoomLayoutSpec layout;
+  final bool newestFirst;
+  final bool singleColumn;
+  final VoidCallback onToggleSort;
+  final VoidCallback onToggleColumn;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: layout.controlHeight,
+      padding: layout.controlPadding,
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Color(0xFFF0F2F5)),
+          bottom: BorderSide(color: Color(0xFFF0F2F5)),
+        ),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: onToggleSort,
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              height: layout.controlHeight,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    newestFirst ? '최신순' : '오래된순',
+                    style: const TextStyle(
+                      color: Color(0xFF071426),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      height: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '정렬',
+                    style: TextStyle(
+                      color: Color(0xFFB5BEC7),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      height: 1.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+          _GridToolButton(
+            icon: singleColumn ? Icons.grid_on_rounded : Icons.crop_square,
+            onTap: onToggleColumn,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GridToolButton extends StatelessWidget {
+  const _GridToolButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF6F8FB),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFEDF0F4)),
+        ),
+        child: Icon(icon, size: 19, color: const Color(0xFF9AA4AD)),
+      ),
+    );
+  }
+}
+
+// ── 이벤트 그리드 ─────────────────────────────────────────────────────────────
+
+class _EventGridTile extends ConsumerWidget {
   final PartnerEvent event;
-  const _EventFeedCard({required this.event});
+
+  const _EventGridTile({required this.event});
 
   void _openDetail(BuildContext context, EventStats? stats) {
     showGeneralDialog<void>(
@@ -201,111 +362,101 @@ class _EventFeedCard extends ConsumerWidget {
     final repPhoto = event.representativePhotoPath;
     final hasPhoto = repPhoto != null;
     final hasMultiplePhotos = event.photos.length > 1;
-    final dt = event.startsAt;
-    final dateStr = '${dt.month}.${dt.day.toString().padLeft(2, '0')}';
     final isExpired = DateTime.now().isAfter(event.expiresAt);
-    final hasStats = stats != null &&
-        (stats.visitorCount > 0 || stats.traceCount > 0);
+    final dateStr =
+        '${event.startsAt.month}.${event.startsAt.day.toString().padLeft(2, '0')}';
 
     return GestureDetector(
       onTap: () => _openDetail(context, stats),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
+        fit: StackFit.expand,
         children: [
           if (hasPhoto)
-            Stack(
-              children: [
-                Image.file(
-                  File(repPhoto),
-                  width: double.infinity,
-                  fit: BoxFit.fitWidth,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            Image.file(
+              File(repPhoto),
+              width: double.infinity,
+              height: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const _EventTileFallback(),
+            )
+          else
+            const _EventTileFallback(),
+          if (hasMultiplePhotos)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.30),
+                  borderRadius: BorderRadius.circular(7),
                 ),
-                if (hasMultiplePhotos)
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.30),
-                        borderRadius: BorderRadius.circular(7),
-                      ),
-                      child: const Icon(
-                        Icons.collections_outlined,
-                        size: 15,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-              ],
+                child: const Icon(
+                  Icons.collections_outlined,
+                  size: 15,
+                  color: Colors.white,
+                ),
+              ),
             ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: isExpired
-                            ? const Color(0xFFEEEEEE)
-                            : const Color(0xFF1A1A2E),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: Text(
-                        isExpired ? '종료' : '진행 중',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: isExpired
-                              ? const Color(0xFF888888)
-                              : Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (hasStats) ...[
-                      Text(
-                        '방문 ${stats.visitorCount}  |  흔적 ${stats.traceCount}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFFAAAAAA),
-                        ),
-                      ),
-                    ],
-                  ],
+          Positioned(
+            left: 8,
+            top: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+              decoration: BoxDecoration(
+                color: isExpired
+                    ? const Color(0xCCEEEEEE)
+                    : const Color(0xCC071426),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                isExpired ? '종료' : '진행',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: isExpired ? const Color(0xFF777777) : Colors.white,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  event.title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
-                    height: 1.3,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${event.venue}  ·  $dateStr',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFFAAAAAA),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-          const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(8, 24, 8, 8),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x00000000), Color(0x99000000)],
+                ),
+              ),
+              child: Text(
+                dateStr,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  height: 1.25,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+}
+
+class _EventTileFallback extends StatelessWidget {
+  const _EventTileFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(color: Color(0xFFF4F6FB));
   }
 }
 
@@ -316,8 +467,7 @@ class _EventDetailPopup extends StatelessWidget {
   final EventStats? stats;
   const _EventDetailPopup({required this.event, this.stats});
 
-  String _formatDateTime(DateTime dt) =>
-      '${dt.year}년 ${dt.month}월 ${dt.day}일  '
+  String _formatDateTime(DateTime dt) => '${dt.year}년 ${dt.month}월 ${dt.day}일  '
       '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
   String _durationLabel() {
@@ -333,7 +483,6 @@ class _EventDetailPopup extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      height: screenHeight * 0.72,
       margin: const EdgeInsets.symmetric(horizontal: 20),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -348,121 +497,168 @@ class _EventDetailPopup extends StatelessWidget {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (photos.isNotEmpty)
-            SizedBox(
-              height: 200,
-              child: PageView.builder(
-                itemCount: photos.length,
-                itemBuilder: (_, i) {
-                  final p = photos[i];
-                  return Image.file(
-                    File(p.path),
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    errorBuilder: (_, __, ___) => _noPhotoHeader(),
-                  );
-                },
-              ),
-            )
-          else
-            SizedBox(height: 200, child: _noPhotoHeader()),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+          AspectRatio(
+            aspectRatio: 1,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (photos.isNotEmpty)
+                  PageView.builder(
+                    itemCount: photos.length,
+                    itemBuilder: (_, i) {
+                      final p = photos[i];
+                      return Image.file(
+                        File(p.path),
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder: (_, __, ___) => _noPhotoHeader(),
+                      );
+                    },
+                  )
+                else
+                  _noPhotoHeader(),
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0x00000000),
+                          Color(0x00000000),
+                          Color(0xCCFFFFFF),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 12,
+                  top: 12,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.42),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Transform.translate(
+            offset: const Offset(0, -30),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: screenHeight * 0.34),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isExpired
-                              ? const Color(0xFFEEEEEE)
-                              : const Color(0xFF1A1A2E),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          isExpired ? '종료' : '진행 중',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: isExpired
-                                ? const Color(0xFF888888)
-                                : Colors.white,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isExpired
+                                  ? const Color(0xFFEEEEEE)
+                                  : const Color(0xFF1A1A2E),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isExpired ? '종료' : '진행 중',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: isExpired
+                                    ? const Color(0xFF888888)
+                                    : Colors.white,
+                              ),
+                            ),
                           ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF4F4F7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              _durationLabel(),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF888888),
+                              ),
+                            ),
+                          ),
+                          if (stats != null &&
+                              (stats!.visitorCount > 0 ||
+                                  stats!.traceCount > 0)) ...[
+                            const SizedBox(width: 8),
+                            _statChip('방문', stats!.visitorCount),
+                            const SizedBox(width: 6),
+                            _statChip('흔적', stats!.traceCount),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        event.title,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1A1A2E),
+                          height: 1.3,
+                          letterSpacing: -0.3,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF4F4F7),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          _durationLabel(),
+                      const SizedBox(height: 8),
+                      Text(
+                        event.venue,
+                        style: const TextStyle(
+                            fontSize: 13, color: Color(0xFFAAAAAA)),
+                      ),
+                      const SizedBox(height: 14),
+                      _infoRow('시작', _formatDateTime(event.startsAt)),
+                      const SizedBox(height: 6),
+                      _infoRow('종료', _formatDateTime(event.expiresAt)),
+                      if (event.message != null) ...[
+                        const SizedBox(height: 24),
+                        Text(
+                          event.message!,
                           style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF888888),
+                            fontSize: 16,
+                            color: Color(0xFF333333),
+                            height: 1.85,
+                            letterSpacing: -0.2,
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  Text(
-                    event.title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1A1A2E),
-                      height: 1.3,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    event.venue,
-                    style: const TextStyle(
-                        fontSize: 13, color: Color(0xFFAAAAAA)),
-                  ),
-                  if (stats != null &&
-                      (stats!.visitorCount > 0 || stats!.traceCount > 0)) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _statChip('방문', stats!.visitorCount),
-                        const SizedBox(width: 8),
-                        _statChip('흔적', stats!.traceCount),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  _infoRow('시작', _formatDateTime(event.startsAt)),
-                  const SizedBox(height: 6),
-                  _infoRow('종료', _formatDateTime(event.expiresAt)),
-                  if (event.message != null) ...[
-                    const SizedBox(height: 24),
-                    Text(
-                      event.message!,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF333333),
-                        height: 1.85,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
             ),
           ),
+          const SizedBox(height: 2),
         ],
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/popup_layout.dart';
 
 /// Z:GUM 표준 팝업 컨테이너.
 /// child: 스크롤 가능한 내용, actions: 하단 고정 버튼.
@@ -20,52 +21,140 @@ class ZGumDialog extends StatelessWidget {
   final EdgeInsets actionsPadding;
   final bool centerContent;
 
+  double _resolvedHeight(double screenHeight) {
+    final targetHeight = PopupLayoutSpec.current.heightForFactor(heightFactor);
+    return targetHeight.clamp(0.0, screenHeight - 80).toDouble();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
     final screenHeight = MediaQuery.sizeOf(context).height;
-    return Container(
-      width: double.infinity,
-      height: screenHeight * heightFactor,
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x38000000),
-            blurRadius: 24,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.white,
-        child: Column(
-          children: [
-            Expanded(
-              child: centerContent
-                  ? Center(
-                      child: Padding(
-                        padding: contentPadding,
-                        child: child,
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      padding: contentPadding,
-                      child: child,
-                    ),
+    return Align(
+      alignment: Alignment.center,
+      child: Container(
+        width: (screenWidth - 40).clamp(0.0, 360.0),
+        height: _resolvedHeight(screenHeight),
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        clipBehavior: Clip.antiAlias,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.all(Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x38000000),
+              blurRadius: 24,
+              offset: Offset(0, 8),
             ),
-            if (actions != null)
-              Padding(
-                padding: actionsPadding,
-                child: actions!,
-              ),
           ],
+        ),
+        child: MediaQuery.withNoTextScaling(
+          child: Material(
+            color: Colors.transparent,
+            child: ZGumFaintIconBackground(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: centerContent
+                        ? Center(
+                            child: Padding(
+                              padding: contentPadding,
+                              child: child,
+                            ),
+                          )
+                        : SingleChildScrollView(
+                            padding: contentPadding,
+                            child: child,
+                          ),
+                  ),
+                  if (actions != null)
+                    Padding(
+                      padding: actionsPadding,
+                      child: actions!,
+                    ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
+}
+
+class ZGumFaintIconBackground extends StatelessWidget {
+  const ZGumFaintIconBackground({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Center(
+          child: IgnorePointer(
+            child: Opacity(
+              opacity: 0.026,
+              child: ClipOval(
+                child: SizedBox(
+                  width: 220,
+                  height: 220,
+                  child: Image.asset(
+                    'assets/icon/app_icon.png',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        child,
+      ],
+    );
+  }
+}
+
+class ZGumDialogTextStyles {
+  const ZGumDialogTextStyles._();
+
+  static const title = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w800,
+    color: Color(0xFF1A1A2E),
+    height: 1.2,
+  );
+
+  static const body = TextStyle(
+    fontSize: 15,
+    color: Color(0xFF333333),
+    height: 1.6,
+  );
+
+  static const sectionTitle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+    color: Color(0xFF1A1A2E),
+    height: 1.35,
+  );
+
+  static const support = TextStyle(
+    fontSize: 14,
+    color: Color(0xFF777777),
+    height: 1.65,
+  );
+
+  static const confirmBody = TextStyle(
+    fontSize: 15,
+    color: Color(0xFF555555),
+    height: 1.45,
+  );
+
+  static const caption = TextStyle(
+    fontSize: 13,
+    color: Color(0xFFAAAAAA),
+    height: 1.45,
+  );
 }
 
 /// Z:GUM 표준 확인 버튼.

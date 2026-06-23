@@ -83,9 +83,8 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('이음',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1A1A2E))),
-                Text(_timerText, style: const TextStyle(fontSize: 13, color: Color(0xFFAAAAAA))),
+                const Text('이음', style: ZGumDialogTextStyles.title),
+                Text(_timerText, style: ZGumDialogTextStyles.caption),
               ],
             ),
             const SizedBox(height: 20),
@@ -99,11 +98,12 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
                       onTap: () => setState(() => _duration = d),
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 2),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        height: 40,
                         decoration: BoxDecoration(
                           color: sel ? const Color(0xFF16213E) : const Color(0xFFF4F4F4),
                           borderRadius: BorderRadius.circular(10),
                         ),
+                        alignment: Alignment.center,
                         child: Text(d.chipLabel,
                             textAlign: TextAlign.center,
                             style: TextStyle(
@@ -126,7 +126,7 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
               const SizedBox(height: 8),
               const Center(
                 child: Text('이 코드를 상대방에게 알려주세요',
-                    style: TextStyle(fontSize: 12, color: Color(0xFFAAAAAA))),
+                    style: ZGumDialogTextStyles.caption),
               ),
             ],
           ],

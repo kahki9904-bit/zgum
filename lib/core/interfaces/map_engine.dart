@@ -39,12 +39,14 @@ abstract class MapEngine {
     VoidCallback? onEngineReady,
   });
 
-  /// 마커 색상 (ARGB int) — 파트너/검색/공공 3종류.
+  /// 마커 색상 (ARGB int) — 내 위치는 각 엔진에서 별도 처리,
+  /// 지도 이벤트는 하나의 이벤트 색상으로 묶고 검색 핀만 분리합니다.
   /// 색상 변경 시 이 메서드만 수정하면 됩니다.
   int markerColor(MapMarkerModel marker) {
-    if (marker.isPartner) return 0xFFE63946;  // 파트너 — 레드
     if (marker.category == MarkerCategory.cinema ||
-        marker.category == MarkerCategory.other) { return 0xFF00B4D8; }  // 검색 — 청록
-    return 0xFF1A1A2E;  // 공공 이벤트 — 딥블루
+        marker.category == MarkerCategory.other) {
+      return 0xFF00B4D8;
+    }
+    return 0xFF1F6F8B;
   }
 }

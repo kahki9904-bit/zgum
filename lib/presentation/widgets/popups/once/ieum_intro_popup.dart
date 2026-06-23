@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../core/popup_layout.dart';
 import '../../dialogs/zgum_dialog.dart';
 
 const _kIeumIntroShown = 'ieum_intro_shown';
@@ -30,46 +31,33 @@ Future<void> showIeumIntroPopup(BuildContext context) async {
       child: Center(
         child: GestureDetector(
           onTap: () {},
-          child: const ZGumDialog(
-            heightFactor: 0.60,
-            child: Column(
+          child: ZGumDialog(
+            heightFactor: PopupLayoutSpec.current.introShortFactor,
+            child: const Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '이음',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1A1A2E),
-                  ),
+                  style: ZGumDialogTextStyles.title,
                 ),
                 SizedBox(height: 12),
                 Text(
-                  '주변 사람과 연결되는 기능입니다.\n이음 요청을 보내면 상대방이 수락할 수 있습니다.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF333333),
-                    height: 1.75,
-                  ),
+                  '주변 사람과 연결되는 기능입니다.\n'
+                  '이음 요청을 보내면 상대방이 수락할 수 있습니다.',
+                  style: ZGumDialogTextStyles.body,
                 ),
                 SizedBox(height: 24),
                 Text(
                   '알림을 허용하면',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
-                  ),
+                  style: ZGumDialogTextStyles.sectionTitle,
                 ),
                 SizedBox(height: 10),
                 Text(
-                  '· 이음 요청을 실시간으로 받을 수 있습니다\n· 상대방의 수락 여부를 즉시 알 수 있습니다\n· 알림은 설정에서 언제든 변경할 수 있습니다',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF777777),
-                    height: 1.85,
-                  ),
+                  '· 이음 요청을 실시간으로 받을 수 있습니다\n'
+                  '· 상대방의 수락 여부를 즉시 알 수 있습니다\n'
+                  '· 알림은 설정에서 언제든 변경할 수 있습니다',
+                  style: ZGumDialogTextStyles.support,
                 ),
               ],
             ),

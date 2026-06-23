@@ -22,7 +22,7 @@ Future<bool?> showAgeConfirmPopup(BuildContext context) {
                   child: GestureDetector(
                     onTap: () => Navigator.of(dialogContext).pop(false),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      height: 48,
                       decoration: BoxDecoration(
                         color: const Color(0xFFF0F0F0),
                         borderRadius: BorderRadius.circular(12),
@@ -31,7 +31,7 @@ Future<bool?> showAgeConfirmPopup(BuildContext context) {
                       child: const Text(
                         '전체이용',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 15,
                           color: Color(0xFF888888),
                           fontWeight: FontWeight.w600,
                         ),
@@ -44,7 +44,7 @@ Future<bool?> showAgeConfirmPopup(BuildContext context) {
                   child: GestureDetector(
                     onTap: () => Navigator.of(dialogContext).pop(true),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      height: 48,
                       decoration: BoxDecoration(
                         color: const Color(0xFF1A1A2E),
                         borderRadius: BorderRadius.circular(12),
@@ -53,7 +53,7 @@ Future<bool?> showAgeConfirmPopup(BuildContext context) {
                       child: const Text(
                         '19세이상',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 15,
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
                         ),
@@ -65,10 +65,8 @@ Future<bool?> showAgeConfirmPopup(BuildContext context) {
             ),
             child: const Text(
               '대상연령확인',
-              style: TextStyle(
-                fontSize: 14,
-                color: Color(0xFF555555),
-              ),
+              textAlign: TextAlign.center,
+              style: ZGumDialogTextStyles.confirmBody,
             ),
           ),
         ),

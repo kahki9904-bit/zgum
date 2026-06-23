@@ -20,7 +20,7 @@ Future<bool?> showExtendConfirmPopup(BuildContext context) {
               onTap: () => Navigator.of(dialogContext).pop(true),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                height: 48,
                 decoration: BoxDecoration(
                   color: const Color(0xFF1A1A2E),
                   borderRadius: BorderRadius.circular(12),
@@ -29,7 +29,7 @@ Future<bool?> showExtendConfirmPopup(BuildContext context) {
                 child: const Text(
                   '확인',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
                   ),
@@ -38,10 +38,8 @@ Future<bool?> showExtendConfirmPopup(BuildContext context) {
             ),
             child: const Text(
               '1회 1시간 연장가능',
-              style: TextStyle(
-                fontSize: 14,
-                color: Color(0xFF555555),
-              ),
+              textAlign: TextAlign.center,
+              style: ZGumDialogTextStyles.confirmBody,
             ),
           ),
         ),

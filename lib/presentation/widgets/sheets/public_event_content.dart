@@ -15,8 +15,6 @@ class PublicEventContent extends EventContentBase {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -24,7 +22,7 @@ class PublicEventContent extends EventContentBase {
           height: 36,
           child: Marquee(
             text: event.title,
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            style: EventDetailTextStyles.title,
             scrollAxis: Axis.horizontal,
             blankSpace: 40.0,
             velocity: 40.0,
@@ -35,7 +33,7 @@ class PublicEventContent extends EventContentBase {
         const SizedBox(height: 14),
         Text(
           event.description,
-          style: theme.textTheme.bodyMedium?.copyWith(height: 1.75),
+          style: EventDetailTextStyles.description,
         ),
         const SizedBox(height: 14),
         Row(
@@ -43,9 +41,7 @@ class PublicEventContent extends EventContentBase {
             Expanded(
               child: Text(
                 event.address,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                ),
+                style: EventDetailTextStyles.address,
               ),
             ),
             if (onNavigateTap != null)

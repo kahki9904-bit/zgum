@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Z:GUM 앱 아이콘 비교</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #eef2f7;
+      color: #071426;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+        "Noto Sans KR", "Segoe UI", sans-serif;
+    }
+    main {
+      width: min(1080px, 100%);
+      margin: 0 auto;
+      padding: 34px 22px 44px;
+    }
+    h1 {
+      margin: 0 0 22px;
+      font-size: 20px;
+      font-weight: 900;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      gap: 24px;
+    }
+    .card {
+      background: white;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 16px 40px rgba(7, 20, 38, 0.12);
+      text-align: center;
+    }
+    img {
+      width: 100%;
+      max-width: 260px;
+      border-radius: 28px;
+      box-shadow: 0 14px 34px rgba(7, 20, 38, 0.18);
+    }
+    h2 {
+      margin: 16px 0 6px;
+      font-size: 15px;
+      font-weight: 900;
+    }
+    p {
+      margin: 0;
+      color: #7d8b95;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Z:GUM 앱 아이콘 3종 비교</h1>
+    <section class="grid">
+      <article class="card">
+        <img src="../icon/app_icon.png" alt="현재 앱 적용본">
+        <h2>현재 앱 적용본</h2>
+        <p>지금 앱 경로에 들어있는 아이콘</p>
+      </article>
+      <article class="card">
+        <img src="zgum_app_icon_confirmed.png" alt="확정본">
+        <h2>확정본</h2>
+        <p>방금 마음에 들었던 친근한 후보</p>
+      </article>
+      <article class="card">
+        <img src="zgum_app_icon_less_blue_candidate.png" alt="색감 낮춘 후보">
+        <h2>색감 낮춘 후보</h2>
+        <p>파란 느낌을 줄인 새 후보</p>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

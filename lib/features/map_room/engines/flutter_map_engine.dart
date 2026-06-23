@@ -5,8 +5,8 @@ import 'package:latlong2/latlong.dart' hide Path;
 
 import '../../../core/event_fade.dart';
 import '../../../core/interfaces/map_engine.dart';
+import '../../../core/map_marker_layout.dart';
 import '../../../core/models/map_marker_model.dart';
-import '../../../presentation/widgets/icons/zgum_icon.dart';
 
 // ── 좌표 변환 헬퍼 ─────────────────────────────────────────────────────────────
 
@@ -96,7 +96,10 @@ class FlutterMapEngine extends MapEngine {
       width: 48,
       height: 52,
       alignment: Alignment.bottomCenter,
-      child: const _UserMarkerPin(),
+      child: const _MapDropMarker(
+        fillColor: Color(0xFF52606C),
+        centerColor: Color(0xC9FFFFFF),
+      ),
     );
   }
 
@@ -107,17 +110,15 @@ class FlutterMapEngine extends MapEngine {
     final now = DateTime.now();
     final deadline = marker.deadline;
     final expired = marker.isExpired(now: now);
-    final color = expired ? const Color(0xFF9E9E9E) : Color(markerColor(marker));
-    final label = (expired && deadline != null)
-        ? (EventFade.negativeLabel(deadline, now) ?? '')
-        : '';
+    final color =
+        expired ? const Color(0xFF9E9E9E) : Color(markerColor(marker));
     final highlighted = marker.isHighlighted;
     final shouldBlink = !expired && !marker.isDimmed;
 
     return Marker(
       point: marker.location.toLatLng(),
-      width: highlighted ? 88 : 72,
-      height: highlighted ? 40 : 36,
+      width: MapMarkerLayoutSpec.current.bitmapSize + 8,
+      height: MapMarkerLayoutSpec.current.bitmapSize + 12,
       alignment: Alignment.bottomCenter,
       child: Opacity(
         opacity: marker.isDimmed ? 0.22 : 1.0,
@@ -126,7 +127,6 @@ class FlutterMapEngine extends MapEngine {
           child: _MarkerPin(
             key: ValueKey(marker.id),
             color: color,
-            label: label,
             highlighted: highlighted,
             deadline: deadline,
             blink: shouldBlink,
@@ -137,50 +137,10 @@ class FlutterMapEngine extends MapEngine {
   }
 }
 
-// ── 내 위치 마커 ──────────────────────────────────────────────────────────────
-
-class _UserMarkerPin extends StatelessWidget {
-  const _UserMarkerPin();
-
-  @override
-  Widget build(BuildContext context) {
-    const pinColor = Color(0xFF1A1A2E);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: pinColor,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.35),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: const Center(
-            child: ZGumIcon(size: 22, color: Colors.white),
-          ),
-        ),
-        const CustomPaint(
-          painter: _PinTipPainter(color: pinColor),
-          size: Size(14, 8),
-        ),
-      ],
-    );
-  }
-}
-
 // ── 이벤트 마커 핀 ────────────────────────────────────────────────────────────
 
 class _MarkerPin extends StatefulWidget {
   final Color color;
-  final String label;
   final bool highlighted;
   final DateTime? deadline;
   final bool blink;
@@ -188,7 +148,6 @@ class _MarkerPin extends StatefulWidget {
   const _MarkerPin({
     super.key,
     required this.color,
-    required this.label,
     this.highlighted = false,
     this.deadline,
     this.blink = false,
@@ -238,52 +197,23 @@ class _MarkerPinState extends State<_MarkerPin>
     final pinColor = (deadline != null && EventFade.isGrayed(deadline, _now))
         ? const Color(0xFF9E9E9E)
         : widget.color;
+    final isSearch = pinColor.toARGB32() == const Color(0xFF00B4D8).toARGB32();
 
     Widget pin = Opacity(
       opacity: fade,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: BoxDecoration(
-              color: pinColor,
-              borderRadius: BorderRadius.circular(7),
-              border: widget.highlighted
-                  ? Border.all(color: Colors.white, width: 2)
-                  : null,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(
-                      alpha: widget.highlighted ? 0.35 : 0.20),
-                  blurRadius: widget.highlighted ? 6 : 3,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Text(
-              widget.label.isEmpty ? ' ' : widget.label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
-                height: 1.2,
-              ),
-            ),
-          ),
-          CustomPaint(
-            painter: _PinTipPainter(color: pinColor),
-            size: const Size(14, 8),
-          ),
-        ],
+      child: _MapDropMarker(
+        fillColor: isSearch ? Colors.white : pinColor,
+        borderColor: isSearch ? pinColor : Colors.white,
+        centerColor: isSearch ? pinColor : const Color(0xFF9EEEFF),
+        highlighted: widget.highlighted,
       ),
     );
 
     if (widget.blink && _blinkAnim != null) {
       return AnimatedBuilder(
         animation: _blinkAnim!,
-        builder: (_, child) => Opacity(opacity: _blinkAnim!.value, child: child!),
+        builder: (_, child) =>
+            Opacity(opacity: _blinkAnim!.value, child: child!),
         child: pin,
       );
     }
@@ -291,24 +221,85 @@ class _MarkerPinState extends State<_MarkerPin>
   }
 }
 
-class _PinTipPainter extends CustomPainter {
-  final Color color;
-  const _PinTipPainter({required this.color});
+class _MapDropMarker extends StatelessWidget {
+  const _MapDropMarker({
+    required this.fillColor,
+    required this.centerColor,
+    this.borderColor = Colors.white,
+    this.highlighted = false,
+  });
+
+  final Color fillColor;
+  final Color centerColor;
+  final Color borderColor;
+  final bool highlighted;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawPath(
-      Path()
-        ..moveTo(0, 0)
-        ..lineTo(size.width, 0)
-        ..lineTo(size.width / 2, size.height)
-        ..close(),
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.fill,
+  Widget build(BuildContext context) {
+    return Center(
+      child: Transform.rotate(
+        angle: -0.785398,
+        child: Container(
+          width: highlighted
+              ? MapMarkerLayoutSpec.current.highlightedPinSize
+              : MapMarkerLayoutSpec.current.pinSize,
+          height: highlighted
+              ? MapMarkerLayoutSpec.current.highlightedPinSize
+              : MapMarkerLayoutSpec.current.pinSize,
+          decoration: BoxDecoration(
+            color: fillColor,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(999),
+              topRight: const Radius.circular(999),
+              bottomLeft: const Radius.circular(999),
+              bottomRight:
+                  Radius.circular(MapMarkerLayoutSpec.current.tailRadius),
+            ),
+            border: Border.all(
+              color: borderColor,
+              width: highlighted
+                  ? MapMarkerLayoutSpec.current.highlightedBorderWidth
+                  : MapMarkerLayoutSpec.current.borderWidth,
+            ),
+            boxShadow: MapMarkerLayoutSpec.current.shadowBlur <= 0
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(
+                        alpha: highlighted ? 0.3 : 0.18,
+                      ),
+                      blurRadius: highlighted
+                          ? MapMarkerLayoutSpec.current.highlightedShadowBlur
+                          : MapMarkerLayoutSpec.current.shadowBlur,
+                      offset: Offset(
+                        0,
+                        MapMarkerLayoutSpec.current.shadowOffsetY,
+                      ),
+                    ),
+                  ],
+          ),
+          child: Center(
+            child: Container(
+              width: highlighted
+                  ? MapMarkerLayoutSpec.current.highlightedCenterSize
+                  : MapMarkerLayoutSpec.current.centerSize,
+              height: highlighted
+                  ? MapMarkerLayoutSpec.current.highlightedCenterSize
+                  : MapMarkerLayoutSpec.current.centerSize,
+              decoration: BoxDecoration(
+                color: centerColor,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: fillColor == Colors.white
+                      ? Colors.transparent
+                      : Colors.white.withValues(alpha: 0.84),
+                  width: MapMarkerLayoutSpec.current.borderWidth * 0.75,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
-
-  @override
-  bool shouldRepaint(_PinTipPainter old) => old.color != color;
 }
