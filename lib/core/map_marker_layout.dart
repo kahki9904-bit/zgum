@@ -49,9 +49,9 @@ class MapMarkerLayoutSpec {
     highlightedCenterSize: 11,
     borderWidth: 2,
     highlightedBorderWidth: 2.4,
-    shadowBlur: 9,
-    highlightedShadowBlur: 12,
-    shadowOffsetY: 4,
+    shadowBlur: 0,
+    highlightedShadowBlur: 0,
+    shadowOffsetY: 0,
     tailRadius: 10,
   );
 

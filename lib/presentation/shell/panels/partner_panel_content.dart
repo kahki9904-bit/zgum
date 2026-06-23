@@ -36,7 +36,6 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
   FocusNode? _descFocusNode;
   final List<File> _photos = [];
   final List<TextEditingController> _photoCtrls = [];
-  int _repIndex = 0;
   int _selectedMinutes = 60;
   bool _submitting = false;
 
@@ -83,13 +82,19 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
       _photoCtrls[index].dispose();
       _photos.removeAt(index);
       _photoCtrls.removeAt(index);
-      if (_photos.isEmpty) {
-        _repIndex = 0;
-      } else if (index == _repIndex) {
-        _repIndex = 0;
-      } else if (index < _repIndex) {
-        _repIndex--;
-      }
+    });
+  }
+
+  void _swapPhotos(int fromIndex, int toIndex) {
+    if (fromIndex == toIndex) return;
+    if (fromIndex >= _photos.length || toIndex >= _photos.length) return;
+    setState(() {
+      final tempPhoto = _photos[fromIndex];
+      _photos[fromIndex] = _photos[toIndex];
+      _photos[toIndex] = tempPhoto;
+      final tempCtrl = _photoCtrls[fromIndex];
+      _photoCtrls[fromIndex] = _photoCtrls[toIndex];
+      _photoCtrls[toIndex] = tempCtrl;
     });
   }
 
@@ -138,7 +143,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
       startsAt: now,
       expiresAt: now.add(Duration(minutes: _selectedMinutes)),
       photos: photoList,
-      representativeIndex: _repIndex.clamp(0, photoList.length - 1),
+      representativeIndex: 0,
       orderId: 'order-${now.millisecondsSinceEpoch}',
       paymentStatus: PaymentStatus.paid,
       isAdultOnly: isAdultOnly,
@@ -324,12 +329,41 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (int i = 0; i < 3; i++) ...[
-                      if (i > 0) const SizedBox(width: 6),
-                      Expanded(
-                          child: AspectRatio(
-                              aspectRatio: 1.2, child: _buildPhotoCell(i))),
-                    ],
+                    Expanded(
+                      flex: 4,
+                      child: AspectRatio(aspectRatio: 1.2, child: _buildPhotoCell(0)),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      flex: 6,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(child: AspectRatio(aspectRatio: 1.2, child: _buildPhotoCell(1))),
+                              const SizedBox(width: 6),
+                              Expanded(child: AspectRatio(aspectRatio: 1.2, child: _buildPhotoCell(2))),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          FittedBox(
+                            fit: BoxFit.fitWidth,
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.swap_horiz, size: 16, color: Color(0xFFBBBBBB)),
+                                SizedBox(width: 4),
+                                Text(
+                                  '눌러서 이동',
+                                  style: TextStyle(fontSize: 14, color: Color(0xFFBBBBBB)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -446,50 +480,85 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
 
   Widget _buildPhotoCell(int i) {
     if (i < _photos.length) {
-      final isRep = i == _repIndex;
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.file(_photos[i], fit: BoxFit.cover),
-            Positioned(
-              top: 6,
-              left: 6,
-              child: GestureDetector(
-                onTap: () => setState(() => _repIndex = i),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: isRep
-                        ? const Color(0xFF16213E)
-                        : Colors.black.withValues(alpha: 0.45),
-                    shape: BoxShape.circle,
+      final isRep = i == 0;
+      final photoWidget = Container(
+        decoration: isRep
+            ? BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFFE63946),
+                  width: 8.0,
+                ),
+              )
+            : null,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(isRep ? 6 : 10),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.file(_photos[i], fit: BoxFit.cover),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: GestureDetector(
+                  onTap: () => _deletePhoto(i),
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close, color: Colors.white, size: 12),
                   ),
-                  child: Icon(isRep ? Icons.star : Icons.star_border,
-                      color: Colors.white, size: 14),
                 ),
               ),
-            ),
-            Positioned(
-              top: 4,
-              right: 4,
-              child: GestureDetector(
-                onTap: () => _deletePhoto(i),
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 12),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
+
+      return DragTarget<int>(
+        onWillAcceptWithDetails: (details) => details.data != i,
+        onAcceptWithDetails: (details) => _swapPhotos(details.data, i),
+        builder: (context, candidateData, _) {
+          return LongPressDraggable<int>(
+            data: i,
+            delay: const Duration(milliseconds: 300),
+            feedback: SizedBox(
+              width: 72,
+              height: 72,
+              child: Opacity(
+                opacity: 0.85,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.file(_photos[i], fit: BoxFit.cover),
+                ),
+              ),
+            ),
+            childWhenDragging: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0E0E0),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              decoration: candidateData.isNotEmpty
+                  ? BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFF16213E),
+                        width: 2,
+                      ),
+                    )
+                  : null,
+              child: photoWidget,
+            ),
+          );
+        },
+      );
     }
+
     if (i == _photos.length && _photos.length < 3) {
       return GestureDetector(
         onTap: _takePhoto,
@@ -516,6 +585,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
         ),
       );
     }
+
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFF4F4F7),
@@ -718,6 +788,7 @@ class _ActiveEventWaitingViewState
 
   Future<void> _extend() async {
     if (_extending) return;
+    if (widget.event.extensionCount >= 1) return;
     setState(() => _extending = true);
     try {
       final isAdmin = ref.read(adminModeProvider);
@@ -732,7 +803,10 @@ class _ActiveEventWaitingViewState
       await ref
           .read(firestorePartnerEventServiceProvider)
           .extend(widget.event.id, newExpiresAt);
-      final extendedEvent = widget.event.copyWith(expiresAt: newExpiresAt);
+      final extendedEvent = widget.event.copyWith(
+        expiresAt: newExpiresAt,
+        extensionCount: widget.event.extensionCount + 1,
+      );
       ref.read(activePartnerEventProvider.notifier).state = extendedEvent;
     } finally {
       if (mounted) setState(() => _extending = false);
@@ -816,11 +890,11 @@ class _ActiveEventWaitingViewState
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: _extending ? null : _showExtendConfirm,
+                    onTap: (_extending || widget.event.extensionCount >= 1) ? null : _showExtendConfirm,
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       decoration: BoxDecoration(
-                        color: _extending
+                        color: (_extending || widget.event.extensionCount >= 1)
                             ? const Color(0xFFAAAAAA)
                             : const Color(0xFF1A1A2E),
                         borderRadius: BorderRadius.circular(16),

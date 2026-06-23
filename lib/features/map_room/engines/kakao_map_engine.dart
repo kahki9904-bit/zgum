@@ -163,14 +163,17 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
     if (cached != null) return cached;
     final spec = MapMarkerLayoutSpec.current;
     final double tapSize = spec.bitmapSize;
-    final markerWidget = SizedBox(
-      width: tapSize,
-      height: tapSize,
-      child: Center(
-        child: _KakaoDropMarker(
-          fillColor: fillColor,
-          borderColor: borderColor,
-          centerColor: centerColor,
+    final markerWidget = Material(
+      color: Colors.transparent,
+      child: SizedBox(
+        width: tapSize,
+        height: tapSize,
+        child: Center(
+          child: _KakaoDropMarker(
+            fillColor: fillColor,
+            borderColor: borderColor,
+            centerColor: centerColor,
+          ),
         ),
       ),
     );
@@ -189,14 +192,17 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
     if (_userMarkerImage != null) return _userMarkerImage!;
     final spec = MapMarkerLayoutSpec.current;
     final double tapSize = spec.bitmapSize;
-    final markerWidget = SizedBox(
-      width: tapSize,
-      height: tapSize,
-      child: Center(
-        child: _KakaoDropMarker(
-          fillColor: const Color(0xFF52606C),
-          borderColor: Colors.white,
-          centerColor: Colors.white.withValues(alpha: 0.78),
+    final markerWidget = Material(
+      color: Colors.transparent,
+      child: SizedBox(
+        width: tapSize,
+        height: tapSize,
+        child: Center(
+          child: _KakaoDropMarker(
+            fillColor: const Color(0xFF52606C),
+            borderColor: Colors.white,
+            centerColor: Colors.white.withValues(alpha: 0.78),
+          ),
         ),
       ),
     );

@@ -63,6 +63,9 @@ class PartnerEvent extends Equatable {
   /// 성인 전용 이벤트 여부
   final bool isAdultOnly;
 
+  /// 연장 횟수 (최대 1회)
+  final int extensionCount;
+
   const PartnerEvent({
     required this.id,
     required this.partnerId,
@@ -81,6 +84,7 @@ class PartnerEvent extends Equatable {
     this.paymentStatus = PaymentStatus.pending,
     this.paidAt,
     this.isAdultOnly = false,
+    this.extensionCount = 0,
   });
 
   /// 대표사진 경로. photos가 비어 있으면 null.
@@ -98,6 +102,7 @@ class PartnerEvent extends Equatable {
     DateTime? paidAt,
     DateTime? expiresAt,
     bool? isAdultOnly,
+    int? extensionCount,
   }) {
     return PartnerEvent(
       id: id,
@@ -117,6 +122,7 @@ class PartnerEvent extends Equatable {
       paymentStatus: paymentStatus ?? this.paymentStatus,
       paidAt: paidAt ?? this.paidAt,
       isAdultOnly: isAdultOnly ?? this.isAdultOnly,
+      extensionCount: extensionCount ?? this.extensionCount,
     );
   }
 
@@ -141,6 +147,7 @@ class PartnerEvent extends Equatable {
         'paymentStatus': paymentStatus.name,
         'paidAtMs': paidAt?.millisecondsSinceEpoch,
         'isAdultOnly': isAdultOnly,
+        'extensionCount': extensionCount,
       };
 
   factory PartnerEvent.fromMap(Map<String, dynamic> map) => PartnerEvent(
@@ -174,6 +181,7 @@ class PartnerEvent extends Equatable {
             ? DateTime.fromMillisecondsSinceEpoch(map['paidAtMs'] as int)
             : null,
         isAdultOnly: map['isAdultOnly'] as bool? ?? false,
+        extensionCount: map['extensionCount'] as int? ?? 0,
       );
 
   @override

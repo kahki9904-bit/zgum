@@ -67,39 +67,25 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
               SizedBox(height: topPad + layout.topOffset),
               Padding(
                 padding: layout.headerPadding,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Expanded(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _IeumOrb(onTap: _showIeumRequestDialog),
-                          const SizedBox(width: 18),
-                          const Flexible(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '흔적',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: Color(0xFF071426),
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w900,
-                                    height: 1.0,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                    const Text(
+                      '흔적',
+                      style: TextStyle(
+                        color: Color(0xFF071426),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        height: 1.0,
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    const _SettingsSection(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _IeumOrb(onTap: _showIeumRequestDialog),
+                        const _SettingsSection(),
+                      ],
+                    ),
                   ],
                 ),
               ),

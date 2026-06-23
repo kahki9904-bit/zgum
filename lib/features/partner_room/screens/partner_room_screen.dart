@@ -113,61 +113,47 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
           SizedBox(height: topPad + layout.topOffset),
           Padding(
             padding: layout.headerPadding,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                Expanded(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _RegisterOrb(
-                        label: activeEvent == null ? '이곳' : '변경',
-                        onTap: () => _openRegister(context, activeEvent),
-                      ),
-                      const SizedBox(width: 18),
-                      const Flexible(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '기록',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Color(0xFF071426),
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                height: 1.0,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                const Text(
+                  '기록',
+                  style: TextStyle(
+                    color: Color(0xFF071426),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    height: 1.0,
                   ),
                 ),
-                const SizedBox(width: 14),
-                GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    CupertinoPageRoute(
-                        builder: (_) => const PartnerDashboardScreen()),
-                  ),
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF4F4F7),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFEEEEEE)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _RegisterOrb(
+                      label: activeEvent == null ? '이곳' : '변경',
+                      onTap: () => _openRegister(context, activeEvent),
                     ),
-                    child: const Icon(
-                      Icons.bar_chart_outlined,
-                      size: 20,
-                      color: Color(0xFFAAAAAA),
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        CupertinoPageRoute(
+                            builder: (_) => const PartnerDashboardScreen()),
+                      ),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF4F4F7),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFEEEEEE)),
+                        ),
+                        child: const Icon(
+                          Icons.bar_chart_outlined,
+                          size: 20,
+                          color: Color(0xFFAAAAAA),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),

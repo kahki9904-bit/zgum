@@ -22,6 +22,8 @@ class _IeumRequestDialogState extends State<IeumRequestDialog> {
   String? _requestId;
   bool _waiting = false;
   bool _loading = false;
+  String? _resultMessage;
+  bool _resultSuccess = false;
 
   @override
   void dispose() {
@@ -67,8 +69,22 @@ class _IeumRequestDialogState extends State<IeumRequestDialog> {
             myUserId: 'mock_user',
             myLocation: widget.location,
           );
-          if (mounted) Navigator.pop(context);
-        } catch (_) {}
+          if (mounted) {
+            setState(() {
+              _resultMessage = '이음이 연결됐습니다';
+              _resultSuccess = true;
+            });
+            await Future.delayed(const Duration(milliseconds: 1200));
+            if (mounted) Navigator.pop(context);
+          }
+        } catch (_) {
+          if (mounted) {
+            setState(() {
+              _resultMessage = '코드를 확인해 주세요';
+              _resultSuccess = false;
+            });
+          }
+        }
       }
     }
     if (mounted) setState(() => _loading = false);
@@ -78,9 +94,55 @@ class _IeumRequestDialogState extends State<IeumRequestDialog> {
   Widget build(BuildContext context) {
     return Center(
       child: ZGumDialog(
-        actions: ZGumButton(
-          label: _waiting ? '확인' : '신청',
-          onTap: _loading || _duration == null ? null : _confirm,
+        actions: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!_waiting) ...[
+              const Text(
+                '지금 곁에 있지 않는 사람과는\n이어지지 않습니다.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 20,
+                  color: Color(0xFFAAAAAA),
+                  height: 1.45,
+                  fontWeight: FontWeight.w300,
+                ),
+              ),
+              const SizedBox(height: 22),
+              Row(
+                children: [FriendDuration.oneDay, FriendDuration.threeMonths, FriendDuration.sixMonths]
+                    .map((d) {
+                  final sel = _duration == d;
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _duration = d),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: sel ? const Color(0xFF16213E) : const Color(0xFFF4F4F4),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(d.chipLabel,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: sel ? Colors.white : const Color(0xFF555555),
+                            )),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 14),
+            ],
+            ZGumButton(
+              label: _waiting ? '확인' : '신청',
+              onTap: _loading || _duration == null ? null : _confirm,
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -96,33 +158,6 @@ class _IeumRequestDialogState extends State<IeumRequestDialog> {
             ),
             const SizedBox(height: 20),
             if (!_waiting) ...[
-              Row(
-                children: [FriendDuration.oneDay, FriendDuration.threeMonths, FriendDuration.sixMonths]
-                    .map((d) {
-                  final sel = _duration == d;
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _duration = d),
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: sel ? const Color(0xFF16213E) : const Color(0xFFF4F4F4),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(d.chipLabel,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: sel ? Colors.white : const Color(0xFF555555),
-                            )),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
             ] else ...[
               TextField(
                 controller: _codeCtrl,
@@ -147,6 +182,19 @@ class _IeumRequestDialogState extends State<IeumRequestDialog> {
               const SizedBox(height: 8),
               const Text('상대방이 불러주는 번호를 입력하세요.',
                   style: ZGumDialogTextStyles.caption),
+              if (_resultMessage != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  _resultMessage!,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _resultSuccess
+                        ? const Color(0xFF16213E)
+                        : const Color(0xFFCC3333),
+                  ),
+                ),
+              ],
             ],
           ],
         ),

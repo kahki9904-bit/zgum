@@ -112,9 +112,11 @@ class _ShakePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(16, kShellCapsuleHeight + 14, 16, 18),
-      child: _ShakeDeviceStage(),
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final topPad = kShellCapsuleHeight + 14 - bottomInset;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, topPad, 16, 18),
+      child: const _ShakeDeviceStage(),
     );
   }
 }
@@ -291,8 +293,10 @@ class _PartnerEventPanel extends StatelessWidget {
     final featured = events.first;
     final rest = events.skip(1).toList();
 
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final topPad = kShellCapsuleHeight + 14 - bottomInset;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, kShellCapsuleHeight + 14, 16, 18),
+      padding: EdgeInsets.fromLTRB(16, topPad, 16, 18),
       child: Column(
         children: [
           SizedBox(

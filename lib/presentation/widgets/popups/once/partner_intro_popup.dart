@@ -43,11 +43,8 @@ Future<void> showPartnerIntroPopup(BuildContext context) async {
                 ),
                 SizedBox(height: 12),
                 Text(
-                  '본인의 이벤트를 등록하면\n'
-                  '주변의 지금 이용자들에게\n'
-                  '홍보됩니다.\n'
-                  '공연, 팝업, 버스킹처럼\n'
-                  '지금 알리고 싶은 어떤 이벤트도 등록할 수 있습니다.',
+                  '지금 알리고 싶은 어떠한 이벤트로 등록하여\n'
+                  '홍보 할 수있습니다.',
                   style: ZGumDialogTextStyles.body,
                 ),
                 SizedBox(height: 24),
