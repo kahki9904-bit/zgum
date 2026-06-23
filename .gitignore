@@ -17,6 +17,7 @@ secrets.env
 .svn/
 .swiftpm/
 migrate_working_dir/
+.codex_tmp/
 
 # IntelliJ related
 *.iml
@@ -38,6 +39,7 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/android/build/
 /coverage/
 
 # Symbolication related

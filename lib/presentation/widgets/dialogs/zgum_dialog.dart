@@ -98,8 +98,8 @@ class ZGumFaintIconBackground extends StatelessWidget {
               opacity: 0.026,
               child: ClipOval(
                 child: SizedBox(
-                  width: 220,
-                  height: 220,
+                  width: 260,
+                  height: 260,
                   child: Image.asset(
                     'assets/icon/app_icon.png',
                     fit: BoxFit.cover,

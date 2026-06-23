@@ -275,8 +275,8 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
           event: activeEvent, onClose: widget.onClose);
     }
     final formTopPadding = Platform.isIOS ? 18.0 : kShellPanelHandleContentGap;
-    final titleToPhotosGap = Platform.isIOS ? 14.0 : 40.0;
-    final photosToControlsGap = Platform.isIOS ? 10.0 : 32.0;
+    final titleToPhotosGap = Platform.isIOS ? 10.0 : 40.0;
+    final photosToControlsGap = Platform.isIOS ? 4.0 : 32.0;
     final bottomSafe = MediaQuery.paddingOf(context).bottom;
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),

@@ -24,13 +24,13 @@ class ZGumOrbButton extends StatelessWidget {
           padding: const EdgeInsets.all(2),
           child: Container(
             decoration: const BoxDecoration(
-              color: Color(0xFF071426),
+              color: Color(0x80071426),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Color(0x24071426),
-                  blurRadius: 16,
-                  offset: Offset(0, 7),
+                  color: Color(0x1C071426),
+                  blurRadius: 14,
+                  offset: Offset(0, 6),
                 ),
               ],
             ),
@@ -45,7 +45,7 @@ class ZGumOrbButton extends StatelessWidget {
                       child: Image.asset(
                         'assets/icon/app_icon.png',
                         fit: BoxFit.cover,
-                        opacity: const AlwaysStoppedAnimation<double>(0.55),
+                        opacity: const AlwaysStoppedAnimation<double>(0.22),
                       ),
                     ),
                   ),
@@ -56,8 +56,8 @@ class ZGumOrbButton extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Color(0x70071426),
-                        Color(0x90071426),
+                        Color(0x24071426),
+                        Color(0x42071426),
                       ],
                     ),
                   ),
@@ -73,7 +73,7 @@ class ZGumOrbButton extends StatelessWidget {
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: const Color(0xFFE8EDF7),
-                              width: 1.2,
+                              width: 2.2,
                             ),
                           ),
                         ),
@@ -83,8 +83,8 @@ class ZGumOrbButton extends StatelessWidget {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: const Color(0x807DEAFF),
-                                width: 1,
+                                color: const Color(0x997DEAFF),
+                                width: 1.4,
                               ),
                             ),
                           ),

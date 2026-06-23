@@ -99,7 +99,7 @@ class _IeumRequestDialogState extends State<IeumRequestDialog> {
           children: [
             if (!_waiting) ...[
               const Text(
-                '지금 곁에 있지 않는 사람과는\n이어지지 않습니다.',
+                '지금 곁에 있지 않으면\n이어지지 않습니다.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 20,
