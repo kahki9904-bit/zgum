@@ -30,7 +30,7 @@ import '../../../presentation/widgets/sheets/kakao_place_detail_sheet.dart';
 import '../../../data/models/check_in_record.dart';
 import '../../user_room/providers/auth_provider.dart';
 import '../../user_room/providers/check_in_provider.dart';
-import '../engines/kakao_map_engine.dart';
+import '../engines/google_map_engine.dart';
 import '../providers/map_filter_provider.dart';
 import '../providers/kakao_search_provider.dart';
 import '../../../core/providers/partner_my_events_provider.dart';
@@ -64,7 +64,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   final bool _partnerEventSeen = false;
 
   // ── 지도 엔진 (여기만 바꾸면 지도 교체 완료) ─────────────────────────────────
-  final MapEngine _engine = KakaoMapEngine();
+  final MapEngine _engine = GoogleMapEngine();
 
   final _locationService = LocationService();
   final CulturalEventRepository _publicRepo = AppConfig.hasTourApiKey
