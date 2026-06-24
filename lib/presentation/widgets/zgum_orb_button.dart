@@ -24,11 +24,11 @@ class ZGumOrbButton extends StatelessWidget {
           padding: const EdgeInsets.all(2),
           child: Container(
             decoration: const BoxDecoration(
-              color: Color(0x80071426),
+              color: Color(0x746D5633),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Color(0x1C071426),
+                  color: Color(0x286D5633),
                   blurRadius: 14,
                   offset: Offset(0, 6),
                 ),
@@ -56,8 +56,8 @@ class ZGumOrbButton extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Color(0x24071426),
-                        Color(0x42071426),
+                        Color(0x34E7C77B),
+                        Color(0x507B5B2C),
                       ],
                     ),
                   ),
@@ -72,7 +72,7 @@ class ZGumOrbButton extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(0xFFE8EDF7),
+                              color: const Color(0xFFE2C98C),
                               width: 2.2,
                             ),
                           ),
@@ -83,7 +83,7 @@ class ZGumOrbButton extends StatelessWidget {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: const Color(0x997DEAFF),
+                                color: const Color(0xA8B88A43),
                                 width: 1.4,
                               ),
                             ),

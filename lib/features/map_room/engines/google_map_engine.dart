@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -19,6 +20,19 @@ const _mapStyle = '''
   {"featureType":"road","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
   {"featureType":"landscape.man_made","elementType":"geometry.fill","stylers":[{"color":"#ede8e0"}]},
   {"featureType":"landscape.man_made","elementType":"geometry.stroke","stylers":[{"color":"#c8c0b8"}]}
+]
+''';
+
+const _iosMapStyle = '''
+[
+  {"featureType":"road","elementType":"geometry.fill","stylers":[{"color":"#ffffff"}]},
+  {"featureType":"road","elementType":"geometry.stroke","stylers":[{"color":"#e0e0e0"}]},
+  {"featureType":"road.highway","elementType":"geometry.fill","stylers":[{"color":"#f5f0e8"}]},
+  {"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#e0d8c8"}]},
+  {"featureType":"road","elementType":"labels.text","stylers":[{"visibility":"off"}]},
+  {"featureType":"road","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
+  {"featureType":"landscape.man_made","elementType":"geometry.fill","stylers":[{"color":"#ede8e0"}]},
+  {"featureType":"landscape.man_made","elementType":"geometry.stroke","stylers":[{"color":"#b9b2a8"},{"weight":2}]}
 ]
 ''';
 
@@ -356,8 +370,8 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
       ),
       markers: _gMarkers,
       polylines: _polylines,
-      style: _mapStyle,
-      buildingsEnabled: false,
+      style: Platform.isIOS ? _iosMapStyle : _mapStyle,
+      buildingsEnabled: Platform.isIOS,
       mapToolbarEnabled: false,
       myLocationButtonEnabled: false,
       zoomControlsEnabled: false,
