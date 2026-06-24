@@ -191,7 +191,7 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
   Future<kakao.KImage> _getUserMarkerImage() async {
     if (_userMarkerImage != null) return _userMarkerImage!;
     final spec = MapMarkerLayoutSpec.current;
-    final double tapSize = Platform.isIOS ? 30 : spec.bitmapSize;
+    final double tapSize = spec.bitmapSize;
     final markerWidget = Material(
       color: Colors.transparent,
       child: SizedBox(

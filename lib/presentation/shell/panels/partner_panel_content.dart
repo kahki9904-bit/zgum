@@ -75,6 +75,10 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
       _photos.add(File(picked.path));
       _photoCtrls.add(TextEditingController());
     });
+    final newIndex = _photos.length - 1;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _showDescOverlay(newIndex);
+    });
   }
 
   void _deletePhoto(int index) {
@@ -330,7 +334,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      flex: 4,
+                      flex: 5,
                       child: AspectRatio(aspectRatio: 1.2, child: _buildPhotoCell(0)),
                     ),
                     const SizedBox(width: 6),
@@ -364,19 +368,6 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                         ],
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    for (int i = 0; i < 3; i++) ...[
-                      if (i > 0) const SizedBox(width: 6),
-                      Expanded(
-                        child: i < _photos.length
-                            ? _buildDescField(i)
-                            : const SizedBox(height: 26),
-                      ),
-                    ],
                   ],
                 ),
                 SizedBox(height: photosToControlsGap),
@@ -480,44 +471,76 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
 
   Widget _buildPhotoCell(int i) {
     if (i < _photos.length) {
-      final isRep = i == 0;
-      final photoWidget = Container(
-        decoration: isRep
-            ? BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFFE63946),
-                  width: 8.0,
-                ),
-              )
-            : null,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(isRep ? 6 : 10),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.file(_photos[i], fit: BoxFit.cover),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: GestureDetector(
-                  onTap: () => _deletePhoto(i),
-                  child: Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close, color: Colors.white, size: 12),
+      final photoWidget = ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.file(_photos[i], fit: BoxFit.cover),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: GestureDetector(
+                onTap: () => _deletePhoto(i),
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
                   ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 12),
                 ),
               ),
-            ],
-          ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _photoCtrls[i],
+                builder: (_, value, __) {
+                  if (value.text.isEmpty) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      color: Colors.black.withValues(alpha: 0.3),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.edit, color: Colors.white.withValues(alpha: 0.75), size: 10),
+                          const SizedBox(width: 3),
+                          Text(
+                            '설명 추가',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.75),
+                              fontSize: 9,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    color: Colors.black.withValues(alpha: 0.45),
+                    child: Text(
+                      value.text,
+                      style: const TextStyle(color: Colors.white, fontSize: 9),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       );
 
-      return DragTarget<int>(
+      return GestureDetector(
+        onTap: () {
+          if (!_submitting) _showDescOverlay(i);
+        },
+        child: DragTarget<int>(
         onWillAcceptWithDetails: (details) => details.data != i,
         onAcceptWithDetails: (details) => _swapPhotos(details.data, i),
         builder: (context, candidateData, _) {
@@ -556,6 +579,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
             ),
           );
         },
+        ),
       );
     }
 
@@ -594,33 +618,6 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     );
   }
 
-  Widget _buildDescField(int i) {
-    return GestureDetector(
-      onTap: () => _showDescOverlay(i),
-      child: Container(
-        height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F8F8),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: ValueListenableBuilder<TextEditingValue>(
-          valueListenable: _photoCtrls[i],
-          builder: (_, value, __) => Text(
-            value.text.isEmpty ? '내용' : value.text,
-            style: TextStyle(
-              fontSize: 11,
-              color: value.text.isEmpty
-                  ? const Color(0xFFCCCCCC)
-                  : const Color(0xFF333333),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 // ── 제목/설명 입력 오버레이 바 ────────────────────────────────────────────────
