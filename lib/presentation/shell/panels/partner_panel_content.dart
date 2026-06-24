@@ -11,8 +11,8 @@ import '../../../promotions/free_use/free_use_service.dart';
 import '../../../services/location_service.dart';
 import '../../../services/device_id_service.dart';
 import '../../../services/firestore_partner_event_service.dart';
-import '../../widgets/dialogs/camera_chooser_popup.dart';
 import '../../widgets/dialogs/zgum_dialog.dart';
+import '../../widgets/dialogs/photo_viewer_popup.dart';
 import '../../widgets/popups/confirm/age_confirm_popup.dart';
 import '../../widgets/popups/confirm/extend_confirm_popup.dart';
 import '../../widgets/popups/confirm/terminate_confirm_popup.dart';
@@ -29,13 +29,9 @@ class PartnerPanelContent extends ConsumerStatefulWidget {
 
 class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
   final _titleCtrl = TextEditingController();
+  final _contentCtrl = TextEditingController();
   final _picker = ImagePicker();
-  OverlayEntry? _titleOverlay;
-  FocusNode? _titleFocusNode;
-  OverlayEntry? _descOverlay;
-  FocusNode? _descFocusNode;
   final List<File> _photos = [];
-  final List<TextEditingController> _photoCtrls = [];
   int _selectedMinutes = 60;
   bool _submitting = false;
 
@@ -62,8 +58,6 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
   }
 
   Future<void> _takePhoto() async {
-    final shown = await isCameraChooserPopupShown();
-    if (!shown && mounted) await showCameraChooserPopup(context);
     if (!mounted) return;
     final picked = await _picker.pickImage(
       source: ImageSource.camera,
@@ -71,35 +65,16 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
       maxWidth: 1080,
     );
     if (picked == null || !mounted) return;
-    setState(() {
-      _photos.add(File(picked.path));
-      _photoCtrls.add(TextEditingController());
-    });
-    final newIndex = _photos.length - 1;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _showDescOverlay(newIndex);
-    });
+    setState(() => _photos.add(File(picked.path)));
   }
 
   void _deletePhoto(int index) {
-    setState(() {
-      _photoCtrls[index].dispose();
-      _photos.removeAt(index);
-      _photoCtrls.removeAt(index);
-    });
+    setState(() => _photos.removeAt(index));
   }
 
-  void _swapPhotos(int fromIndex, int toIndex) {
-    if (fromIndex == toIndex) return;
-    if (fromIndex >= _photos.length || toIndex >= _photos.length) return;
-    setState(() {
-      final tempPhoto = _photos[fromIndex];
-      _photos[fromIndex] = _photos[toIndex];
-      _photos[toIndex] = tempPhoto;
-      final tempCtrl = _photoCtrls[fromIndex];
-      _photoCtrls[fromIndex] = _photoCtrls[toIndex];
-      _photoCtrls[toIndex] = tempCtrl;
-    });
+  Future<void> _openPhotoViewer(int index) async {
+    if (_photos.isEmpty) return;
+    await showPhotoViewerPopup(context, _photos, initialIndex: index);
   }
 
   Future<void> _submit() async {
@@ -124,15 +99,8 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     final locationResult = await LocationService().acquireLocation();
     if (!mounted) return;
 
-    final photoList = List.generate(
-      _photos.length,
-      (i) => PartnerPhoto(
-        path: _photos[i].path,
-        title: _photoCtrls[i].text.trim().isEmpty
-            ? null
-            : _photoCtrls[i].text.trim(),
-      ),
-    );
+    final photoList =
+        _photos.map((f) => PartnerPhoto(path: f.path)).toList();
 
     final now = DateTime.now();
     final deviceId = await DeviceIdService.getId();
@@ -141,7 +109,9 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
       partnerId: deviceId,
       title: title,
       venue: title,
-      message: null,
+      message: _contentCtrl.text.trim().isEmpty
+          ? null
+          : _contentCtrl.text.trim(),
       location: locationResult.position,
       geoHash: 'mock',
       startsAt: now,
@@ -184,10 +154,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '등록 실패',
-                      style: ZGumDialogTextStyles.sectionTitle,
-                    ),
+                    Text('등록 실패', style: ZGumDialogTextStyles.sectionTitle),
                     SizedBox(height: 10),
                     Text(
                       '저장 중 오류가 발생했습니다.\n잠시 후 다시 시도해 주세요.',
@@ -209,65 +176,10 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     widget.onClose();
   }
 
-  void _showDescOverlay(int index) {
-    _descOverlay?.remove();
-    _descFocusNode?.dispose();
-    _descFocusNode = FocusNode();
-    final node = _descFocusNode!;
-    _descOverlay = OverlayEntry(
-      builder: (_) => _TitleInputBar(
-        controller: _photoCtrls[index],
-        focusNode: node,
-        onClose: _closeDescOverlay,
-      ),
-    );
-    Overlay.of(context).insert(_descOverlay!);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) node.requestFocus();
-    });
-  }
-
-  void _closeDescOverlay() {
-    FocusScope.of(context).unfocus();
-    _descOverlay?.remove();
-    _descOverlay = null;
-    setState(() {});
-  }
-
-  void _showTitleOverlay() {
-    _titleFocusNode?.dispose();
-    _titleFocusNode = FocusNode();
-    final node = _titleFocusNode!;
-    _titleOverlay = OverlayEntry(
-      builder: (_) => _TitleInputBar(
-        controller: _titleCtrl,
-        focusNode: node,
-        onClose: _closeTitleOverlay,
-      ),
-    );
-    Overlay.of(context).insert(_titleOverlay!);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) node.requestFocus();
-    });
-  }
-
-  void _closeTitleOverlay() {
-    FocusScope.of(context).unfocus();
-    _titleOverlay?.remove();
-    _titleOverlay = null;
-    setState(() {});
-  }
-
   @override
   void dispose() {
-    _titleOverlay?.remove();
-    _titleFocusNode?.dispose();
-    _descOverlay?.remove();
-    _descFocusNode?.dispose();
     _titleCtrl.dispose();
-    for (final c in _photoCtrls) {
-      c.dispose();
-    }
+    _contentCtrl.dispose();
     super.dispose();
   }
 
@@ -278,10 +190,12 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
       return _ActiveEventWaitingView(
           event: activeEvent, onClose: widget.onClose);
     }
-    final formTopPadding = Platform.isIOS ? 18.0 : kShellPanelHandleContentGap;
-    final titleToPhotosGap = Platform.isIOS ? 10.0 : 40.0;
-    final photosToControlsGap = Platform.isIOS ? 4.0 : 32.0;
+
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 100;
+    final formTopPadding =
+        Platform.isIOS ? 18.0 : kShellPanelHandleContentGap;
     final bottomSafe = MediaQuery.paddingOf(context).bottom;
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       behavior: HitTestBehavior.opaque,
@@ -292,295 +206,243 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
               24,
               formTopPadding,
               24,
-              82 + bottomSafe,
+              keyboardVisible ? 16 : 82 + bottomSafe,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '제목',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF555555)),
+                TextField(
+                  controller: _titleCtrl,
+                  style: const TextStyle(
+                      fontSize: 14, color: Color(0xFF1A1A2E)),
+                  cursorColor: const Color(0xFF16213E),
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    hintText: '제목 (필수)',
+                    hintStyle: const TextStyle(
+                        color: Color(0xFFCCCCCC), fontSize: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    filled: true,
+                    fillColor: const Color(0xFFF8F8F8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                          color: Color(0xFF16213E), width: 1.5),
+                    ),
+                    disabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    isDense: true,
+                  ),
                 ),
                 const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: _showTitleOverlay,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8F8F8),
+                TextField(
+                  controller: _contentCtrl,
+                  maxLines: 2,
+                  style: const TextStyle(
+                      fontSize: 13, color: Color(0xFF1A1A2E)),
+                  cursorColor: const Color(0xFF16213E),
+                  decoration: InputDecoration(
+                    hintText: '내용',
+                    hintStyle: const TextStyle(
+                        color: Color(0xFFCCCCCC), fontSize: 13),
+                    contentPadding: const EdgeInsets.all(14),
+                    filled: true,
+                    fillColor: const Color(0xFFF8F8F8),
+                    border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
                     ),
-                    child: ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _titleCtrl,
-                      builder: (_, value, __) => Text(
-                        value.text.isEmpty ? '필수' : value.text,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: value.text.isEmpty
-                              ? const Color(0xFFCCCCCC)
-                              : const Color(0xFF1A1A2E),
-                        ),
-                      ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                          color: Color(0xFF16213E), width: 1.5),
+                    ),
+                    disabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
                     ),
                   ),
                 ),
-                SizedBox(height: titleToPhotosGap),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 5,
-                      child: AspectRatio(aspectRatio: 1.2, child: _buildPhotoCell(0)),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      flex: 6,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(child: AspectRatio(aspectRatio: 1.2, child: _buildPhotoCell(1))),
-                              const SizedBox(width: 6),
-                              Expanded(child: AspectRatio(aspectRatio: 1.2, child: _buildPhotoCell(2))),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          FittedBox(
-                            fit: BoxFit.fitWidth,
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.swap_horiz, size: 16, color: Color(0xFFBBBBBB)),
-                                SizedBox(width: 4),
-                                Text(
-                                  '눌러서 이동',
-                                  style: TextStyle(fontSize: 14, color: Color(0xFFBBBBBB)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: photosToControlsGap),
-                Row(
-                  children: [
-                    const Text(
-                      '노출시간',
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF555555)),
-                    ),
-                    const SizedBox(width: 12),
-                    ...[60, 120, 180].map((min) {
-                      final selected = _selectedMinutes == min;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedMinutes = min),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? const Color(0xFF16213E)
-                                  : const Color(0xFFF4F4F7),
-                              borderRadius: BorderRadius.circular(7),
-                            ),
-                            child: Text(
-                              '${min ~/ 60}시간',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: selected
-                                    ? Colors.white
-                                    : const Color(0xFF888888),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                    const Spacer(),
-                  ],
-                ),
+                const SizedBox(height: 14),
+                _buildPhotoRow(),
+                if (!keyboardVisible) ...[
+                  const SizedBox(height: 16),
+                  _buildTimeSelection(),
+                ],
               ],
             ),
           ),
-          Positioned(
-            left: 24,
-            right: 24,
-            bottom: 18 + bottomSafe,
-            child: Center(
-              child: SizedBox(
-                width: MediaQuery.sizeOf(context).width * 0.5,
-                child: FutureBuilder<(bool, bool)>(
-                  future: () async {
-                    final isAdmin = ref.read(adminModeProvider);
-                    if (isAdmin) return (true, true);
-                    final active = await FreeUseService.instance.isActive();
-                    final canRegister = active
-                        ? await FreeUseService.instance.canRegisterToday()
-                        : true;
-                    return (active, canRegister);
-                  }(),
-                  builder: (context, snapshot) {
-                    final isFree = snapshot.data?.$1 == true;
-                    final canRegister = snapshot.data?.$2 != false;
-                    final disabled = _submitting || !canRegister;
-                    return GestureDetector(
-                      onTap: disabled ? null : _submit,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        decoration: BoxDecoration(
-                          color: disabled
-                              ? const Color(0xFFCCCCCC)
-                              : const Color(0xFF1A1A2E),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          isFree ? '무료이용' : '등록',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 2.0,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+          if (!keyboardVisible)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 18 + bottomSafe,
+              child: Center(
+                child: SizedBox(
+                  width: MediaQuery.sizeOf(context).width * 0.5,
+                  child: _buildRegisterButton(),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildPhotoCell(int i) {
-    if (i < _photos.length) {
-      final photoWidget = ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Stack(
-          fit: StackFit.expand,
+  Widget _buildPhotoRow() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Row(
           children: [
-            Image.file(_photos[i], fit: BoxFit.cover),
-            Positioned(
-              top: 4,
-              right: 4,
-              child: GestureDetector(
-                onTap: () => _deletePhoto(i),
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 12),
+            for (int i = 0; i < 3; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(
+                child: AspectRatio(
+                  aspectRatio: 1.0,
+                  child: _buildPhotoSlot(i),
                 ),
               ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _photoCtrls[i],
-                builder: (_, value, __) {
-                  if (value.text.isEmpty) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      color: Colors.black.withValues(alpha: 0.3),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.edit, color: Colors.white.withValues(alpha: 0.75), size: 10),
-                          const SizedBox(width: 3),
-                          Text(
-                            '설명 추가',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.75),
-                              fontSize: 9,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                    color: Colors.black.withValues(alpha: 0.45),
-                    child: Text(
-                      value.text,
-                      style: const TextStyle(color: Colors.white, fontSize: 9),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  );
-                },
-              ),
-            ),
+            ],
           ],
         ),
-      );
+        if (_photos.length > 1) ...[
+          const SizedBox(height: 6),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.swap_horiz_rounded,
+                  size: 13, color: Color(0xFFBBBBBB)),
+              SizedBox(width: 4),
+              Text(
+                '자리이동',
+                style: TextStyle(fontSize: 10, color: Color(0xFFBBBBBB)),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
 
-      return GestureDetector(
-        onTap: () {
-          if (!_submitting) _showDescOverlay(i);
-        },
-        child: DragTarget<int>(
-        onWillAcceptWithDetails: (details) => details.data != i,
-        onAcceptWithDetails: (details) => _swapPhotos(details.data, i),
-        builder: (context, candidateData, _) {
-          return LongPressDraggable<int>(
-            data: i,
-            delay: const Duration(milliseconds: 300),
-            feedback: SizedBox(
-              width: 72,
-              height: 72,
-              child: Opacity(
-                opacity: 0.85,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.file(_photos[i], fit: BoxFit.cover),
+  Widget _buildPhotoSlot(int i) {
+    if (i < _photos.length) {
+      return LayoutBuilder(builder: (context, constraints) {
+        final size = constraints.maxWidth;
+        return DragTarget<int>(
+          onAcceptWithDetails: (details) {
+            final from = details.data;
+            if (from == i) return;
+            setState(() {
+              final item = _photos.removeAt(from);
+              _photos.insert(i, item);
+            });
+          },
+          builder: (context, candidateData, _) {
+            return GestureDetector(
+              onTap: () => _openPhotoViewer(i),
+              behavior: HitTestBehavior.opaque,
+              child: Draggable<int>(
+                data: i,
+                feedback: Material(
+                  color: Colors.transparent,
+                  child: Transform.scale(
+                    scale: 1.08,
+                    child: SizedBox(
+                      width: size,
+                      height: size,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child:
+                            Image.file(_photos[i], fit: BoxFit.cover),
+                      ),
+                    ),
+                  ),
+                ),
+                childWhenDragging: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0E4EC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: const Color(0xFFB0B8CC), width: 1.5),
+                  ),
+                ),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 120),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: candidateData.isNotEmpty
+                        ? Border.all(
+                            color: const Color(0xFF1A1A2E), width: 2)
+                        : null,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.file(_photos[i], fit: BoxFit.cover),
+                        if (i == 0)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 3),
+                              color: const Color(0xFF1A1A2E)
+                                  .withValues(alpha: 0.7),
+                              alignment: Alignment.center,
+                              child: const Text(
+                                '표지',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: GestureDetector(
+                            onTap: () => _deletePhoto(i),
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close,
+                                  color: Colors.white, size: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-            childWhenDragging: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0E0E0),
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              decoration: candidateData.isNotEmpty
-                  ? BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xFF16213E),
-                        width: 2,
-                      ),
-                    )
-                  : null,
-              child: photoWidget,
-            ),
-          );
-        },
-        ),
-      );
+            );
+          },
+        );
+      });
     }
 
     if (i == _photos.length && _photos.length < 3) {
@@ -590,18 +452,22 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
           decoration: BoxDecoration(
             color: const Color(0xFFF4F4F7),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFDDDDDD), width: 1.5),
+            border: Border.all(
+                color: const Color(0xFFDDDDDD), width: 1.5),
           ),
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.add_a_photo_outlined,
-                    size: 20, color: Color(0xFFAAAAAA)),
+                    size: 22, color: Color(0xFFAAAAAA)),
                 if (i == 0) ...[
                   const SizedBox(height: 4),
-                  const Text('필수',
-                      style: TextStyle(fontSize: 11, color: Color(0xFFCC3333))),
+                  const Text(
+                    '필수',
+                    style:
+                        TextStyle(fontSize: 10, color: Color(0xFFCC3333)),
+                  ),
                 ],
               ],
             ),
@@ -612,94 +478,86 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F4F7),
+        color: const Color(0xFFF0F0F0),
         borderRadius: BorderRadius.circular(10),
       ),
     );
   }
 
-}
-
-// ── 제목/설명 입력 오버레이 바 ────────────────────────────────────────────────
-
-class _TitleInputBar extends StatefulWidget {
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final VoidCallback onClose;
-  const _TitleInputBar(
-      {required this.controller,
-      required this.focusNode,
-      required this.onClose});
-
-  @override
-  State<_TitleInputBar> createState() => _TitleInputBarState();
-}
-
-class _TitleInputBarState extends State<_TitleInputBar> {
-  @override
-  Widget build(BuildContext context) {
-    final bottom =
-        Platform.isIOS ? 0.0 : MediaQuery.viewInsetsOf(context).bottom;
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: widget.onClose,
-            child: const ColoredBox(color: Colors.transparent),
-          ),
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: bottom,
-          child: Material(
-            color: Colors.white,
-            elevation: 0,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 10, 12, 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: widget.controller,
-                      focusNode: widget.focusNode,
-                      style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF1A1A2E),
-                          decoration: TextDecoration.none),
-                      cursorColor: const Color(0xFF16213E),
-                      decoration: const InputDecoration(
-                        hintText: '이벤트 제목',
-                        hintStyle:
-                            TextStyle(color: Color(0xFFCCCCCC), fontSize: 14),
-                        border: InputBorder.none,
-                        isDense: true,
-                      ),
-                      onSubmitted: (_) => widget.onClose(),
-                    ),
+  Widget _buildTimeSelection() {
+    return Row(
+      children: [60, 120, 180].map((min) {
+        final selected = _selectedMinutes == min;
+        final isLast = min == 180;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: isLast ? 0 : 6),
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedMinutes = min),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? const Color(0xFF16213E)
+                      : const Color(0xFFF4F4F7),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '${min ~/ 60}시간',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: selected
+                        ? Colors.white
+                        : const Color(0xFF888888),
                   ),
-                  TextButton(
-                    onPressed: widget.onClose,
-                    child: const Text(
-                      '확인',
-                      style: TextStyle(
-                        color: Color(0xFF1A1A2E),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildRegisterButton() {
+    return FutureBuilder<(bool, bool)>(
+      future: () async {
+        final isAdmin = ref.read(adminModeProvider);
+        if (isAdmin) return (true, true);
+        final active = await FreeUseService.instance.isActive();
+        final canRegister =
+            active ? await FreeUseService.instance.canRegisterToday() : true;
+        return (active, canRegister);
+      }(),
+      builder: (context, snapshot) {
+        final isFree = snapshot.data?.$1 == true;
+        final canRegister = snapshot.data?.$2 != false;
+        final disabled = _submitting || !canRegister;
+        return GestureDetector(
+          onTap: disabled ? null : _submit,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            decoration: BoxDecoration(
+              color: disabled
+                  ? const Color(0xFFCCCCCC)
+                  : const Color(0xFF1A1A2E),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              isFree ? '무료이용' : '등록',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 2.0,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -796,7 +654,8 @@ class _ActiveEventWaitingViewState
       }
       if (isFreeActive) await FreeUseService.instance.recordRegistration();
 
-      final newExpiresAt = widget.event.expiresAt.add(const Duration(hours: 1));
+      final newExpiresAt =
+          widget.event.expiresAt.add(const Duration(hours: 1));
       await ref
           .read(firestorePartnerEventServiceProvider)
           .extend(widget.event.id, newExpiresAt);
@@ -854,8 +713,9 @@ class _ActiveEventWaitingViewState
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w200,
-              color:
-                  isExpired ? const Color(0xFFAAAAAA) : const Color(0xFF1A1A2E),
+              color: isExpired
+                  ? const Color(0xFFAAAAAA)
+                  : const Color(0xFF1A1A2E),
               letterSpacing: 2,
             ),
           ),
@@ -887,13 +747,16 @@ class _ActiveEventWaitingViewState
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: (_extending || widget.event.extensionCount >= 1) ? null : _showExtendConfirm,
+                    onTap: (_extending || widget.event.extensionCount >= 1)
+                        ? null
+                        : _showExtendConfirm,
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       decoration: BoxDecoration(
-                        color: (_extending || widget.event.extensionCount >= 1)
-                            ? const Color(0xFFAAAAAA)
-                            : const Color(0xFF1A1A2E),
+                        color:
+                            (_extending || widget.event.extensionCount >= 1)
+                                ? const Color(0xFFAAAAAA)
+                                : const Color(0xFF1A1A2E),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       alignment: Alignment.center,

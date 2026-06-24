@@ -267,14 +267,14 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               title: e.title,
               venue: e.venue,
               address: '현재 위치',
-              description: e.title,
+              description: e.message ?? '',
               startDate: e.startsAt,
               endDateTime: e.expiresAt,
               location: e.location,
               category: EventCategory.partner,
               isFree: false,
               source: EventSource.partner,
-              partnerMessage: e.message,
+              partnerMessage: e.title,
               isAdultOnly: e.isAdultOnly,
             ))
         .toList();
