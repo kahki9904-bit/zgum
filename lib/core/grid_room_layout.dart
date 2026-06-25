@@ -5,6 +5,7 @@ class GridRoomLayoutSpec {
   const GridRoomLayoutSpec({
     required this.topOffset,
     required this.headerPadding,
+    required this.headerMinHeight,
     required this.orbSize,
     required this.controlHeight,
     required this.controlPadding,
@@ -12,6 +13,7 @@ class GridRoomLayoutSpec {
 
   final double topOffset;
   final EdgeInsets headerPadding;
+  final double headerMinHeight;
   final double orbSize;
   final double controlHeight;
   final EdgeInsets controlPadding;
@@ -19,6 +21,7 @@ class GridRoomLayoutSpec {
   static const ios = GridRoomLayoutSpec(
     topOffset: 48,
     headerPadding: EdgeInsets.fromLTRB(20, 0, 18, 18),
+    headerMinHeight: 82,
     orbSize: 82,
     controlHeight: 48,
     controlPadding: EdgeInsets.symmetric(horizontal: 20),
@@ -27,8 +30,9 @@ class GridRoomLayoutSpec {
   static const android = GridRoomLayoutSpec(
     topOffset: 48,
     headerPadding: EdgeInsets.fromLTRB(20, 0, 18, 18),
+    headerMinHeight: 100,
     orbSize: 82,
-    controlHeight: 48,
+    controlHeight: 64,
     controlPadding: EdgeInsets.symmetric(horizontal: 20),
   );
 

@@ -73,7 +73,7 @@ class EventCategoryBadge extends StatelessWidget {
       children: [
         _Chip(label: category.label, color: color),
         if (isAdultOnly)
-          const _Chip(label: '19+', color: Color(0xFFE74C3C), icon: Icons.lock_outline),
+          const _Chip(label: '신분증확인', color: Color(0xFFE74C3C), icon: Icons.lock_outline),
       ],
     );
   }

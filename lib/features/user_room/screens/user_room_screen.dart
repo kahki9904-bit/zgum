@@ -67,22 +67,25 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
               SizedBox(height: topPad + layout.topOffset),
               Padding(
                 padding: layout.headerPadding,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _IeumOrb(onTap: _showIeumRequestDialog),
-                        const _SettingsSection(),
-                      ],
-                    ),
-                    const Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: _HeaderHint(text: '흔적을 남겨 보세요'),
-                    ),
-                  ],
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: layout.headerMinHeight),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _IeumOrb(onTap: _showIeumRequestDialog),
+                          const _SettingsSection(),
+                        ],
+                      ),
+                      const Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: _HeaderHint(text: '흔적을 남겨 보세요'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               _TraceGridControls(
