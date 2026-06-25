@@ -8,7 +8,7 @@ import '../../data/repositories/admin/filter_policy_repository.dart';
 import '../../data/repositories/admin/account_management_repository.dart';
 import '../../features/partner_room/data/repositories/partner_repository.dart';
 import '../../services/push_service.dart';
-import '../../dev/mock_auth_repository.dart';
+import '../../firebase/firebase_auth_repository.dart';
 import '../../dev/mock_trace_repository.dart';
 import '../../dev/mock_trace_sync_queue.dart';
 import '../../dev/mock_partner_repository.dart';
@@ -25,7 +25,7 @@ import '../../dev/mock_filter_policy_repository.dart';
 //   3. UI 코드 변경 없음
 
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => MockAuthRepository(),
+  (ref) => FirebaseAuthRepository(),
 );
 
 final traceRepositoryProvider = Provider<TraceRepository>(
