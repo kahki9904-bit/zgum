@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../core/interfaces/map_engine.dart';
@@ -131,8 +130,6 @@ class _GoogleMapView extends StatefulWidget {
 class _GoogleMapViewState extends State<_GoogleMapView> {
   final Map<int, BitmapDescriptor> _bitmapCache = {};
   BitmapDescriptor? _userBitmap;
-  BitmapDescriptor? _registeredBitmap;
-  ui.Image? _appIconImage;
   Set<Marker> _gMarkers = {};
   Set<Polyline> _polylines = {};
   bool _building = false;
@@ -147,7 +144,6 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
       _dpr = newDpr;
       _bitmapCache.clear();
       _userBitmap = null;
-      _registeredBitmap = null;
     }
   }
 
@@ -166,7 +162,6 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
   @override
   void dispose() {
     widget.controller._native?.dispose();
-    _appIconImage?.dispose();
     super.dispose();
   }
 
@@ -194,19 +189,23 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
       marker.category == MarkerCategory.other ||
       marker.category == MarkerCategory.cinema;
 
-  bool _isRegisteredMarker(MapMarkerModel marker) => marker.isPartner;
+  Color _centerColorForMarker(MapMarkerModel marker, bool isSearch) {
+    if (marker.isPartner) {
+      return const Color(0xFFE0524D);
+    }
+    if (isSearch) {
+      return Color(widget.colorForMarker(marker));
+    }
+    return const Color(0xFFE4C67E);
+  }
 
   Future<BitmapDescriptor> _getMarkerBitmap(MapMarkerModel marker) async {
-    if (_isRegisteredMarker(marker)) return _getRegisteredBitmap();
-
     final isSearch = _isSearchMarker(marker);
     final fillColor =
         isSearch ? Colors.white : Color(widget.colorForMarker(marker));
     final borderColor =
         isSearch ? Color(widget.colorForMarker(marker)) : Colors.white;
-    final centerColor = isSearch
-        ? Color(widget.colorForMarker(marker))
-        : const Color(0xFF9EEEFF);
+    final centerColor = _centerColorForMarker(marker, isSearch);
     final cacheKey = Object.hash(
       fillColor.toARGB32(),
       borderColor.toARGB32(),
@@ -230,108 +229,6 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
       centerColor: Colors.white.withValues(alpha: 0.78),
     );
     return _userBitmap!;
-  }
-
-  Future<BitmapDescriptor> _getRegisteredBitmap() async {
-    if (_registeredBitmap != null) return _registeredBitmap!;
-    final icon = await _loadAppIconImage();
-    _registeredBitmap = await _buildRegisteredBubbleBitmap(icon);
-    return _registeredBitmap!;
-  }
-
-  Future<ui.Image> _loadAppIconImage() async {
-    if (_appIconImage != null) return _appIconImage!;
-    final data = await rootBundle.load('assets/icon/app_icon.png');
-    final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
-    final frame = await codec.getNextFrame();
-    _appIconImage = frame.image;
-    return _appIconImage!;
-  }
-
-  Future<BitmapDescriptor> _buildRegisteredBubbleBitmap(ui.Image icon) async {
-    final spec = MapMarkerLayoutSpec.current;
-    final double size = spec.bitmapSize;
-    final double pinS = spec.pinSize;
-    final double cx = size / 2;
-    final double cy = size / 2;
-    final int imgSize = (size * _dpr).toInt();
-    final bodyWidth = pinS * 1.28;
-    final bodyHeight = pinS * 0.96;
-    final bodyRect = Rect.fromCenter(
-      center: Offset(cx, cy - pinS * 0.08),
-      width: bodyWidth,
-      height: bodyHeight,
-    );
-    final bodyRRect = RRect.fromRectAndRadius(
-      bodyRect,
-      Radius.circular(bodyHeight * 0.34),
-    );
-    final tailTop = bodyRect.bottom - 1;
-    final tailBottom = math.min(size - 3, bodyRect.bottom + pinS * 0.22);
-
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(
-      recorder,
-      Rect.fromLTWH(0, 0, size * _dpr, size * _dpr),
-    );
-    canvas.scale(_dpr);
-
-    final tailPath = Path()
-      ..moveTo(cx - pinS * 0.16, tailTop)
-      ..lineTo(cx, tailBottom)
-      ..lineTo(cx + pinS * 0.16, tailTop)
-      ..close();
-    final fillPaint = Paint()..color = const Color(0xFF2B231A);
-    final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.22)
-      ..maskFilter = ui.MaskFilter.blur(ui.BlurStyle.normal, spec.shadowBlur);
-
-    canvas.save();
-    canvas.translate(0, spec.shadowOffsetY);
-    canvas.drawRRect(bodyRRect, shadowPaint);
-    canvas.drawPath(tailPath, shadowPaint);
-    canvas.restore();
-
-    canvas.drawPath(tailPath, fillPaint);
-    canvas.drawRRect(bodyRRect, fillPaint);
-
-    canvas.save();
-    canvas.clipRRect(bodyRRect);
-    paintImage(
-      canvas: canvas,
-      rect: bodyRect.inflate(1),
-      image: icon,
-      fit: BoxFit.cover,
-      opacity: 0.9,
-    );
-    canvas.restore();
-
-    final borderPaint = Paint()
-      ..color = const Color(0xFFD9BD7A)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = spec.borderWidth * 1.15;
-    canvas.drawPath(tailPath, borderPaint);
-    canvas.drawRRect(bodyRRect, borderPaint);
-
-    final innerRRect = RRect.fromRectAndRadius(
-      bodyRect.deflate(spec.borderWidth * 1.6),
-      Radius.circular(bodyHeight * 0.28),
-    );
-    canvas.drawRRect(
-      innerRRect,
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.22)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = spec.borderWidth * 0.7,
-    );
-
-    final picture = recorder.endRecording();
-    final image = await picture.toImage(imgSize, imgSize);
-    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    return BitmapDescriptor.bytes(
-      bytes!.buffer.asUint8List(),
-      imagePixelRatio: _dpr,
-    );
   }
 
   Future<BitmapDescriptor> _buildDropBitmap({

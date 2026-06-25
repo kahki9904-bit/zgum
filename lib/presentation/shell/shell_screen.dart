@@ -737,7 +737,7 @@ class _NowCapsuleState extends State<_NowCapsule>
   @override
   Widget build(BuildContext context) {
     final capsuleWidth = MediaQuery.sizeOf(context).width * 0.50;
-    const color = AppColors.actionGold;
+    const color = AppColors.actionGoldBright;
 
     return AnimatedBuilder(
       animation: _lightAnim,

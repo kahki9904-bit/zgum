@@ -1040,14 +1040,14 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                           child: _locationAcquiring
                               ? const CircularProgressIndicator(
                                   strokeWidth: 3.5,
-                                  color: AppColors.actionGold,
+                                  color: AppColors.actionGoldBright,
                                 )
                               : Center(
                                   child: Container(
                                     width: 20,
                                     height: 6,
                                     decoration: BoxDecoration(
-                                      color: AppColors.actionGold
+                                      color: AppColors.actionGoldBright
                                           .withValues(alpha: 0.70),
                                       borderRadius: BorderRadius.circular(5),
                                     ),

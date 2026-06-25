@@ -10,6 +10,7 @@ import '../../../core/map_panel_layout.dart';
 import '../../../core/providers/partner_focus_provider.dart';
 import '../../../core/providers/shell_page_provider.dart';
 import '../../../core/providers/admin_mode_provider.dart';
+import '../../../core/theme/app_colors.dart';
 import '../shell_constants.dart';
 
 class MapPanelContent extends ConsumerStatefulWidget {
@@ -189,7 +190,7 @@ class _ShakeWavePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0x4716213E)
+      ..color = AppColors.actionGoldBright.withValues(alpha: 0.34)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
@@ -221,11 +222,11 @@ class _PhoneShakeIcon extends StatelessWidget {
       height: layout.phoneHeight,
       padding: EdgeInsets.all(layout.phonePadding),
       decoration: BoxDecoration(
-        color: const Color(0xFF071426),
+        color: AppColors.actionGold,
         borderRadius: BorderRadius.circular(layout.phoneRadius),
         boxShadow: [
           BoxShadow(
-            color: const Color(0x33071426),
+            color: AppColors.actionGold.withValues(alpha: 0.24),
             blurRadius: layout.shadowBlur,
             offset: Offset(0, layout.shadowOffsetY),
           ),
@@ -238,7 +239,7 @@ class _PhoneShakeIcon extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xFFF9FBFC), Color(0xFFDFE9EE)],
+              colors: [Color(0xFFFFFCF4), Color(0xFFF3E8D1)],
             ),
           ),
           child: Stack(
@@ -250,7 +251,7 @@ class _PhoneShakeIcon extends StatelessWidget {
                   width: layout.notchWidth,
                   height: layout.notchHeight,
                   decoration: BoxDecoration(
-                    color: const Color(0x2E071426),
+                    color: AppColors.actionGold.withValues(alpha: 0.22),
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -264,11 +265,11 @@ class _PhoneShakeIcon extends StatelessWidget {
                     center: Alignment(0, -0.16),
                     radius: 0.78,
                     colors: [
-                      Color(0xFF071426),
-                      Color(0xFF071426),
+                      Color(0xFF6D5633),
+                      Color(0xFF6D5633),
                       Color(0xFFFFFFFF),
                       Color(0xFFFFFFFF),
-                      Color(0xFF9EEEFF),
+                      Color(0xFFE4C67E),
                     ],
                     stops: [0.0, 0.20, 0.21, 0.47, 1.0],
                   ),

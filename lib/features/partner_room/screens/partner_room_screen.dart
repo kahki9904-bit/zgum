@@ -358,12 +358,11 @@ class _EventGridTile extends ConsumerWidget {
         fit: StackFit.expand,
         children: [
           if (hasPhoto)
-            Image.file(
-              File(repPhoto),
+            _PartnerEventPhoto(
+              path: repPhoto,
               width: double.infinity,
               height: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const _EventTileFallback(),
             )
           else
             const _EventTileFallback(),
@@ -446,6 +445,46 @@ class _EventTileFallback extends StatelessWidget {
   }
 }
 
+class _PartnerEventPhoto extends StatelessWidget {
+  const _PartnerEventPhoto({
+    required this.path,
+    required this.fit,
+    this.width,
+    this.height,
+    this.fallback = const _EventTileFallback(),
+  });
+
+  final String path;
+  final BoxFit fit;
+  final double? width;
+  final double? height;
+  final Widget fallback;
+
+  bool get _isRemote =>
+      path.startsWith('http://') || path.startsWith('https://');
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isRemote) {
+      return Image.network(
+        path,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, __, ___) => fallback,
+      );
+    }
+
+    return Image.file(
+      File(path),
+      width: width,
+      height: height,
+      fit: fit,
+      errorBuilder: (_, __, ___) => fallback,
+    );
+  }
+}
+
 // ── 이벤트 상세 팝업 ────────────────────────────────────────────────────────────
 
 class _EventDetailPopup extends StatelessWidget {
@@ -496,11 +535,11 @@ class _EventDetailPopup extends StatelessWidget {
                     itemCount: photos.length,
                     itemBuilder: (_, i) {
                       final p = photos[i];
-                      return Image.file(
-                        File(p.path),
+                      return _PartnerEventPhoto(
+                        path: p.path,
                         fit: BoxFit.cover,
                         width: double.infinity,
-                        errorBuilder: (_, __, ___) => _noPhotoHeader(),
+                        fallback: _noPhotoHeader(),
                       );
                     },
                   )

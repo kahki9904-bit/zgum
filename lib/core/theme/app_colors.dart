@@ -12,6 +12,7 @@ class AppColors {
 
   // ── 작동 버튼 골드 ─────────────────────────────────────────────────────────
   static const Color actionGold = Color(0xFF5A452D);
+  static const Color actionGoldBright = Color(0xFFC9A45A);
   static const Color actionGoldSoft = Color(0xFFF4EBD7);
   static const Color actionGoldBorder = Color(0xFFD9BD7A);
   static const Color actionGoldText = Color(0xFF6D5633);
