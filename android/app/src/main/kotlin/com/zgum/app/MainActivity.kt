@@ -1,4 +1,4 @@
-package com.example.zgum
+package com.zgum.app
 
 import android.graphics.Rect
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -7,7 +7,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
 
-    private val channel = "com.example.zgum/gesture"
+    private val channel = "com.zgum.app/gesture"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

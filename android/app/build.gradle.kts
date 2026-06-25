@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.zgum"
+    namespace = "com.zgum.app"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -17,7 +17,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.zgum"
+        applicationId = "com.zgum.app"
         minSdk = flutter.minSdkVersion
         multiDexEnabled = true
         targetSdk = flutter.targetSdkVersion
