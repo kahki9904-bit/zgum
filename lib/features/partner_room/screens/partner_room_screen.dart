@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,7 @@ import '../../../features/alert/providers/event_stats_provider.dart';
 import '../../../presentation/shell/panels/partner_panel_content.dart';
 import '../../../presentation/widgets/dialogs/zgum_dialog.dart';
 import '../../../presentation/widgets/zgum_orb_button.dart';
+import '../../../services/firestore_partner_event_service.dart';
 import 'partner_dashboard_screen.dart';
 
 class PartnerRoomScreen extends ConsumerStatefulWidget {
@@ -23,6 +25,27 @@ class PartnerRoomScreen extends ConsumerStatefulWidget {
 class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
   bool _newestFirst = true;
   bool _singleColumn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadMyEvents());
+  }
+
+  Future<void> _loadMyEvents() async {
+    if (!mounted) return;
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+      final service = ref.read(firestorePartnerEventServiceProvider);
+      final events = await service.watchByPartner(uid).first;
+      if (mounted) {
+        ref.read(partnerMyEventsProvider.notifier).state = events;
+      }
+    } catch (e) {
+      debugPrint('[PartnerRoom] 이벤트 로드 실패: $e');
+    }
+  }
 
   void _openRegister(BuildContext context, PartnerEvent? activeEvent) {
     if (activeEvent != null) {

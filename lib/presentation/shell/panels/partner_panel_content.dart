@@ -13,6 +13,8 @@ import '../../../promotions/free_use/free_use_service.dart';
 import '../../../services/location_service.dart';
 import '../../../services/device_id_service.dart';
 import '../../../services/firestore_partner_event_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../../widgets/dialogs/zgum_dialog.dart';
 import '../../widgets/dialogs/photo_viewer_popup.dart';
 import '../../widgets/popups/confirm/age_confirm_popup.dart';
@@ -49,9 +51,10 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     if (!mounted) return;
     if (ref.read(activePartnerEventProvider) != null) return;
     try {
-      final deviceId = await DeviceIdService.getId();
+      final uid = FirebaseAuth.instance.currentUser?.uid
+          ?? await DeviceIdService.getId();
       final service = ref.read(firestorePartnerEventServiceProvider);
-      final events = await service.watchByPartner(deviceId).first;
+      final events = await service.watchByPartner(uid).first;
       final active = events.where((e) => !e.isExpired).toList();
       if (active.isNotEmpty && mounted) {
         ref.read(activePartnerEventProvider.notifier).state = active.first;
@@ -106,10 +109,11 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     final photoList = _photos.map((f) => PartnerPhoto(path: f.path)).toList();
 
     final now = DateTime.now();
-    final deviceId = await DeviceIdService.getId();
+    final uid = FirebaseAuth.instance.currentUser?.uid
+        ?? await DeviceIdService.getId();
     final event = PartnerEvent(
       id: now.millisecondsSinceEpoch.toString(),
-      partnerId: deviceId,
+      partnerId: uid,
       title: title,
       venue: title,
       message:
@@ -173,6 +177,34 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
       );
       return;
     }
+
+    // 사진 Storage 업로드 (실패해도 이벤트 등록엔 영향 없음)
+    try {
+      final storage = FirebaseStorage.instance;
+      final updatedPhotos = <PartnerPhoto>[];
+      for (int i = 0; i < _photos.length; i++) {
+        try {
+          final ref = storage
+              .ref()
+              .child('partner_events')
+              .child(uid)
+              .child(paidEvent.id)
+              .child('$i.jpg');
+          await ref.putFile(_photos[i]);
+          final url = await ref.getDownloadURL();
+          updatedPhotos.add(PartnerPhoto(path: url));
+        } catch (_) {
+          updatedPhotos.add(paidEvent.photos[i]);
+        }
+      }
+      if (updatedPhotos.any((p) => p.path.startsWith('http'))) {
+        final updatedEvent = paidEvent.copyWith(photos: updatedPhotos);
+        await ref.read(firestorePartnerEventServiceProvider).save(updatedEvent);
+        if (mounted) {
+          ref.read(activePartnerEventProvider.notifier).state = updatedEvent;
+        }
+      }
+    } catch (_) {}
 
     if (!mounted) return;
     widget.onClose();

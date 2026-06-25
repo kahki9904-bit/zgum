@@ -65,14 +65,26 @@ class FirebasePartnerRepository implements PartnerRepository {
       throw UnimplementedError('FCM 연동 후 구현');
 
   @override
-  Future<List<PartnerEventDraft>> fetchMyEvents() =>
-      throw UnimplementedError('Firestore 연동 후 구현');
+  Future<List<PartnerEventDraft>> fetchMyEvents() async {
+    final events = await _service.watchByPartner(_uid).first;
+    return events.map((e) => PartnerEventDraft(
+      id: e.id,
+      title: e.title,
+      venue: e.venue,
+      message: e.message,
+      location: e.location,
+      startsAt: e.startsAt,
+      expiresAt: e.expiresAt,
+      paymentStatus: e.paymentStatus == pe.PaymentStatus.paid
+          ? PaymentStatus.paid
+          : PaymentStatus.pending,
+    )).toList();
+  }
 
   @override
   Future<PartnerEventStats> fetchEventStats(String eventId) =>
       throw UnimplementedError('Firestore 연동 후 구현');
 
   @override
-  Future<void> cancelEvent(String eventId) =>
-      throw UnimplementedError('Firestore 연동 후 구현');
+  Future<void> cancelEvent(String eventId) => _service.expire(eventId);
 }

@@ -36,6 +36,7 @@ class LocationService {
   static const _kLastLngKey = 'zgum_last_lng';
   static const _accuracyThreshold = 50.0; // 미터
 
+
   // ── 위치 권한 확인 ─────────────────────────────────────────────────────────
 
   Future<LocationStatus> _checkPermission() async {
