@@ -90,9 +90,11 @@ class ApiCulturalEventRepository implements CulturalEventRepository {
 
       final json = jsonDecode(body) as Map<String, dynamic>;
       final events = _parseResponse(json);
-      if (!isIdentityVerified) {
-        return events.where((e) => !e.isAdultOnly).toList();
-      }
+      // [AGE-GATE DISABLED] 본인인증 추가 전까지 필터링 비활성화.
+      // 재활성화: 아래 주석 해제 후 return events; 삭제.
+      // if (!isIdentityVerified) {
+      //   return events.where((e) => !e.isAdultOnly).toList();
+      // }
       return events;
     } on CulturalEventApiException {
       rethrow;
