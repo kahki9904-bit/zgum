@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart';
 import '../../../features/alert/models/partner_event.dart';
 import '../../../core/providers/admin_mode_provider.dart';
 import '../../../core/providers/active_partner_event_provider.dart';
-import '../../../core/providers/partner_focus_provider.dart';
 import '../../../core/providers/partner_my_events_provider.dart';
 import '../../../core/providers/shell_page_provider.dart';
 import '../../../core/theme/app_colors.dart';
@@ -177,7 +176,6 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
 
     if (!mounted) return;
     widget.onClose();
-    ref.read(partnerFocusPendingProvider.notifier).state = true;
     ref.read(shellPageProvider.notifier).state = 1;
   }
 

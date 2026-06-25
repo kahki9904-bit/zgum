@@ -868,6 +868,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       debugPrint('[MapRoom] marker event missing: ${marker.id}');
       return;
     }
+    final activeOwnEvent = ref.read(activePartnerEventProvider);
+    if (activeOwnEvent != null && activeOwnEvent.id == event.id) return;
     debugPrint('[MapRoom] show sheet: ${event.id} / ${event.title}');
     _mapCtrl.move(
       MapCoordinate(event.location.latitude, event.location.longitude),
