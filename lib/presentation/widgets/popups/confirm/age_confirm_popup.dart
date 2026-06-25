@@ -52,7 +52,7 @@ Future<bool?> showAgeConfirmPopup(BuildContext context) {
                       ),
                       alignment: Alignment.center,
                       child: const Text(
-                        '19세이상',
+                        '신분증확인',
                         style: TextStyle(
                           fontSize: 15,
                           color: Colors.white,

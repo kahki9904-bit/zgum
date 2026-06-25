@@ -17,9 +17,6 @@ dependencies:
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
 
-  # 지도 — 카카오 (네이티브 SDK, 네이티브 앱 키 + 키 해시 필요)
-  kakao_map_sdk: ^1.2.2
-
   # 지도 — 구글맵 (Android + iOS, 단일 API 키)
   google_maps_flutter: ^2.6.0
 

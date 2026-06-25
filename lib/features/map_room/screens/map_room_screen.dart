@@ -146,6 +146,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     super.dispose();
   }
 
+  bool get isNavigating => _isNavigating;
+
   void recenterOnUser() {
     if (!mounted || _locationAcquiring) return;
     _stopNavigation();
@@ -895,7 +897,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     });
     ref.listen<int>(shellPageProvider, (prev, next) {
       if (next == 1 && prev != 1) {
-        if (!ref.read(partnerFocusPendingProvider)) {
+        if (!ref.read(partnerFocusPendingProvider) && !_isNavigating) {
           recenterOnUser();
         }
       }

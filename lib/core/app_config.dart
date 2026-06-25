@@ -53,12 +53,6 @@ abstract final class AppConfig {
     defaultValue: '',
   );
 
-  /// 카카오맵 네이티브 SDK 초기화에 사용
-  static const String kakaoNativeAppKey = String.fromEnvironment(
-    'KAKAO_NATIVE_APP_KEY',
-    defaultValue: '',
-  );
-
   // ── KOPIS 공연예술통합전산망 ────────────────────────────────────────────────
   static const String kopisApiKey = String.fromEnvironment(
     'KOPIS_API_KEY',
@@ -83,5 +77,4 @@ abstract final class AppConfig {
   static bool get hasSdscKey => sdscApiKey.isNotEmpty;
   static bool get hasNaverKey => naverClientId.isNotEmpty;
   static bool get hasKakaoKey => kakaoApiKey.isNotEmpty;
-  static bool get hasKakaoNativeAppKey => kakaoNativeAppKey.isNotEmpty;
 }

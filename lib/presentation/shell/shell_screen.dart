@@ -123,7 +123,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
 
   void _recenterMapOnReturn(int page) {
     if (page != 1 || ref.read(partnerFocusPendingProvider)) return;
-    _mapKey.currentState?.recenterOnUser();
+    final state = _mapKey.currentState;
+    if (state?.isNavigating == true) return;
+    state?.recenterOnUser();
   }
 
   void _syncExclusionRects() {
