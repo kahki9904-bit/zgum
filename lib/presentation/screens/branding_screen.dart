@@ -32,9 +32,9 @@ class _BrandingScreenState extends State<BrandingScreen> {
   @override
   Widget build(BuildContext context) {
     return const AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark,
+      value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xFF17130F),
         body: Center(
           child: _BrandBlock(),
         ),
@@ -52,7 +52,7 @@ class _BrandBlock extends StatelessWidget {
   static const _titleStyle = TextStyle(
     fontSize: 58,
     fontWeight: FontWeight.w900,
-    color: Color(0xFF071426),
+    color: Color(0xFFF2DFB0),
     letterSpacing: 1,
     height: 1.0,
   );
@@ -60,7 +60,7 @@ class _BrandBlock extends StatelessWidget {
   static const _subtitleBase = TextStyle(
     fontSize: 19,
     fontWeight: FontWeight.w300,
-    color: Color(0xFF7D8B95),
+    color: Color(0xA0F4EBD7),
     height: 1.0,
   );
 
@@ -93,38 +93,56 @@ class _BrandBlock extends StatelessWidget {
     final tw = _titleWidth();
     final spacing = _subtitleSpacing(tw);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
+    return Stack(
+      alignment: Alignment.center,
       children: [
-        const Text(_titleText, style: _titleStyle),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: tw,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              _subtitleText,
-              style: _subtitleBase.copyWith(
-                letterSpacing: spacing.clamp(0.0, 30.0),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 30),
         Container(
-          width: 96,
-          height: 3,
+          width: 280,
+          height: 280,
           decoration: const BoxDecoration(
-            borderRadius: BorderRadius.all(Radius.circular(999)),
-            gradient: LinearGradient(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
               colors: [
-                Color(0x009EEEFF),
-                Color(0xFF9EEEFF),
-                Color(0x009EEEFF),
+                Color(0x29C9A45A),
+                Color(0x0017130F),
               ],
             ),
           ),
+        ),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Text(_titleText, style: _titleStyle),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: tw,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  _subtitleText,
+                  style: _subtitleBase.copyWith(
+                    letterSpacing: spacing.clamp(0.0, 30.0),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
+            Container(
+              width: 96,
+              height: 3,
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.circular(999)),
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0x00D9BD7A),
+                    Color(0xFFD9BD7A),
+                    Color(0x00D9BD7A),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

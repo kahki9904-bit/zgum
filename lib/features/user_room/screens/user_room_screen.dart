@@ -70,21 +70,17 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    const Text(
-                      '흔적',
-                      style: TextStyle(
-                        color: Color(0xFF071426),
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        height: 1.0,
-                      ),
-                    ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _IeumOrb(onTap: _showIeumRequestDialog),
                         const _SettingsSection(),
                       ],
+                    ),
+                    const Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: _HeaderHint(text: '흔적을 남겨 보세요'),
                     ),
                   ],
                 ),
@@ -133,6 +129,25 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HeaderHint extends StatelessWidget {
+  const _HeaderHint({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: Color(0x66765D35),
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        height: 1.0,
       ),
     );
   }

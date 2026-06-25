@@ -116,15 +116,6 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                const Text(
-                  '기록',
-                  style: TextStyle(
-                    color: Color(0xFF071426),
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    height: 1.0,
-                  ),
-                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -154,6 +145,11 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
                       ),
                     ),
                   ],
+                ),
+                const Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: _HeaderHint(text: '기록을 남겨 보세요'),
                 ),
               ],
             ),
@@ -191,6 +187,25 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _HeaderHint extends StatelessWidget {
+  const _HeaderHint({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: Color(0x66765D35),
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        height: 1.0,
       ),
     );
   }
@@ -487,22 +502,45 @@ class _PartnerEventPhoto extends StatelessWidget {
 
 // ── 이벤트 상세 팝업 ────────────────────────────────────────────────────────────
 
-class _EventDetailPopup extends StatelessWidget {
+class _EventDetailPopup extends StatefulWidget {
   final PartnerEvent event;
   final EventStats? stats;
   const _EventDetailPopup({required this.event, this.stats});
+
+  @override
+  State<_EventDetailPopup> createState() => _EventDetailPopupState();
+}
+
+class _EventDetailPopupState extends State<_EventDetailPopup> {
+  late final PageController _photoCtrl;
+  int _currentPhoto = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _photoCtrl = PageController();
+  }
+
+  @override
+  void dispose() {
+    _photoCtrl.dispose();
+    super.dispose();
+  }
 
   String _formatDateTime(DateTime dt) => '${dt.year}년 ${dt.month}월 ${dt.day}일  '
       '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
   String _durationLabel() {
-    final hours = event.expiresAt.difference(event.startsAt).inHours;
+    final hours =
+        widget.event.expiresAt.difference(widget.event.startsAt).inHours;
     return '$hours시간';
   }
 
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
+    final event = widget.event;
+    final stats = widget.stats;
     final isExpired = DateTime.now().isAfter(event.expiresAt);
     final photos = event.photos;
 
@@ -532,7 +570,9 @@ class _EventDetailPopup extends StatelessWidget {
               children: [
                 if (photos.isNotEmpty)
                   PageView.builder(
+                    controller: _photoCtrl,
                     itemCount: photos.length,
+                    onPageChanged: (i) => setState(() => _currentPhoto = i),
                     itemBuilder: (_, i) {
                       final p = photos[i];
                       return _PartnerEventPhoto(
@@ -545,6 +585,30 @@ class _EventDetailPopup extends StatelessWidget {
                   )
                 else
                   _noPhotoHeader(),
+                if (photos.length > 1)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 42,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        photos.length,
+                        (i) => AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: i == _currentPhoto ? 16 : 6,
+                          height: 6,
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(3),
+                            color: i == _currentPhoto
+                                ? const Color(0xFF1A1A2E)
+                                : const Color(0xCCFFFFFF),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 const Positioned.fill(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
@@ -635,12 +699,12 @@ class _EventDetailPopup extends StatelessWidget {
                             ),
                           ),
                           if (stats != null &&
-                              (stats!.visitorCount > 0 ||
-                                  stats!.traceCount > 0)) ...[
+                              (stats.visitorCount > 0 ||
+                                  stats.traceCount > 0)) ...[
                             const SizedBox(width: 8),
-                            _statChip('방문', stats!.visitorCount),
+                            _statChip('방문', stats.visitorCount),
                             const SizedBox(width: 6),
-                            _statChip('흔적', stats!.traceCount),
+                            _statChip('흔적', stats.traceCount),
                           ],
                         ],
                       ),
@@ -731,7 +795,7 @@ class _EventDetailPopup extends StatelessWidget {
       alignment: Alignment.center,
       padding: const EdgeInsets.all(24),
       child: Text(
-        event.title,
+        widget.event.title,
         textAlign: TextAlign.center,
         style: const TextStyle(
           fontSize: 18,
