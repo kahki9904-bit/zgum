@@ -43,13 +43,16 @@ abstract class MapEngine {
   /// 지도 이벤트는 하나의 이벤트 색상으로 묶고 검색 핀만 분리합니다.
   /// 색상 변경 시 이 메서드만 수정하면 됩니다.
   int markerColor(MapMarkerModel marker) {
+    if (marker.isHighlighted) {
+      return 0xFFC1493F;
+    }
     if (marker.isPartner) {
-      return 0xFF6D5633;
+      return 0xFF6F7F69;
     }
     if (marker.category == MarkerCategory.cinema ||
         marker.category == MarkerCategory.other) {
-      return 0xFF00B4D8;
+      return 0xFFB07A3B;
     }
-    return 0xFF1F6F8B;
+    return 0xFF8B6B36;
   }
 }

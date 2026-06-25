@@ -189,34 +189,32 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
       marker.category == MarkerCategory.other ||
       marker.category == MarkerCategory.cinema;
 
-  Color _centerColorForMarker(MapMarkerModel marker, bool isSearch) {
-    if (marker.isPartner) {
-      return const Color(0xFFE0524D);
-    }
-    if (isSearch) {
-      return Color(widget.colorForMarker(marker));
-    }
-    return const Color(0xFFE4C67E);
-  }
-
   Future<BitmapDescriptor> _getMarkerBitmap(MapMarkerModel marker) async {
     final isSearch = _isSearchMarker(marker);
-    final fillColor =
-        isSearch ? Colors.white : Color(widget.colorForMarker(marker));
-    final borderColor =
-        isSearch ? Color(widget.colorForMarker(marker)) : Colors.white;
-    final centerColor = _centerColorForMarker(marker, isSearch);
+    final markerColor = Color(widget.colorForMarker(marker));
+    final fillColor = isSearch ? const Color(0xFFFFFDF8) : markerColor;
+    final borderColor = isSearch ? markerColor : const Color(0xFFFFFCF4);
+    final centerColor = isSearch
+        ? markerColor
+        : Colors.white.withValues(alpha: marker.isHighlighted ? 0.96 : 0.9);
     final cacheKey = Object.hash(
+      isSearch ? 'target' : 'drop',
       fillColor.toARGB32(),
       borderColor.toARGB32(),
       centerColor.toARGB32(),
     );
     if (_bitmapCache.containsKey(cacheKey)) return _bitmapCache[cacheKey]!;
-    final bitmap = await _buildDropBitmap(
-      fillColor: fillColor,
-      borderColor: borderColor,
-      centerColor: centerColor,
-    );
+    final bitmap = isSearch
+        ? await _buildTargetBitmap(
+            fillColor: fillColor,
+            borderColor: borderColor,
+            centerColor: centerColor,
+          )
+        : await _buildDropBitmap(
+            fillColor: fillColor,
+            borderColor: borderColor,
+            centerColor: centerColor,
+          );
     _bitmapCache[cacheKey] = bitmap;
     return bitmap;
   }
@@ -224,9 +222,9 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
   Future<BitmapDescriptor> _getUserBitmap() async {
     if (_userBitmap != null) return _userBitmap!;
     _userBitmap = await _buildDropBitmap(
-      fillColor: const Color(0xFF52606C),
-      borderColor: Colors.white,
-      centerColor: Colors.white.withValues(alpha: 0.78),
+      fillColor: const Color(0xFFD9BD7A),
+      borderColor: const Color(0xFFFFFCF4),
+      centerColor: Colors.white.withValues(alpha: 0.94),
     );
     return _userBitmap!;
   }
@@ -309,6 +307,56 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
           ..strokeWidth = spec.borderWidth * 0.75,
       );
     }
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(imgSize, imgSize);
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.bytes(bytes!.buffer.asUint8List(),
+        imagePixelRatio: _dpr);
+  }
+
+  Future<BitmapDescriptor> _buildTargetBitmap({
+    required Color fillColor,
+    required Color borderColor,
+    required Color centerColor,
+  }) async {
+    final spec = MapMarkerLayoutSpec.current;
+    final double size = spec.bitmapSize;
+    final double cx = size / 2;
+    final double cy = size / 2;
+    final int imgSize = (size * _dpr).toInt();
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, size * _dpr, size * _dpr),
+    );
+    canvas.scale(_dpr);
+
+    final double outerRadius = spec.pinSize * 0.42;
+    final double innerRadius = outerRadius * 0.58;
+    final double dotRadius = math.max(spec.centerSize * 0.34, 2);
+    final double strokeWidth = math.max(spec.borderWidth * 1.25, 1.4);
+    final center = Offset(cx, cy);
+
+    canvas.drawCircle(center, outerRadius, Paint()..color = fillColor);
+    canvas.drawCircle(
+      center,
+      outerRadius,
+      Paint()
+        ..color = borderColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth,
+    );
+    canvas.drawCircle(
+      center,
+      innerRadius,
+      Paint()
+        ..color = borderColor.withValues(alpha: 0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(spec.borderWidth * 0.75, 1),
+    );
+    canvas.drawCircle(center, dotRadius, Paint()..color = centerColor);
 
     final picture = recorder.endRecording();
     final image = await picture.toImage(imgSize, imgSize);

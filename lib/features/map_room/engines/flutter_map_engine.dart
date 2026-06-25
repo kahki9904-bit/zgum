@@ -97,8 +97,9 @@ class FlutterMapEngine extends MapEngine {
       height: 52,
       alignment: Alignment.bottomCenter,
       child: const _MapDropMarker(
-        fillColor: Color(0xFF52606C),
-        centerColor: Color(0xC9FFFFFF),
+        fillColor: Color(0xFFD9BD7A),
+        borderColor: Color(0xFFFFFCF4),
+        centerColor: Color(0xF0FFFFFF),
       ),
     );
   }
@@ -127,6 +128,7 @@ class FlutterMapEngine extends MapEngine {
           child: _MarkerPin(
             key: ValueKey(marker.id),
             color: color,
+            isSearch: _isSearchMarker(marker),
             highlighted: highlighted,
             deadline: deadline,
             blink: shouldBlink,
@@ -141,6 +143,7 @@ class FlutterMapEngine extends MapEngine {
 
 class _MarkerPin extends StatefulWidget {
   final Color color;
+  final bool isSearch;
   final bool highlighted;
   final DateTime? deadline;
   final bool blink;
@@ -148,6 +151,7 @@ class _MarkerPin extends StatefulWidget {
   const _MarkerPin({
     super.key,
     required this.color,
+    this.isSearch = false,
     this.highlighted = false,
     this.deadline,
     this.blink = false,
@@ -197,16 +201,19 @@ class _MarkerPinState extends State<_MarkerPin>
     final pinColor = (deadline != null && EventFade.isGrayed(deadline, _now))
         ? const Color(0xFF9E9E9E)
         : widget.color;
-    final isSearch = pinColor.toARGB32() == const Color(0xFF00B4D8).toARGB32();
 
     Widget pin = Opacity(
       opacity: fade,
-      child: _MapDropMarker(
-        fillColor: isSearch ? Colors.white : pinColor,
-        borderColor: isSearch ? pinColor : Colors.white,
-        centerColor: isSearch ? pinColor : const Color(0xFF9EEEFF),
-        highlighted: widget.highlighted,
-      ),
+      child: widget.isSearch
+          ? _MapTargetMarker(color: pinColor)
+          : _MapDropMarker(
+              fillColor: pinColor,
+              borderColor: const Color(0xFFFFFCF4),
+              centerColor: Colors.white.withValues(
+                alpha: widget.highlighted ? 0.96 : 0.9,
+              ),
+              highlighted: widget.highlighted,
+            ),
     );
 
     if (widget.blink && _blinkAnim != null) {
@@ -218,6 +225,62 @@ class _MarkerPinState extends State<_MarkerPin>
       );
     }
     return pin;
+  }
+}
+
+bool _isSearchMarker(MapMarkerModel marker) =>
+    marker.category == MarkerCategory.other ||
+    marker.category == MarkerCategory.cinema;
+
+class _MapTargetMarker extends StatelessWidget {
+  const _MapTargetMarker({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final spec = MapMarkerLayoutSpec.current;
+    final outerSize = spec.pinSize * 0.84;
+    final innerSize = outerSize * 0.58;
+    final dotSize = spec.centerSize * 0.68;
+
+    return Center(
+      child: Container(
+        width: outerSize,
+        height: outerSize,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFDF8),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: color,
+            width: spec.borderWidth * 1.25,
+          ),
+        ),
+        child: Center(
+          child: Container(
+            width: innerSize,
+            height: innerSize,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: color.withValues(alpha: 0.6),
+                width: spec.borderWidth * 0.75,
+              ),
+            ),
+            child: Center(
+              child: Container(
+                width: dotSize,
+                height: dotSize,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

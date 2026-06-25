@@ -68,7 +68,8 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
               Padding(
                 padding: layout.headerPadding,
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: layout.headerMinHeight),
+                  constraints:
+                      BoxConstraints(minHeight: layout.headerMinHeight),
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
@@ -413,6 +414,7 @@ class _TracePhotoViewer extends ConsumerWidget {
     final dateStr = '${dt.month}.${dt.day.toString().padLeft(2, '0')}';
     final hasMemo = record.memo != null && record.memo!.isNotEmpty;
     final hasPhoto = record.photoPath != null;
+    final showDownloadMarker = hasPhoto && !showForget;
 
     return Container(
       width: double.infinity,
@@ -505,6 +507,12 @@ class _TracePhotoViewer extends ConsumerWidget {
                       ),
                     ),
                   ),
+                if (showDownloadMarker)
+                  const Positioned(
+                    left: 12,
+                    top: 12,
+                    child: _DownloadPhotoMarker(),
+                  ),
                 Positioned(
                   right: 12,
                   top: 12,
@@ -595,6 +603,28 @@ class _TracePhotoViewer extends ConsumerWidget {
           ),
           const SizedBox(height: 2),
         ],
+      ),
+    );
+  }
+}
+
+class _DownloadPhotoMarker extends StatelessWidget {
+  const _DownloadPhotoMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.32),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+      ),
+      child: const Icon(
+        Icons.download_rounded,
+        size: 17,
+        color: Colors.white,
       ),
     );
   }

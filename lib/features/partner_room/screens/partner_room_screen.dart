@@ -182,8 +182,10 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
                   crossAxisSpacing: 2,
                 ),
                 itemCount: sorted.length,
-                itemBuilder: (context, index) =>
-                    _EventGridTile(event: sorted[index]),
+                itemBuilder: (context, index) => _EventGridTile(
+                  event: sorted[index],
+                  showDownloadMarker: index != 0,
+                ),
               ),
             ),
         ],
@@ -325,8 +327,12 @@ class _GridToolButton extends StatelessWidget {
 
 class _EventGridTile extends ConsumerWidget {
   final PartnerEvent event;
+  final bool showDownloadMarker;
 
-  const _EventGridTile({required this.event});
+  const _EventGridTile({
+    required this.event,
+    required this.showDownloadMarker,
+  });
 
   void _openDetail(BuildContext context, EventStats? stats) {
     showGeneralDialog<void>(
@@ -343,7 +349,11 @@ class _EventGridTile extends ConsumerWidget {
             onTap: () {},
             child: Material(
               color: Colors.transparent,
-              child: _EventDetailPopup(event: event, stats: stats),
+              child: _EventDetailPopup(
+                event: event,
+                stats: stats,
+                showDownloadMarker: showDownloadMarker,
+              ),
             ),
           ),
         ),
@@ -500,12 +510,39 @@ class _PartnerEventPhoto extends StatelessWidget {
   }
 }
 
+class _DownloadPhotoMarker extends StatelessWidget {
+  const _DownloadPhotoMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.32),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+      ),
+      child: const Icon(
+        Icons.download_rounded,
+        size: 17,
+        color: Colors.white,
+      ),
+    );
+  }
+}
+
 // ── 이벤트 상세 팝업 ────────────────────────────────────────────────────────────
 
 class _EventDetailPopup extends StatefulWidget {
   final PartnerEvent event;
   final EventStats? stats;
-  const _EventDetailPopup({required this.event, this.stats});
+  final bool showDownloadMarker;
+  const _EventDetailPopup({
+    required this.event,
+    this.stats,
+    required this.showDownloadMarker,
+  });
 
   @override
   State<_EventDetailPopup> createState() => _EventDetailPopupState();
@@ -585,6 +622,12 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                   )
                 else
                   _noPhotoHeader(),
+                if (photos.isNotEmpty && widget.showDownloadMarker)
+                  const Positioned(
+                    left: 12,
+                    top: 12,
+                    child: _DownloadPhotoMarker(),
+                  ),
                 if (photos.length > 1)
                   Positioned(
                     left: 0,
