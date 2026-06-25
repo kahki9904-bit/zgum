@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
@@ -13,16 +12,13 @@ import 'local_check_in_repository.dart';
 class FirebaseCheckInRepository implements CheckInRepository {
   FirebaseCheckInRepository({
     FirebaseFirestore? firestore,
-    FirebaseAuth? auth,
     FirebaseStorage? storage,
     LocalCheckInRepository? local,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance,
         _storage = storage ?? FirebaseStorage.instance,
         _local = local ?? LocalCheckInRepository();
 
   final FirebaseFirestore _firestore;
-  final FirebaseAuth _auth;
   final FirebaseStorage _storage;
   final LocalCheckInRepository _local;
 
@@ -52,7 +48,12 @@ class FirebaseCheckInRepository implements CheckInRepository {
 
     try {
       final userId = await _currentUserId();
-      final photoUrl = await _uploadPhotoIfNeeded(userId, record);
+      String? photoUrl;
+      try {
+        photoUrl = await _uploadPhotoIfNeeded(userId, record);
+      } catch (_) {
+        // 사진 업로드 실패해도 데이터는 저장
+      }
       final remoteRecord =
           record.copyWith(photoPath: photoUrl ?? record.photoPath);
 
@@ -80,11 +81,7 @@ class FirebaseCheckInRepository implements CheckInRepository {
   }
 
   Future<String> _currentUserId() async {
-    final current = _auth.currentUser;
-    if (current != null) return current.uid;
-
-    final credential = await _auth.signInAnonymously();
-    return credential.user?.uid ?? await DeviceIdService.getId();
+    return DeviceIdService.getId();
   }
 
   Future<String?> _uploadPhotoIfNeeded(
