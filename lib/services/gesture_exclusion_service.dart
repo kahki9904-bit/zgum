@@ -13,21 +13,29 @@ class GestureExclusionService {
     double devicePixelRatio,
   ) async {
     if (!Platform.isAndroid) return;
-    await _ch.invokeMethod<void>('setExclusionRects', {
-      'rects': rects
-          .map((r) => {
-                'left': (r.left * devicePixelRatio).round(),
-                'top': (r.top * devicePixelRatio).round(),
-                'right': (r.right * devicePixelRatio).round(),
-                'bottom': (r.bottom * devicePixelRatio).round(),
-              })
-          .toList(),
-    });
+    try {
+      await _ch.invokeMethod<void>('setExclusionRects', {
+        'rects': rects
+            .map((r) => {
+                  'left': (r.left * devicePixelRatio).round(),
+                  'top': (r.top * devicePixelRatio).round(),
+                  'right': (r.right * devicePixelRatio).round(),
+                  'bottom': (r.bottom * devicePixelRatio).round(),
+                })
+            .toList(),
+      });
+    } on MissingPluginException {
+      // 네이티브 구현 없을 때 무시 (에뮬레이터 등)
+    }
   }
 
   /// 등록된 제외 영역을 모두 해제합니다.
   static Future<void> clearExclusionRects() async {
     if (!Platform.isAndroid) return;
-    await _ch.invokeMethod<void>('clearExclusionRects');
+    try {
+      await _ch.invokeMethod<void>('clearExclusionRects');
+    } on MissingPluginException {
+      // 네이티브 구현 없을 때 무시 (에뮬레이터 등)
+    }
   }
 }

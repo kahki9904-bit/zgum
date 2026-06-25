@@ -33,9 +33,12 @@ class FirebaseCheckInRepository implements CheckInRepository {
           .orderBy('checkedInAt', descending: true)
           .get();
 
-      return snapshot.docs
-          .map((doc) => CheckInRecord.fromJson(doc.data()))
-          .toList();
+      if (snapshot.docs.isNotEmpty) {
+        return snapshot.docs
+            .map((doc) => CheckInRecord.fromJson(doc.data()))
+            .toList();
+      }
+      return await _local.getAll();
     } catch (error) {
       debugPrint('Firebase check-in load failed: $error');
       return _local.getAll();
@@ -48,21 +51,23 @@ class FirebaseCheckInRepository implements CheckInRepository {
 
     try {
       final userId = await _currentUserId();
-      String? photoUrl;
-      try {
-        photoUrl = await _uploadPhotoIfNeeded(userId, record);
-      } catch (_) {
-        // 사진 업로드 실패해도 데이터는 저장
-      }
-      final remoteRecord =
-          record.copyWith(photoPath: photoUrl ?? record.photoPath);
+      final deviceId = await DeviceIdService.getId();
 
+      // Firestore 저장 먼저
       await _recordsRef(userId).doc(record.id).set({
-        ...remoteRecord.toJson(),
+        ...record.toJson(),
         'userId': userId,
-        'deviceId': await DeviceIdService.getId(),
+        'deviceId': deviceId,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // 사진 업로드는 별도 시도 (실패해도 Firestore 저장엔 영향 없음)
+      try {
+        final photoUrl = await _uploadPhotoIfNeeded(userId, record);
+        if (photoUrl != null) {
+          await _recordsRef(userId).doc(record.id).update({'photoPath': photoUrl});
+        }
+      } catch (_) {}
     } catch (error) {
       debugPrint('Firebase check-in save failed: $error');
     }

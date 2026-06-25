@@ -9,9 +9,9 @@ import '../../data/repositories/admin/account_management_repository.dart';
 import '../../features/partner_room/data/repositories/partner_repository.dart';
 import '../../services/push_service.dart';
 import '../../firebase/firebase_auth_repository.dart';
-import '../../dev/mock_trace_repository.dart';
-import '../../dev/mock_trace_sync_queue.dart';
-import '../../dev/mock_partner_repository.dart';
+import '../../firebase/firebase_trace_repository.dart';
+import '../../firebase/firebase_trace_sync_queue.dart';
+import '../../firebase/firebase_partner_repository.dart';
 import '../../dev/mock_push_service.dart';
 import '../../dev/mock_global_config_repository.dart';
 import '../../dev/mock_audit_log_repository.dart';
@@ -29,15 +29,15 @@ final authRepositoryProvider = Provider<AuthRepository>(
 );
 
 final traceRepositoryProvider = Provider<TraceRepository>(
-  (ref) => MockTraceRepository(),
+  (ref) => FirebaseTraceRepository(),
 );
 
 final traceSyncQueueProvider = Provider<TraceSyncQueue>(
-  (ref) => MockTraceSyncQueue(),
+  (ref) => FirebaseTraceSyncQueue(),
 );
 
 final partnerRepositoryProvider = Provider<PartnerRepository>(
-  (ref) => MockPartnerRepository(),
+  (ref) => FirebasePartnerRepository(),
 );
 
 final pushServiceProvider = Provider<PushService>(
