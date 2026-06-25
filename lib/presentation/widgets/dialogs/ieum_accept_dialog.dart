@@ -4,13 +4,18 @@ import 'package:latlong2/latlong.dart';
 import '../../../features/friend/data/models/friend_duration.dart';
 import '../../../features/friend/data/models/friend_request.dart';
 import '../../../features/friend/data/repositories/friend_repository.dart';
+import '../../../core/theme/app_colors.dart';
 import 'zgum_dialog.dart';
 
 class IeumAcceptDialog extends StatefulWidget {
   final FriendRequest request;
   final LatLng location;
   final FriendRepository repo;
-  const IeumAcceptDialog({super.key, required this.request, required this.location, required this.repo});
+  const IeumAcceptDialog(
+      {super.key,
+      required this.request,
+      required this.location,
+      required this.repo});
 
   @override
   State<IeumAcceptDialog> createState() => _IeumAcceptDialogState();
@@ -26,7 +31,10 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
   @override
   void initState() {
     super.initState();
-    _secondsLeft = widget.request.expiresAt.difference(DateTime.now()).inSeconds.clamp(0, 120);
+    _secondsLeft = widget.request.expiresAt
+        .difference(DateTime.now())
+        .inSeconds
+        .clamp(0, 120);
     _startTimer();
   }
 
@@ -38,9 +46,15 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
       setState(() => _secondsLeft--);
-      if (_secondsLeft <= 0) { t.cancel(); if (mounted) Navigator.pop(context); }
+      if (_secondsLeft <= 0) {
+        t.cancel();
+        if (mounted) Navigator.pop(context);
+      }
     });
   }
 
@@ -90,8 +104,11 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
             const SizedBox(height: 20),
             if (_generatedCode == null) ...[
               Row(
-                children: [FriendDuration.oneDay, FriendDuration.threeMonths, FriendDuration.sixMonths]
-                    .map((d) {
+                children: [
+                  FriendDuration.oneDay,
+                  FriendDuration.threeMonths,
+                  FriendDuration.sixMonths
+                ].map((d) {
                   final sel = _duration == d;
                   return Expanded(
                     child: GestureDetector(
@@ -100,8 +117,14 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
                         margin: const EdgeInsets.symmetric(horizontal: 2),
                         height: 40,
                         decoration: BoxDecoration(
-                          color: sel ? const Color(0xFF16213E) : const Color(0xFFF4F4F4),
+                          color: sel
+                              ? AppColors.actionGoldSoft
+                              : const Color(0xFFF4F4F4),
                           borderRadius: BorderRadius.circular(10),
+                          border: sel
+                              ? Border.all(
+                                  color: AppColors.actionGoldBorder, width: 1)
+                              : null,
                         ),
                         alignment: Alignment.center,
                         child: Text(d.chipLabel,
@@ -109,7 +132,9 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: sel ? Colors.white : const Color(0xFF555555),
+                              color: sel
+                                  ? AppColors.actionGoldText
+                                  : const Color(0xFF555555),
                             )),
                       ),
                     ),
@@ -120,7 +145,11 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
               Center(
                 child: Text(
                   _generatedCode!,
-                  style: const TextStyle(fontSize: 52, fontWeight: FontWeight.w800, color: Color(0xFF1A1A2E), letterSpacing: 16),
+                  style: const TextStyle(
+                      fontSize: 52,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1A1A2E),
+                      letterSpacing: 16),
                 ),
               ),
               const SizedBox(height: 8),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:marquee/marquee.dart';
 import '../../../core/extensions/context_extensions.dart';
+import '../../../core/theme/app_colors.dart';
 import 'event_content_base.dart';
 
 class PublicEventContent extends EventContentBase {
@@ -48,9 +49,10 @@ class PublicEventContent extends EventContentBase {
               GestureDetector(
                 onTap: onNavigateTap,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF16213E),
+                    color: AppColors.actionGold,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(

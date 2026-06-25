@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../features/friend/data/models/friend_duration.dart';
 import '../../../features/friend/data/repositories/friend_repository.dart';
+import '../../../core/theme/app_colors.dart';
 import 'zgum_dialog.dart';
 
 class IeumRequestDialog extends StatefulWidget {
   final LatLng location;
   final FriendRepository repo;
-  const IeumRequestDialog({super.key, required this.location, required this.repo});
+  const IeumRequestDialog(
+      {super.key, required this.location, required this.repo});
 
   @override
   State<IeumRequestDialog> createState() => _IeumRequestDialogState();
@@ -34,9 +36,15 @@ class _IeumRequestDialogState extends State<IeumRequestDialog> {
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
       setState(() => _secondsLeft--);
-      if (_secondsLeft <= 0) { t.cancel(); if (mounted) Navigator.pop(context); }
+      if (_secondsLeft <= 0) {
+        t.cancel();
+        if (mounted) Navigator.pop(context);
+      }
     });
   }
 
@@ -56,7 +64,11 @@ class _IeumRequestDialogState extends State<IeumRequestDialog> {
           myLocation: widget.location,
           duration: _duration!,
         );
-        setState(() { _requestId = req.id; _waiting = true; _secondsLeft = 120; });
+        setState(() {
+          _requestId = req.id;
+          _waiting = true;
+          _secondsLeft = 120;
+        });
         _startTimer();
       } catch (_) {}
     } else {
@@ -110,8 +122,11 @@ class _IeumRequestDialogState extends State<IeumRequestDialog> {
               ),
               const SizedBox(height: 22),
               Row(
-                children: [FriendDuration.oneDay, FriendDuration.threeMonths, FriendDuration.sixMonths]
-                    .map((d) {
+                children: [
+                  FriendDuration.oneDay,
+                  FriendDuration.threeMonths,
+                  FriendDuration.sixMonths
+                ].map((d) {
                   final sel = _duration == d;
                   return Expanded(
                     child: GestureDetector(
@@ -120,8 +135,14 @@ class _IeumRequestDialogState extends State<IeumRequestDialog> {
                         margin: const EdgeInsets.symmetric(horizontal: 2),
                         height: 44,
                         decoration: BoxDecoration(
-                          color: sel ? const Color(0xFF16213E) : const Color(0xFFF4F4F4),
+                          color: sel
+                              ? AppColors.actionGoldSoft
+                              : const Color(0xFFF4F4F4),
                           borderRadius: BorderRadius.circular(10),
+                          border: sel
+                              ? Border.all(
+                                  color: AppColors.actionGoldBorder, width: 1)
+                              : null,
                         ),
                         alignment: Alignment.center,
                         child: Text(d.chipLabel,
@@ -129,7 +150,9 @@ class _IeumRequestDialogState extends State<IeumRequestDialog> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: sel ? Colors.white : const Color(0xFF555555),
+                              color: sel
+                                  ? AppColors.actionGoldText
+                                  : const Color(0xFF555555),
                             )),
                       ),
                     ),
@@ -157,18 +180,27 @@ class _IeumRequestDialogState extends State<IeumRequestDialog> {
               ],
             ),
             const SizedBox(height: 20),
-            if (!_waiting) ...[
-            ] else ...[
+            if (!_waiting)
+              ...[]
+            else ...[
               TextField(
                 controller: _codeCtrl,
                 keyboardType: TextInputType.number,
                 maxLength: 2,
                 textAlign: TextAlign.center,
                 autofocus: true,
-                style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800, letterSpacing: 12, color: Color(0xFF16213E)),
+                style: const TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 12,
+                    color: Color(0xFF16213E)),
                 decoration: InputDecoration(
                   hintText: '--',
-                  hintStyle: const TextStyle(color: Color(0xFFDDDDDD), letterSpacing: 12, fontSize: 36, fontWeight: FontWeight.w800),
+                  hintStyle: const TextStyle(
+                      color: Color(0xFFDDDDDD),
+                      letterSpacing: 12,
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800),
                   counterText: '',
                   filled: true,
                   fillColor: const Color(0xFFF8F8F8),

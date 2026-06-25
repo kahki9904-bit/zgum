@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/popup_layout.dart';
 
 /// Z:GUM 표준 팝업 컨테이너.
@@ -32,6 +33,7 @@ class ZGumDialog extends StatelessWidget {
     final screenHeight = MediaQuery.sizeOf(context).height;
     return Align(
       alignment: Alignment.center,
+      // ignore: avoid_unnecessary_containers
       child: Container(
         width: (screenWidth - 40).clamp(0.0, 360.0),
         height: _resolvedHeight(screenHeight),
@@ -165,7 +167,7 @@ class ZGumButton extends StatelessWidget {
     super.key,
     required this.label,
     required this.onTap,
-    this.color = const Color(0xFF16213E),
+    this.color = AppColors.actionGold,
     this.textColor = Colors.white,
     this.fontWeight = FontWeight.w700,
     this.widthFactor = 0.25,

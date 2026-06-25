@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../dialogs/zgum_dialog.dart';
 
 Future<bool?> showTerminateConfirmPopup(BuildContext context, String message) {
@@ -22,7 +23,7 @@ Future<bool?> showTerminateConfirmPopup(BuildContext context, String message) {
                 width: double.infinity,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A2E),
+                  color: AppColors.actionGold,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,

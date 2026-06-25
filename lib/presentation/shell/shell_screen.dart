@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'dart:math';
 import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/partner_focus_provider.dart';
 import '../../core/providers/shell_page_provider.dart';
 import '../../core/shell_gesture_layout.dart';
+import '../../core/theme/app_colors.dart';
 import '../../features/map_room/screens/map_room_screen.dart';
 import '../../features/partner_room/screens/partner_room_screen.dart';
 import '../../features/user_room/screens/user_room_screen.dart';
@@ -15,7 +16,6 @@ import '../widgets/popups/once/ieum_intro_popup.dart';
 import '../widgets/popups/once/partner_intro_popup.dart';
 import 'shell_constants.dart';
 import 'panels/map_panel_content.dart';
-
 
 class ShellScreen extends ConsumerStatefulWidget {
   const ShellScreen({super.key});
@@ -68,7 +68,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     final shown = await isPartnerIntroShown();
     if (!shown && mounted) await showPartnerIntroPopup(context);
   }
-
 
   @override
   void initState() {
@@ -680,7 +679,6 @@ class _PanelScrollIndicator extends StatelessWidget {
   }
 }
 
-
 class _NowCapsule extends StatefulWidget {
   final bool isOpen;
   final bool mapReady;
@@ -737,7 +735,7 @@ class _NowCapsuleState extends State<_NowCapsule>
   @override
   Widget build(BuildContext context) {
     final capsuleWidth = MediaQuery.sizeOf(context).width * 0.50;
-    const color = Color(0xFF16213E);
+    const color = AppColors.actionGold;
 
     return AnimatedBuilder(
       animation: _lightAnim,
@@ -780,8 +778,7 @@ class _NowCapsuleState extends State<_NowCapsule>
             width: capsuleWidth,
             height: 6,
             child: progress >= 1.0
-                ? ColoredBox(
-                    color: color.withValues(alpha: 0.70))
+                ? ColoredBox(color: color.withValues(alpha: 0.70))
                 : Stack(
                     children: [
                       // 좌측 끝 → 중앙으로
@@ -790,9 +787,7 @@ class _NowCapsuleState extends State<_NowCapsule>
                         top: 0,
                         bottom: 0,
                         width: fillWidth,
-                        child: ColoredBox(
-                            color:
-                                color.withValues(alpha: 0.70)),
+                        child: ColoredBox(color: color.withValues(alpha: 0.70)),
                       ),
                       // 우측 끝 → 중앙으로
                       Positioned(
@@ -800,9 +795,7 @@ class _NowCapsuleState extends State<_NowCapsule>
                         top: 0,
                         bottom: 0,
                         width: fillWidth,
-                        child: ColoredBox(
-                            color:
-                                color.withValues(alpha: 0.70)),
+                        child: ColoredBox(color: color.withValues(alpha: 0.70)),
                       ),
                     ],
                   ),

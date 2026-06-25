@@ -38,6 +38,7 @@ import '../../../core/providers/active_partner_event_provider.dart';
 import '../../../core/providers/admin_mode_provider.dart';
 import '../../../core/providers/shell_page_provider.dart';
 import '../../../core/providers/unified_search_provider.dart';
+import '../../../core/theme/app_colors.dart';
 
 class MapRoomScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSwipeToUserRoom;
@@ -526,7 +527,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               controller: _searchCtrl,
               focusNode: _searchFocus,
               style: const TextStyle(color: Color(0xFF1A1A2E), fontSize: 14),
-              cursorColor: const Color(0xFF16213E),
+              cursorColor: AppColors.actionGold,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
                 hintText: null,
@@ -917,6 +918,12 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
         : hasResults
             ? panelHeight
             : 120.0;
+    final routeButtonIsEnd = _isNavigating && !_isLoadingRoute;
+    final routeButtonBg = routeButtonIsEnd
+        ? AppColors.actionGoldSoft.withValues(alpha: 0.96)
+        : AppColors.actionGold;
+    final routeButtonFg =
+        routeButtonIsEnd ? AppColors.actionGoldText : Colors.white;
     return Scaffold(
       backgroundColor: Colors.black,
       resizeToAvoidBottomInset: false,
@@ -1031,14 +1038,14 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                           child: _locationAcquiring
                               ? const CircularProgressIndicator(
                                   strokeWidth: 3.5,
-                                  color: Color(0xFF16213E),
+                                  color: AppColors.actionGold,
                                 )
                               : Center(
                                   child: Container(
                                     width: 20,
                                     height: 6,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF16213E)
+                                      color: AppColors.actionGold
                                           .withValues(alpha: 0.70),
                                       borderRadius: BorderRadius.circular(5),
                                     ),
@@ -1060,7 +1067,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF16213E),
+                    color: routeButtonBg,
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
@@ -1093,15 +1100,15 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                             ),
                           ],
                         )
-                      : const Row(
+                      : Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.close, color: Colors.white, size: 16),
-                            SizedBox(width: 6),
+                            Icon(Icons.close, color: routeButtonFg, size: 16),
+                            const SizedBox(width: 6),
                             Text(
                               '안내 종료',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: routeButtonFg,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -1122,7 +1129,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF16213E).withValues(alpha: 0.9),
+                  color: AppColors.actionGold.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
@@ -1140,7 +1147,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               child: Icon(
                 Icons.add,
                 size: 36,
-                color: Color(0xFF16213E),
+                color: AppColors.actionGold,
               ),
             ),
             Positioned(
@@ -1150,7 +1157,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               child: FilledButton(
                 onPressed: _confirmManualLocation,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF16213E),
+                  backgroundColor: AppColors.actionGold,
                   minimumSize: const Size(double.infinity, 48),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),

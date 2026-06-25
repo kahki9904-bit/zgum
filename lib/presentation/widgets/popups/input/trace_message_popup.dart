@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../dialogs/zgum_dialog.dart';
 
 /// 흔적 남길 때 한 줄 메시지 입력 팝업.
@@ -62,7 +63,7 @@ Future<String?> showTraceMessagePopup(BuildContext context) async {
                         Navigator.pop(dialogCtx);
                       },
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF16213E),
+                        backgroundColor: AppColors.actionGold,
                         minimumSize: Size.zero,
                         padding: EdgeInsets.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:marquee/marquee.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/map_marker_model.dart';
+import '../../../core/theme/app_colors.dart';
 
 class KakaoPlaceDetailSheet {
   const KakaoPlaceDetailSheet._();
@@ -42,8 +43,9 @@ class _PlaceSheet extends StatelessWidget {
 
   const _PlaceSheet({required this.place});
 
-  String get _address =>
-      (place.roadAddress?.isNotEmpty == true) ? place.roadAddress! : (place.venue ?? '');
+  String get _address => (place.roadAddress?.isNotEmpty == true)
+      ? place.roadAddress!
+      : (place.venue ?? '');
 
   Future<void> _navigate() async {
     final url = place.placeUrl;
@@ -134,7 +136,7 @@ class _PlaceSheet extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF16213E),
+                        color: AppColors.actionGold,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(

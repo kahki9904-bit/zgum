@@ -7,6 +7,7 @@ import '../../../features/alert/models/partner_event.dart';
 import '../../../core/providers/admin_mode_provider.dart';
 import '../../../core/providers/active_partner_event_provider.dart';
 import '../../../core/providers/partner_my_events_provider.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../promotions/free_use/free_use_service.dart';
 import '../../../services/location_service.dart';
 import '../../../services/device_id_service.dart';
@@ -30,6 +31,8 @@ class PartnerPanelContent extends ConsumerStatefulWidget {
 class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
   final _titleCtrl = TextEditingController();
   final _contentCtrl = TextEditingController();
+  final _titleFocus = FocusNode();
+  final _contentFocus = FocusNode();
   final _picker = ImagePicker();
   final List<File> _photos = [];
   int _selectedMinutes = 60;
@@ -99,8 +102,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     final locationResult = await LocationService().acquireLocation();
     if (!mounted) return;
 
-    final photoList =
-        _photos.map((f) => PartnerPhoto(path: f.path)).toList();
+    final photoList = _photos.map((f) => PartnerPhoto(path: f.path)).toList();
 
     final now = DateTime.now();
     final deviceId = await DeviceIdService.getId();
@@ -109,9 +111,8 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
       partnerId: deviceId,
       title: title,
       venue: title,
-      message: _contentCtrl.text.trim().isEmpty
-          ? null
-          : _contentCtrl.text.trim(),
+      message:
+          _contentCtrl.text.trim().isEmpty ? null : _contentCtrl.text.trim(),
       location: locationResult.position,
       geoHash: 'mock',
       startsAt: now,
@@ -178,6 +179,8 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
 
   @override
   void dispose() {
+    _titleFocus.dispose();
+    _contentFocus.dispose();
     _titleCtrl.dispose();
     _contentCtrl.dispose();
     super.dispose();
@@ -192,9 +195,14 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     }
 
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 100;
-    final formTopPadding =
-        Platform.isIOS ? 18.0 : kShellPanelHandleContentGap;
+    final compactInput = Platform.isIOS;
+    final formTopPadding = Platform.isIOS ? 18.0 : kShellPanelHandleContentGap;
     final bottomSafe = MediaQuery.paddingOf(context).bottom;
+    final titleVerticalPadding = compactInput ? 8.0 : 12.0;
+    final contentVerticalPadding = compactInput ? 8.0 : 14.0;
+    final inputGap = compactInput ? 4.0 : 8.0;
+    final photoTopGap = compactInput ? 8.0 : 14.0;
+    final timeTopGap = compactInput ? 8.0 : 16.0;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -213,16 +221,18 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
               children: [
                 TextField(
                   controller: _titleCtrl,
-                  style: const TextStyle(
-                      fontSize: 14, color: Color(0xFF1A1A2E)),
+                  focusNode: _titleFocus,
+                  style:
+                      const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
                   cursorColor: const Color(0xFF16213E),
                   textInputAction: TextInputAction.next,
+                  onSubmitted: (_) => _contentFocus.requestFocus(),
                   decoration: InputDecoration(
                     hintText: '제목 (필수)',
-                    hintStyle: const TextStyle(
-                        color: Color(0xFFCCCCCC), fontSize: 14),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                    hintStyle:
+                        const TextStyle(color: Color(0xFFCCCCCC), fontSize: 14),
+                    contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16, vertical: titleVerticalPadding),
                     filled: true,
                     fillColor: const Color(0xFFF8F8F8),
                     border: OutlineInputBorder(
@@ -245,18 +255,23 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                     isDense: true,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: inputGap),
                 TextField(
                   controller: _contentCtrl,
-                  maxLines: 2,
-                  style: const TextStyle(
-                      fontSize: 13, color: Color(0xFF1A1A2E)),
+                  focusNode: _contentFocus,
+                  maxLines: compactInput ? 1 : 2,
+                  keyboardType: TextInputType.text,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _contentFocus.unfocus(),
+                  style:
+                      const TextStyle(fontSize: 13, color: Color(0xFF1A1A2E)),
                   cursorColor: const Color(0xFF16213E),
                   decoration: InputDecoration(
                     hintText: '내용',
-                    hintStyle: const TextStyle(
-                        color: Color(0xFFCCCCCC), fontSize: 13),
-                    contentPadding: const EdgeInsets.all(14),
+                    hintStyle:
+                        const TextStyle(color: Color(0xFFCCCCCC), fontSize: 13),
+                    contentPadding: EdgeInsets.symmetric(
+                        horizontal: 14, vertical: contentVerticalPadding),
                     filled: true,
                     fillColor: const Color(0xFFF8F8F8),
                     border: OutlineInputBorder(
@@ -278,10 +293,10 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                SizedBox(height: photoTopGap),
                 _buildPhotoRow(),
                 if (!keyboardVisible) ...[
-                  const SizedBox(height: 16),
+                  SizedBox(height: timeTopGap),
                   _buildTimeSelection(),
                 ],
               ],
@@ -305,6 +320,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
   }
 
   Widget _buildPhotoRow() {
+    final compactHint = Platform.isIOS;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -322,16 +338,22 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
           ],
         ),
         if (_photos.length > 1) ...[
-          const SizedBox(height: 6),
-          const Row(
+          SizedBox(height: compactHint ? 2 : 6),
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.swap_horiz_rounded,
-                  size: 13, color: Color(0xFFBBBBBB)),
-              SizedBox(width: 4),
+              Icon(
+                Icons.swap_horiz_rounded,
+                size: compactHint ? 10 : 13,
+                color: const Color(0xFFBBBBBB),
+              ),
+              const SizedBox(width: 4),
               Text(
                 '자리이동',
-                style: TextStyle(fontSize: 10, color: Color(0xFFBBBBBB)),
+                style: TextStyle(
+                  fontSize: compactHint ? 8 : 10,
+                  color: const Color(0xFFBBBBBB),
+                ),
               ),
             ],
           ),
@@ -368,8 +390,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                       height: size,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(10),
-                        child:
-                            Image.file(_photos[i], fit: BoxFit.cover),
+                        child: Image.file(_photos[i], fit: BoxFit.cover),
                       ),
                     ),
                   ),
@@ -378,8 +399,8 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFE0E4EC),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                        color: const Color(0xFFB0B8CC), width: 1.5),
+                    border:
+                        Border.all(color: const Color(0xFFB0B8CC), width: 1.5),
                   ),
                 ),
                 child: AnimatedContainer(
@@ -387,8 +408,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     border: candidateData.isNotEmpty
-                        ? Border.all(
-                            color: const Color(0xFF1A1A2E), width: 2)
+                        ? Border.all(color: const Color(0xFF1A1A2E), width: 2)
                         : null,
                   ),
                   child: ClipRRect(
@@ -403,8 +423,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                             right: 0,
                             bottom: 0,
                             child: Container(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 3),
+                              padding: const EdgeInsets.symmetric(vertical: 3),
                               color: const Color(0xFF1A1A2E)
                                   .withValues(alpha: 0.7),
                               alignment: Alignment.center,
@@ -452,8 +471,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
           decoration: BoxDecoration(
             color: const Color(0xFFF4F4F7),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-                color: const Color(0xFFDDDDDD), width: 1.5),
+            border: Border.all(color: const Color(0xFFDDDDDD), width: 1.5),
           ),
           child: Center(
             child: Column(
@@ -465,8 +483,13 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                   const SizedBox(height: 4),
                   const Text(
                     '필수',
-                    style:
-                        TextStyle(fontSize: 10, color: Color(0xFFCC3333)),
+                    style: TextStyle(fontSize: 10, color: Color(0xFFCC3333)),
+                  ),
+                ] else ...[
+                  const SizedBox(height: 4),
+                  const Text(
+                    '+',
+                    style: TextStyle(fontSize: 10, color: Color(0xFFAAAAAA)),
                   ),
                 ],
               ],
@@ -481,6 +504,13 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
         color: const Color(0xFFF0F0F0),
         borderRadius: BorderRadius.circular(10),
       ),
+      alignment: Alignment.center,
+      child: i > 0
+          ? const Text(
+              '+',
+              style: TextStyle(fontSize: 10, color: Color(0xFFBBBBBB)),
+            )
+          : null,
     );
   }
 
@@ -498,9 +528,12 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                 padding: const EdgeInsets.symmetric(vertical: 5),
                 decoration: BoxDecoration(
                   color: selected
-                      ? const Color(0xFF16213E)
+                      ? AppColors.actionGoldSoft
                       : const Color(0xFFF4F4F7),
                   borderRadius: BorderRadius.circular(7),
+                  border: selected
+                      ? Border.all(color: AppColors.actionGoldBorder, width: 1)
+                      : null,
                 ),
                 alignment: Alignment.center,
                 child: Text(
@@ -509,7 +542,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: selected
-                        ? Colors.white
+                        ? AppColors.actionGoldText
                         : const Color(0xFF888888),
                   ),
                 ),
@@ -540,9 +573,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 15),
             decoration: BoxDecoration(
-              color: disabled
-                  ? const Color(0xFFCCCCCC)
-                  : const Color(0xFF1A1A2E),
+              color: disabled ? const Color(0xFFCCCCCC) : AppColors.actionGold,
               borderRadius: BorderRadius.circular(16),
             ),
             alignment: Alignment.center,
@@ -654,8 +685,7 @@ class _ActiveEventWaitingViewState
       }
       if (isFreeActive) await FreeUseService.instance.recordRegistration();
 
-      final newExpiresAt =
-          widget.event.expiresAt.add(const Duration(hours: 1));
+      final newExpiresAt = widget.event.expiresAt.add(const Duration(hours: 1));
       await ref
           .read(firestorePartnerEventServiceProvider)
           .extend(widget.event.id, newExpiresAt);
@@ -713,9 +743,8 @@ class _ActiveEventWaitingViewState
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w200,
-              color: isExpired
-                  ? const Color(0xFFAAAAAA)
-                  : const Color(0xFF1A1A2E),
+              color:
+                  isExpired ? const Color(0xFFAAAAAA) : const Color(0xFF1A1A2E),
               letterSpacing: 2,
             ),
           ),
@@ -753,10 +782,9 @@ class _ActiveEventWaitingViewState
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       decoration: BoxDecoration(
-                        color:
-                            (_extending || widget.event.extensionCount >= 1)
-                                ? const Color(0xFFAAAAAA)
-                                : const Color(0xFF1A1A2E),
+                        color: (_extending || widget.event.extensionCount >= 1)
+                            ? const Color(0xFFAAAAAA)
+                            : AppColors.actionGold,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       alignment: Alignment.center,
@@ -784,7 +812,7 @@ class _ActiveEventWaitingViewState
                       child: const Text(
                         '종료',
                         style: TextStyle(
-                            color: Color(0xFF1A1A2E),
+                            color: AppColors.actionGoldText,
                             fontSize: 15,
                             fontWeight: FontWeight.w600),
                       ),

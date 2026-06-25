@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:marquee/marquee.dart';
 import '../../../data/models/cultural_event.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../services/time_service.dart';
 import 'event_content_base.dart';
 import 'partner_event_content.dart';
@@ -206,7 +207,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
                 Navigator.pop(dialogCtx);
               },
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF16213E),
+                backgroundColor: AppColors.actionGold,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
               ),
@@ -344,7 +345,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
                     decoration: BoxDecoration(
                       color: widget.isCheckedIn
                           ? const Color(0xFFCCCCCC)
-                          : const Color(0xFF1A1A2E),
+                          : AppColors.actionGold,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     alignment: Alignment.center,
@@ -408,8 +409,8 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
             style: const TextStyle(fontSize: 14, color: Color(0xFF333333)),
             decoration: InputDecoration(
               hintText: '한 줄 메모 (선택)',
-              hintStyle: const TextStyle(
-                  color: Color(0xFFCCCCCC), fontSize: 14),
+              hintStyle:
+                  const TextStyle(color: Color(0xFFCCCCCC), fontSize: 14),
               filled: true,
               fillColor: const Color(0xFFF8F8F8),
               border: OutlineInputBorder(
@@ -428,15 +429,15 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
                 child: OutlinedButton(
                   onPressed: _cancelTrace,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF888888),
-                    side: const BorderSide(color: Color(0xFFDDDDDD)),
+                    foregroundColor: AppColors.actionGoldText,
+                    side: const BorderSide(color: AppColors.actionGoldBorder),
                     minimumSize: const Size(double.infinity, 52),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
                   ),
                   child: const Text('취소',
-                      style: TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600)),
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -444,7 +445,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
                 child: FilledButton(
                   onPressed: _saving ? null : _saveTrace,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF16213E),
+                    backgroundColor: AppColors.actionGold,
                     minimumSize: const Size(double.infinity, 52),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
