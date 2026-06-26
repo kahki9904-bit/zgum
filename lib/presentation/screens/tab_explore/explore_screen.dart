@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme.dart';
+import '../../../core/theme/app_colors.dart';
 
 class ExploreScreen extends StatelessWidget {
   const ExploreScreen({super.key});
@@ -42,7 +42,7 @@ class _AppLogo extends StatelessWidget {
     return const Text(
       'Z:GUM',
       style: TextStyle(
-        color: AppTheme.deepBlue,
+        color: AppColors.actionGoldText,
         fontSize: 15,
         fontWeight: FontWeight.w800,
         letterSpacing: 4,
@@ -68,7 +68,7 @@ class _HeroSection extends StatelessWidget {
           const Text(
             '탐험을\n시작합니다',
             style: TextStyle(
-              color: AppTheme.deepBlue,
+              color: AppColors.actionGoldText,
               fontSize: 42,
               fontWeight: FontWeight.w700,
               height: 1.2,
@@ -82,7 +82,7 @@ class _HeroSection extends StatelessWidget {
           Text(
             '지금 이 순간,\n당신 주변의 가치를 발견하세요.',
             style: TextStyle(
-              color: AppTheme.deepBlue.withValues(alpha: 0.45),
+              color: AppColors.actionGoldText.withValues(alpha: 0.45),
               fontSize: 15,
               fontWeight: FontWeight.w400,
               height: 1.7,

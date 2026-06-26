@@ -8,6 +8,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../core/interfaces/map_engine.dart';
 import '../../../core/map_marker_layout.dart';
 import '../../../core/models/map_marker_model.dart';
+import '../../../core/theme/app_colors.dart';
 
 // ── 지도 스타일 (도로 밝게) ──────────────────────────────────────────────────────
 const _mapStyle = '''
@@ -176,7 +177,7 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
         _polylines = {
           Polyline(
             polylineId: const PolylineId('route'),
-            color: const Color(0xFF16213E),
+            color: AppColors.actionGold,
             width: 4,
             points: points.map((p) => LatLng(p.latitude, p.longitude)).toList(),
           ),

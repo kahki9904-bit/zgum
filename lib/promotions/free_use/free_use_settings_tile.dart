@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_colors.dart';
 import 'free_use_service.dart';
 
 /// 설정 화면에 꽂히는 무료이용 상태 타일.
@@ -38,7 +39,7 @@ class _FreeUseSettingsTileState extends State<FreeUseSettingsTile> {
 
     final statusText = _active ? '이용 중' : '중단';
     final statusColor =
-        _active ? const Color(0xFF16213E) : const Color(0xFFAAAAAA);
+        _active ? AppColors.actionGoldText : const Color(0xFFAAAAAA);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -82,8 +83,8 @@ class _FreeUseSettingsTileState extends State<FreeUseSettingsTile> {
                   const SizedBox(width: 6),
                   Text(
                     '$_remaining일',
-                    style: const TextStyle(
-                        color: Color(0xFFAAAAAA), fontSize: 12),
+                    style:
+                        const TextStyle(color: Color(0xFFAAAAAA), fontSize: 12),
                   ),
                 ],
               ],

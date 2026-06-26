@@ -7,6 +7,7 @@ import '../../../core/event_fade.dart';
 import '../../../core/interfaces/map_engine.dart';
 import '../../../core/map_marker_layout.dart';
 import '../../../core/models/map_marker_model.dart';
+import '../../../core/theme/app_colors.dart';
 
 // ── 좌표 변환 헬퍼 ─────────────────────────────────────────────────────────────
 
@@ -75,7 +76,7 @@ class FlutterMapEngine extends MapEngine {
             polylines: [
               Polyline(
                 points: routeLatLngs,
-                color: const Color(0xFF16213E),
+                color: AppColors.actionGold,
                 strokeWidth: 4.0,
               ),
             ],

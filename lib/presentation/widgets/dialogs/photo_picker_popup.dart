@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/theme/app_colors.dart';
 import 'camera_chooser_popup.dart';
 
 Future<List<File>?> showPhotoPickerPopup(
@@ -80,7 +81,7 @@ class _PhotoPickerDialogState extends State<_PhotoPickerDialog> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
+                color: AppColors.actionGoldText,
               ),
             ),
             const SizedBox(height: 4),
@@ -106,7 +107,7 @@ class _PhotoPickerDialogState extends State<_PhotoPickerDialog> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A2E),
+                  color: AppColors.actionGold,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
@@ -174,8 +175,8 @@ class _PhotoPickerDialogState extends State<_PhotoPickerDialog> {
                         const SizedBox(height: 4),
                         const Text(
                           '필수',
-                          style: TextStyle(
-                              fontSize: 10, color: Color(0xFFCC3333)),
+                          style:
+                              TextStyle(fontSize: 10, color: Color(0xFFCC3333)),
                         ),
                       ],
                     ],

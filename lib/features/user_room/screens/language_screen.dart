@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/locale_provider.dart';
+import '../../../core/theme/app_colors.dart';
 
 const _kLanguages = [
   _LangOption(code: 'ko', label: '한국어'),
@@ -28,13 +29,14 @@ class LanguageScreen extends ConsumerWidget {
         backgroundColor: const Color(0xFFFFFFFF),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, size: 18, color: Color(0xFF1A1A2E)),
+          icon: const Icon(Icons.arrow_back_ios,
+              size: 18, color: AppColors.actionGoldText),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           '언어',
           style: TextStyle(
-            color: Color(0xFF1A1A2E),
+            color: AppColors.actionGoldText,
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
@@ -59,7 +61,9 @@ class LanguageScreen extends ConsumerWidget {
                   children: [
                     InkWell(
                       onTap: () {
-                        ref.read(localeProvider.notifier).setLocale(Locale(lang.code));
+                        ref
+                            .read(localeProvider.notifier)
+                            .setLocale(Locale(lang.code));
                         Navigator.pop(context);
                       },
                       borderRadius: BorderRadius.circular(12),
@@ -74,7 +78,7 @@ class LanguageScreen extends ConsumerWidget {
                                 height: 32,
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? const Color(0xFF1A1A2E)
+                                      ? AppColors.actionGold
                                       : const Color(0xFFF0F0F0),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -98,7 +102,7 @@ class LanguageScreen extends ConsumerWidget {
                                   lang.label,
                                   style: TextStyle(
                                     color: isSelected
-                                        ? const Color(0xFF1A1A2E)
+                                        ? AppColors.actionGoldText
                                         : const Color(0xFF333333),
                                     fontSize: 15,
                                     fontWeight: isSelected
@@ -109,7 +113,7 @@ class LanguageScreen extends ConsumerWidget {
                               ),
                               if (isSelected)
                                 const Icon(Icons.check,
-                                    color: Color(0xFF1A1A2E), size: 18),
+                                    color: AppColors.actionGoldText, size: 18),
                             ],
                           ),
                         ),

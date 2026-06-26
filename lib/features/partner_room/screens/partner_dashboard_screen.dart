@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/admin_mode_provider.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../dev/mock_partner_event_store.dart';
 import '../../../features/alert/providers/event_stats_provider.dart';
 import '../../../promotions/free_use/free_use_service.dart';
@@ -80,7 +81,7 @@ class _PartnerDashboardScreenState
                   child: Text(
                     '현황',
                     style: TextStyle(
-                      color: Color(0xFF1A1A2E),
+                      color: AppColors.actionGoldText,
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.5,
@@ -104,7 +105,7 @@ class _PartnerDashboardScreenState
                           label: '무료이용 상태',
                           value: '활성',
                           icon: Icons.card_giftcard_outlined,
-                          valueColor: const Color(0xFF1A1A2E),
+                          valueColor: AppColors.actionGoldText,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -114,7 +115,7 @@ class _PartnerDashboardScreenState
                           value: _canRegisterToday ? '가능' : '한도 초과',
                           icon: Icons.today_outlined,
                           valueColor: _canRegisterToday
-                              ? const Color(0xFF1A1A2E)
+                              ? AppColors.actionGoldText
                               : const Color(0xFFAAAAAA),
                         ),
                       ),
@@ -226,8 +227,8 @@ class _PartnerDashboardScreenState
                 const SizedBox(width: 12),
                 Text(
                   label,
-                  style: const TextStyle(
-                      fontSize: 12, color: Color(0xFFAAAAAA)),
+                  style:
+                      const TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),
                 ),
                 const Spacer(),
                 Text(
@@ -235,7 +236,7 @@ class _PartnerDashboardScreenState
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
-                    color: valueColor ?? const Color(0xFF1A1A2E),
+                    color: valueColor ?? AppColors.actionGoldText,
                     letterSpacing: -0.3,
                   ),
                 ),
@@ -251,7 +252,7 @@ class _PartnerDashboardScreenState
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
-                    color: valueColor ?? const Color(0xFF1A1A2E),
+                    color: valueColor ?? AppColors.actionGoldText,
                     letterSpacing: -0.3,
                   ),
                 ),
@@ -314,7 +315,7 @@ class _AdminModeToggle extends ConsumerWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: isAdmin ? const Color(0xFF1A1A2E) : const Color(0xFFEEEEEE),
+              color: isAdmin ? AppColors.actionGold : const Color(0xFFEEEEEE),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -333,11 +334,10 @@ class _AdminModeToggle extends ConsumerWidget {
           Switch(
             value: isAdmin,
             onChanged: (v) => ref.read(adminModeProvider.notifier).state = v,
-            activeThumbColor: const Color(0xFF1A1A2E),
+            activeThumbColor: AppColors.actionGold,
           ),
         ],
       ),
     );
   }
 }
-

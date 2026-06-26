@@ -1,11 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../core/constants.dart';
 import '../../core/interfaces/map_engine.dart';
 import '../../core/models/map_marker_model.dart';
-import '../../core/theme.dart';
+import '../../core/theme/app_colors.dart';
 import '../../features/map_room/engines/flutter_map_engine.dart';
 import '../shell/shell_screen.dart';
 
@@ -23,20 +23,20 @@ class _Cat {
 }
 
 const _categories = <_Cat>[
-  _Cat('movie',    '영화',   null),
-  _Cat('theater',  '연극',   null),
-  _Cat('exhibit',  '전시',   null),
-  _Cat('zoo',      '동물원',  null),
-  _Cat('park',     '유원지',  null),
-  _Cat('shopping', '상권',   null),
+  _Cat('movie', '영화', null),
+  _Cat('theater', '연극', null),
+  _Cat('exhibit', '전시', null),
+  _Cat('zoo', '동물원', null),
+  _Cat('park', '유원지', null),
+  _Cat('shopping', '상권', null),
 ];
 
 typedef _Radius = ({String label, double km});
 const List<_Radius> _radii = [
   (label: '500m', km: 0.5),
-  (label: '1km',  km: 1.0),
-  (label: '3km',  km: 3.0),
-  (label: '전체',  km: 10.0),
+  (label: '1km', km: 1.0),
+  (label: '3km', km: 3.0),
+  (label: '전체', km: 10.0),
 ];
 
 // ── 메인 화면 ──────────────────────────────────────────────────────────────────
@@ -130,7 +130,8 @@ class _ExploreOnboardingScreenState extends State<ExploreOnboardingScreen>
       final loc = await _fetchPosition();
       if (!mounted) return;
       setState(() => _center = loc);
-      _mapCtrl.move(MapCoordinate(loc.latitude, loc.longitude), AppConstants.defaultZoom);
+      _mapCtrl.move(
+          MapCoordinate(loc.latitude, loc.longitude), AppConstants.defaultZoom);
     }
 
     setState(() => _phase = _Phase.filterCard);
@@ -245,7 +246,7 @@ class _UserCursorState extends State<_UserCursor>
                 height: 14 * _scale.value,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppTheme.deepBlue,
+                  color: AppColors.actionGoldBright,
                 ),
               ),
             ),
@@ -255,11 +256,11 @@ class _UserCursorState extends State<_UserCursor>
               height: 16,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.deepBlue,
+                color: AppColors.actionGold,
                 border: Border.all(color: Colors.white, width: 2.5),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.deepBlue.withValues(alpha: 0.30),
+                    color: AppColors.actionGold.withValues(alpha: 0.30),
                     blurRadius: 10,
                     spreadRadius: 2,
                   ),
@@ -320,7 +321,7 @@ class _OnboardingCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.deepBlue.withValues(alpha: 0.10),
+                  color: AppColors.actionGold.withValues(alpha: 0.10),
                   blurRadius: 32,
                   offset: const Offset(0, 8),
                 ),
@@ -372,7 +373,7 @@ class _PermContent extends StatelessWidget {
         const Text(
           '내 주변 탐험을\n시작할까요?',
           style: TextStyle(
-            color: AppTheme.deepBlue,
+            color: AppColors.actionGoldText,
             fontSize: 22,
             fontWeight: FontWeight.w700,
             height: 1.35,
@@ -382,7 +383,7 @@ class _PermContent extends StatelessWidget {
         Text(
           '위치 정보로 지금 이 순간,\n가장 가까운 문화를 발견합니다.',
           style: TextStyle(
-            color: AppTheme.deepBlue.withValues(alpha: 0.50),
+            color: AppColors.actionGoldText.withValues(alpha: 0.50),
             fontSize: 14,
             height: 1.65,
           ),
@@ -396,7 +397,7 @@ class _PermContent extends StatelessWidget {
             child: Text(
               '나중에',
               style: TextStyle(
-                color: AppTheme.deepBlue.withValues(alpha: 0.30),
+                color: AppColors.actionGoldText.withValues(alpha: 0.30),
                 fontSize: 13,
               ),
             ),
@@ -486,7 +487,7 @@ class _SectionLabel extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        color: AppTheme.deepBlue.withValues(alpha: 0.40),
+        color: AppColors.actionGoldText.withValues(alpha: 0.40),
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.8,
@@ -513,9 +514,11 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = selected
-        ? AppTheme.deepBlue
-        : AppTheme.deepBlue.withValues(alpha: 0.06);
-    final fg = selected ? Colors.white : AppTheme.deepBlue.withValues(alpha: 0.65);
+        ? AppColors.actionGold
+        : AppColors.actionGoldSoft.withValues(alpha: 0.72);
+    final fg = selected
+        ? Colors.white
+        : AppColors.actionGoldText.withValues(alpha: 0.72);
 
     return GestureDetector(
       onTap: onTap,
@@ -576,7 +579,7 @@ class _PrimaryBtn extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.deepBlue,
+          backgroundColor: AppColors.actionGold,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),

@@ -51,8 +51,8 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     if (!mounted) return;
     if (ref.read(activePartnerEventProvider) != null) return;
     try {
-      final uid = FirebaseAuth.instance.currentUser?.uid
-          ?? await DeviceIdService.getId();
+      final uid = FirebaseAuth.instance.currentUser?.uid ??
+          await DeviceIdService.getId();
       final service = ref.read(firestorePartnerEventServiceProvider);
       final events = await service.watchByPartner(uid).first;
       final active = events.where((e) => !e.isExpired).toList();
@@ -109,8 +109,8 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     final photoList = _photos.map((f) => PartnerPhoto(path: f.path)).toList();
 
     final now = DateTime.now();
-    final uid = FirebaseAuth.instance.currentUser?.uid
-        ?? await DeviceIdService.getId();
+    final uid =
+        FirebaseAuth.instance.currentUser?.uid ?? await DeviceIdService.getId();
     final event = PartnerEvent(
       id: now.millisecondsSinceEpoch.toString(),
       partnerId: uid,
@@ -256,9 +256,9 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                 TextField(
                   controller: _titleCtrl,
                   focusNode: _titleFocus,
-                  style:
-                      const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
-                  cursorColor: const Color(0xFF16213E),
+                  style: const TextStyle(
+                      fontSize: 14, color: AppColors.actionGoldText),
+                  cursorColor: AppColors.actionGold,
                   textInputAction: TextInputAction.next,
                   onSubmitted: (_) => _contentFocus.requestFocus(),
                   decoration: InputDecoration(
@@ -280,7 +280,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: const BorderSide(
-                          color: Color(0xFF16213E), width: 1.5),
+                          color: AppColors.actionGold, width: 1.5),
                     ),
                     disabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -297,9 +297,9 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                   keyboardType: TextInputType.text,
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _contentFocus.unfocus(),
-                  style:
-                      const TextStyle(fontSize: 13, color: Color(0xFF1A1A2E)),
-                  cursorColor: const Color(0xFF16213E),
+                  style: const TextStyle(
+                      fontSize: 13, color: AppColors.actionGoldText),
+                  cursorColor: AppColors.actionGold,
                   decoration: InputDecoration(
                     hintText: '내용',
                     hintStyle:
@@ -319,7 +319,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: const BorderSide(
-                          color: Color(0xFF16213E), width: 1.5),
+                          color: AppColors.actionGold, width: 1.5),
                     ),
                     disabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -442,7 +442,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     border: candidateData.isNotEmpty
-                        ? Border.all(color: const Color(0xFF1A1A2E), width: 2)
+                        ? Border.all(color: AppColors.actionGold, width: 2)
                         : null,
                   ),
                   child: ClipRRect(
@@ -458,7 +458,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
                             bottom: 0,
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 3),
-                              color: const Color(0xFF1A1A2E)
+                              color: AppColors.actionGoldText
                                   .withValues(alpha: 0.7),
                               alignment: Alignment.center,
                               child: const Text(
@@ -779,7 +779,7 @@ class _ActiveEventWaitingViewState
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A2E),
+              color: AppColors.actionGoldText,
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -796,8 +796,9 @@ class _ActiveEventWaitingViewState
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w200,
-              color:
-                  isExpired ? const Color(0xFFAAAAAA) : const Color(0xFF1A1A2E),
+              color: isExpired
+                  ? const Color(0xFFAAAAAA)
+                  : AppColors.actionGoldText,
               letterSpacing: 2,
             ),
           ),

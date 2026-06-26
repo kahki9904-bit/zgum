@@ -123,7 +123,7 @@ class ZGumDialogTextStyles {
   static const title = TextStyle(
     fontSize: 20,
     fontWeight: FontWeight.w800,
-    color: Color(0xFF1A1A2E),
+    color: AppColors.actionGoldText,
     height: 1.2,
   );
 
@@ -136,7 +136,7 @@ class ZGumDialogTextStyles {
   static const sectionTitle = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w700,
-    color: Color(0xFF1A1A2E),
+    color: AppColors.actionGoldText,
     height: 1.35,
   );
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/cultural_event.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../services/time_service.dart';
 
 /// 이벤트 상세 콘텐츠 위젯의 추상 기반 클래스.
@@ -30,7 +31,7 @@ class EventDetailTextStyles {
   static const title = TextStyle(
     fontSize: 21,
     fontWeight: FontWeight.w800,
-    color: Color(0xFF1A1A2E),
+    color: AppColors.actionGoldText,
     height: 1.25,
   );
 
@@ -42,7 +43,7 @@ class EventDetailTextStyles {
 
   static const address = TextStyle(
     fontSize: 13,
-    color: Color(0x8C1A1A2E),
+    color: Color(0x996D5633),
     height: 1.45,
   );
 }
@@ -63,7 +64,8 @@ class EventCategoryBadge extends StatelessWidget {
     EventCategory.all: Color(0xFF888888),
   };
 
-  const EventCategoryBadge(this.category, {super.key, this.isAdultOnly = false});
+  const EventCategoryBadge(this.category,
+      {super.key, this.isAdultOnly = false});
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +75,10 @@ class EventCategoryBadge extends StatelessWidget {
       children: [
         _Chip(label: category.label, color: color),
         if (isAdultOnly)
-          const _Chip(label: '신분증확인', color: Color(0xFFE74C3C), icon: Icons.lock_outline),
+          const _Chip(
+              label: '신분증확인',
+              color: Color(0xFFE74C3C),
+              icon: Icons.lock_outline),
       ],
     );
   }
@@ -89,7 +94,8 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: icon != null ? 8 : 10, vertical: 4),
+      padding:
+          EdgeInsets.symmetric(horizontal: icon != null ? 8 : 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(12),
@@ -143,7 +149,8 @@ class EndingSoonBadge extends StatelessWidget {
   final String label;
   final bool isUrgent;
 
-  const EndingSoonBadge({super.key, required this.label, this.isUrgent = false});
+  const EndingSoonBadge(
+      {super.key, required this.label, this.isUrgent = false});
 
   @override
   Widget build(BuildContext context) {

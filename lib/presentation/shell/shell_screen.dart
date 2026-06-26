@@ -667,7 +667,7 @@ class _PanelScrollIndicator extends StatelessWidget {
                     width: 4,
                     height: thumbH,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1A1A2E).withValues(alpha: 0.22),
+                      color: AppColors.actionGold.withValues(alpha: 0.22),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),

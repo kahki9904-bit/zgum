@@ -173,7 +173,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A2E),
+                  color: AppColors.actionGoldText,
                 ),
               ),
               const SizedBox(height: 12),
@@ -390,7 +390,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF1A1A2E),
+              color: AppColors.actionGoldText,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

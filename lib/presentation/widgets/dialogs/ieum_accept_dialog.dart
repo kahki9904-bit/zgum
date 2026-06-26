@@ -177,7 +177,7 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
                   style: const TextStyle(
                       fontSize: 52,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF1A1A2E),
+                      color: AppColors.actionGoldText,
                       letterSpacing: 16),
                 ),
               ),
@@ -189,7 +189,7 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: _connected
-                        ? const Color(0xFF16213E)
+                        ? AppColors.actionGoldText
                         : const Color(0xFF9AA4AD),
                   ),
                 ),

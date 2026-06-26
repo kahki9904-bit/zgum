@@ -102,10 +102,8 @@ class _MapPanelContentState extends ConsumerState<MapPanelContent> {
 
     if (partnerEvents.isNotEmpty) {
       _stopShake();
-      final myEventIds = ref
-          .watch(partnerMyEventsProvider)
-          .map((e) => e.id)
-          .toSet();
+      final myEventIds =
+          ref.watch(partnerMyEventsProvider).map((e) => e.id).toSet();
       final activeId = ref.watch(activePartnerEventProvider)?.id;
       return _PartnerEventPanel(
         events: partnerEvents,
@@ -324,7 +322,8 @@ class _PartnerEventPanel extends StatelessWidget {
             child: _PartnerNoticeCard(
               event: featured,
               onTap: () => onTap(featured),
-              isMyEvent: myEventIds.contains(featured.id) || featured.id == activeEventId,
+              isMyEvent: myEventIds.contains(featured.id) ||
+                  featured.id == activeEventId,
             ),
           ),
           const SizedBox(height: 12),
@@ -472,7 +471,7 @@ class _PartnerEventRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Color(0xFF071426),
+                      color: AppColors.actionGoldText,
                       fontSize: 14,
                       height: 1.25,
                       fontWeight: FontWeight.w800,
@@ -550,7 +549,7 @@ class _EventImageFallback extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: dark
-              ? const [Color(0xFF26384F), Color(0xFF071426)]
+              ? const [AppColors.actionGold, AppColors.actionGoldText]
               : const [Color(0xFFD8E3E8), Color(0xFFAABDC7)],
         ),
       ),
@@ -591,7 +590,7 @@ class _NoticeBadge extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          color: dark ? Colors.white : const Color(0xFF16213E),
+          color: dark ? Colors.white : AppColors.actionGoldText,
           fontSize: 11,
           fontWeight: FontWeight.w900,
         ),

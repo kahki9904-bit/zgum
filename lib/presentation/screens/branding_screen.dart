@@ -128,23 +128,93 @@ class _BrandBlock extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 30),
-            Container(
-              width: 96,
-              height: 3,
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.circular(999)),
+            const _MovingGoldLine(),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MovingGoldLine extends StatefulWidget {
+  const _MovingGoldLine();
+
+  @override
+  State<_MovingGoldLine> createState() => _MovingGoldLineState();
+}
+
+class _MovingGoldLineState extends State<_MovingGoldLine>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _glow;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _glow = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const lineWidth = 96.0;
+    const glowWidth = 38.0;
+
+    return SizedBox(
+      width: lineWidth,
+      height: 3,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const DecoratedBox(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
                     Color(0x00D9BD7A),
-                    Color(0xFFD9BD7A),
+                    Color(0x88D9BD7A),
                     Color(0x00D9BD7A),
                   ],
+                ),
+              ),
+              child: SizedBox.expand(),
+            ),
+            AnimatedBuilder(
+              animation: _glow,
+              builder: (context, child) {
+                return Positioned(
+                  left: -glowWidth + ((lineWidth + glowWidth) * _glow.value),
+                  top: 0,
+                  bottom: 0,
+                  width: glowWidth,
+                  child: child!,
+                );
+              },
+              child: const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0x00F8E7B9),
+                      Color(0xFFF8E7B9),
+                      Color(0x00F8E7B9),
+                    ],
+                  ),
                 ),
               ),
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 }

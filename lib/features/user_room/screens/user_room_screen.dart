@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/grid_room_layout.dart';
 import '../../../core/providers/user_location_provider.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../data/models/check_in_record.dart';
 import '../../../features/friend/providers/friend_provider.dart';
 import '../../../presentation/widgets/dialogs/ieum_accept_dialog.dart';
@@ -131,7 +132,8 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _IeumOrb(onTap: _onIeumTap, hasNearby: _hasNearbyRequest),
+                          _IeumOrb(
+                              onTap: _onIeumTap, hasNearby: _hasNearbyRequest),
                           const _SettingsSection(),
                         ],
                       ),
@@ -314,7 +316,7 @@ class _TraceGridControls extends StatelessWidget {
                   Text(
                     newestFirst ? '최신순' : '오래된순',
                     style: const TextStyle(
-                      color: Color(0xFF071426),
+                      color: AppColors.actionGoldText,
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
                       height: 1.0,
@@ -457,7 +459,7 @@ class _TraceGridTile extends StatelessWidget {
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: Color(0xFF16213E),
+                  color: AppColors.actionGoldText,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   height: 1.35,
@@ -558,7 +560,7 @@ class _TracePhotoViewer extends ConsumerWidget {
                       record.eventTitle,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        color: Color(0xFF16213E),
+                        color: AppColors.actionGoldText,
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                         height: 1.35,
@@ -593,8 +595,7 @@ class _TracePhotoViewer extends ConsumerWidget {
                         height: 34,
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
-                          color:
-                              const Color(0xFF071426).withValues(alpha: 0.86),
+                          color: AppColors.actionGold.withValues(alpha: 0.86),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         alignment: Alignment.center,
@@ -653,7 +654,7 @@ class _TracePhotoViewer extends ConsumerWidget {
                         child: Text(
                           record.eventTitle,
                           style: const TextStyle(
-                            color: Color(0xFF071426),
+                            color: AppColors.actionGoldText,
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
                             height: 1.3,
@@ -665,13 +666,14 @@ class _TracePhotoViewer extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEEFBFF),
+                          color:
+                              AppColors.actionGoldSoft.withValues(alpha: 0.72),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
                           '${index + 1} / $totalCount',
                           style: const TextStyle(
-                            color: Color(0xFF16213E),
+                            color: AppColors.actionGoldText,
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
                           ),

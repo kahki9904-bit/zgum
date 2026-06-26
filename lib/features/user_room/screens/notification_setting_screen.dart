@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/theme/app_colors.dart';
 
 const _kEventRadiusKey = 'zgum_notif_event_radius_m';
 const _kFriendRadiusKey = 'zgum_notif_friend_radius_m';
@@ -22,7 +23,8 @@ class NotificationSettingScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationSettingScreenState
-    extends ConsumerState<NotificationSettingScreen> with WidgetsBindingObserver {
+    extends ConsumerState<NotificationSettingScreen>
+    with WidgetsBindingObserver {
   bool _notifGranted = false;
   // ignore: unused_field
   int? _eventRadiusM;
@@ -66,16 +68,22 @@ class _NotificationSettingScreenState
   Future<void> _setEventRadius(int? m) async {
     setState(() => _eventRadiusM = m);
     final prefs = await SharedPreferences.getInstance();
-    if (m == null) { prefs.remove(_kEventRadiusKey); }
-    else { prefs.setInt(_kEventRadiusKey, m); }
+    if (m == null) {
+      prefs.remove(_kEventRadiusKey);
+    } else {
+      prefs.setInt(_kEventRadiusKey, m);
+    }
   }
 
   // ignore: unused_element
   Future<void> _setFriendRadius(int? m) async {
     setState(() => _friendRadiusM = m);
     final prefs = await SharedPreferences.getInstance();
-    if (m == null) { prefs.remove(_kFriendRadiusKey); }
-    else { prefs.setInt(_kFriendRadiusKey, m); }
+    if (m == null) {
+      prefs.remove(_kFriendRadiusKey);
+    } else {
+      prefs.setInt(_kFriendRadiusKey, m);
+    }
   }
 
   @override
@@ -86,12 +94,16 @@ class _NotificationSettingScreenState
         backgroundColor: const Color(0xFFFFFFFF),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF333333), size: 18),
+          icon: const Icon(Icons.arrow_back_ios,
+              color: Color(0xFF333333), size: 18),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           '알림',
-          style: TextStyle(color: Color(0xFF333333), fontSize: 16, fontWeight: FontWeight.w600),
+          style: TextStyle(
+              color: Color(0xFF333333),
+              fontSize: 16,
+              fontWeight: FontWeight.w600),
         ),
       ),
       body: SafeArea(
@@ -195,13 +207,14 @@ class _DistanceRow extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    style: const TextStyle(color: Color(0xFF333333), fontSize: 15),
+                    style:
+                        const TextStyle(color: Color(0xFF333333), fontSize: 15),
                   ),
                 ),
                 Switch(
                   value: isOn,
                   onChanged: (v) => onChanged(v ? options[0] : null),
-                  activeThumbColor: const Color(0xFF16213E),
+                  activeThumbColor: AppColors.actionGold,
                 ),
               ],
             ),
@@ -214,12 +227,13 @@ class _DistanceRow extends StatelessWidget {
               children: [
                 SliderTheme(
                   data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: const Color(0xFF1A1A2E),
-                    thumbColor: const Color(0xFF1A1A2E),
+                    activeTrackColor: AppColors.actionGold,
+                    thumbColor: AppColors.actionGold,
                     inactiveTrackColor: const Color(0xFFE0E0E0),
-                    overlayColor: const Color(0x221A1A2E),
+                    overlayColor: AppColors.actionGold.withValues(alpha: 0.14),
                     trackHeight: 3,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+                    thumbShape:
+                        const RoundSliderThumbShape(enabledThumbRadius: 7),
                   ),
                   child: Slider(
                     min: 0,
@@ -238,9 +252,12 @@ class _DistanceRow extends StatelessWidget {
                       return Text(
                         _formatDistance(m),
                         style: TextStyle(
-                          color: active ? const Color(0xFF1A1A2E) : const Color(0xFFBBBBBB),
+                          color: active
+                              ? AppColors.actionGoldText
+                              : const Color(0xFFBBBBBB),
                           fontSize: 11,
-                          fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                          fontWeight:
+                              active ? FontWeight.w600 : FontWeight.w400,
                         ),
                       );
                     }).toList(),
@@ -294,7 +311,7 @@ class _ToggleRow extends StatelessWidget {
             Switch(
               value: value,
               onChanged: (_) => onToggle(),
-              activeThumbColor: const Color(0xFF16213E),
+              activeThumbColor: AppColors.actionGold,
             ),
           ],
         ),

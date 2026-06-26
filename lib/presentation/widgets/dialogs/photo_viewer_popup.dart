@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 
 Future<void> showPhotoViewerPopup(
   BuildContext context,
@@ -85,8 +86,7 @@ class _PhotoViewerDialogState extends State<_PhotoViewerDialog> {
                         : PageView.builder(
                             controller: _ctrl,
                             itemCount: widget.photos.length,
-                            onPageChanged: (i) =>
-                                setState(() => _current = i),
+                            onPageChanged: (i) => setState(() => _current = i),
                             itemBuilder: (_, i) => Image.file(
                               widget.photos[i],
                               fit: BoxFit.cover,
@@ -109,7 +109,7 @@ class _PhotoViewerDialogState extends State<_PhotoViewerDialog> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(3),
                           color: i == _current
-                              ? const Color(0xFF1A1A2E)
+                              ? AppColors.actionGoldText
                               : const Color(0xFFCCCCCC),
                         ),
                       ),

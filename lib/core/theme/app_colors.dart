@@ -4,11 +4,11 @@ class AppColors {
   AppColors._();
 
   // ── 브랜드 메인 ─────────────────────────────────────────────────────────────
-  /// 딥블루 — 버튼·강조·아이콘의 기준색
-  static const Color primary = Color(0xFF16213E);
+  /// 딥골드 — 버튼·강조·아이콘의 기준색
+  static const Color primary = Color(0xFF5A452D);
 
-  /// 다크 네이비 — 텍스트·제목의 기준색
-  static const Color primaryDark = Color(0xFF1A1A2E);
+  /// 골드 브라운 — 텍스트·제목의 기준색
+  static const Color primaryDark = Color(0xFF6D5633);
 
   // ── 작동 버튼 골드 ─────────────────────────────────────────────────────────
   static const Color actionGold = Color(0xFF5A452D);

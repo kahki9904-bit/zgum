@@ -57,7 +57,10 @@ class MapRoomScreen extends ConsumerStatefulWidget {
 }
 
 class MapRoomScreenState extends ConsumerState<MapRoomScreen>
-    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin, WidgetsBindingObserver {
+    with
+        AutomaticKeepAliveClientMixin,
+        SingleTickerProviderStateMixin,
+        WidgetsBindingObserver {
   @override
   bool get wantKeepAlive => true;
 
@@ -538,7 +541,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
             child: TextField(
               controller: _searchCtrl,
               focusNode: _searchFocus,
-              style: const TextStyle(color: Color(0xFF1A1A2E), fontSize: 14),
+              style: const TextStyle(
+                  color: AppColors.actionGoldText, fontSize: 14),
               cursorColor: AppColors.actionGold,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
@@ -723,7 +727,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               style: const TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
+                color: AppColors.actionGoldText,
               ),
             ),
             const SizedBox(height: 8),

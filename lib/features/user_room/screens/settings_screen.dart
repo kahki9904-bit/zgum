@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/providers/locale_provider.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../promotions/free_use/free_use_settings_tile.dart';
 // ignore: unused_import
 import 'adult_verification_screen.dart';
@@ -31,7 +32,7 @@ class SettingsScreen extends ConsumerWidget {
         title: Text(
           context.l10n.settings,
           style: const TextStyle(
-            color: Color(0xFF1A1A2E),
+            color: AppColors.actionGoldText,
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
@@ -63,7 +64,9 @@ class SettingsScreen extends ConsumerWidget {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const NotificationSettingScreen()),
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const NotificationSettingScreen()),
                         );
                       },
                     ),
@@ -77,7 +80,8 @@ class SettingsScreen extends ConsumerWidget {
                       trailText: currentLangLabel,
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const LanguageScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const LanguageScreen()),
                       ),
                     ),
                     const Padding(
@@ -89,7 +93,8 @@ class SettingsScreen extends ConsumerWidget {
                       label: context.l10n.settingAppInfo,
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const AppInfoScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const AppInfoScreen()),
                       ),
                     ),
                     const FreeUseSettingsTile(),
@@ -107,7 +112,6 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 }
-
 
 const _kLanguages = [
   _LangOption(code: 'ko', label: '한국어'),
@@ -159,7 +163,8 @@ class _SettingRowWithTrail extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(color: Color(0xFF333333), fontSize: 15),
+                  style:
+                      const TextStyle(color: Color(0xFF333333), fontSize: 15),
                 ),
               ),
               Text(
@@ -167,7 +172,8 @@ class _SettingRowWithTrail extends StatelessWidget {
                 style: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 14),
               ),
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, color: Color(0xFFDDDDDD), size: 20),
+              const Icon(Icons.chevron_right,
+                  color: Color(0xFFDDDDDD), size: 20),
             ],
           ),
         ),
@@ -211,10 +217,12 @@ class _SettingRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(color: Color(0xFF333333), fontSize: 15),
+                  style:
+                      const TextStyle(color: Color(0xFF333333), fontSize: 15),
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Color(0xFFDDDDDD), size: 20),
+              const Icon(Icons.chevron_right,
+                  color: Color(0xFFDDDDDD), size: 20),
             ],
           ),
         ),
@@ -222,7 +230,6 @@ class _SettingRow extends StatelessWidget {
     );
   }
 }
-
 
 class _Rule extends StatelessWidget {
   const _Rule();

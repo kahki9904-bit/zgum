@@ -7,6 +7,7 @@ import '../../../core/grid_room_layout.dart';
 import '../../../core/popup_layout.dart';
 import '../../../core/providers/active_partner_event_provider.dart';
 import '../../../core/providers/partner_my_events_provider.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../features/alert/models/partner_event.dart';
 import '../../../features/alert/providers/event_stats_provider.dart';
 import '../../../presentation/shell/panels/partner_panel_content.dart';
@@ -288,7 +289,7 @@ class _PartnerGridControls extends StatelessWidget {
                   Text(
                     newestFirst ? '최신순' : '오래된순',
                     style: const TextStyle(
-                      color: Color(0xFF071426),
+                      color: AppColors.actionGoldText,
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
                       height: 1.0,
@@ -668,7 +669,7 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(3),
                             color: i == _currentPhoto
-                                ? const Color(0xFF1A1A2E)
+                                ? AppColors.actionGoldText
                                 : const Color(0xCCFFFFFF),
                           ),
                         ),
@@ -732,7 +733,7 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF1A1A2E),
+                                color: AppColors.actionGoldText,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Text(
@@ -777,7 +778,7 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF1A1A2E),
+                          color: AppColors.actionGoldText,
                           height: 1.3,
                           letterSpacing: -0.3,
                         ),
@@ -863,7 +864,7 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
         style: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF1A1A2E),
+          color: AppColors.actionGoldText,
           height: 1.4,
         ),
       ),
