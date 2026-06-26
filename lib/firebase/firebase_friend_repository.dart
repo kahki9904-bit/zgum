@@ -62,9 +62,20 @@ class FirebaseFriendRepository implements FriendRepository {
           .where('expiresAtTs', isGreaterThan: Timestamp.now())
           .get();
 
+      // 이미 연결된 사용자 UID 목록
+      final connSnapshot = await _connectionsRef(myUserId)
+          .where('expiresAtTs', isGreaterThan: Timestamp.now())
+          .get();
+      final connectedIds = connSnapshot.docs
+          .map((d) => d.data()['friendUserId'] as String? ?? '')
+          .toSet();
+
       final all = snapshot.docs
           .map((d) => FriendRequest.fromJson(d.data()))
-          .where((r) => r.requesterId != myUserId && !r.isExpired)
+          .where((r) =>
+              r.requesterId != myUserId &&
+              !r.isExpired &&
+              !connectedIds.contains(r.requesterId))
           .toList();
 
       // 거리 필터: 100m 이내
