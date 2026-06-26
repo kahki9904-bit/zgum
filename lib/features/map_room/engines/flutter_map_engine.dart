@@ -96,7 +96,7 @@ class FlutterMapEngine extends MapEngine {
       width: 48,
       height: 52,
       alignment: Alignment.bottomCenter,
-      child: const _MapDropMarker(
+      child: const _MapUserMarker(
         fillColor: Color(0xFFD9BD7A),
         borderColor: Color(0xFFFFFCF4),
         centerColor: Color(0xF0FFFFFF),
@@ -239,47 +239,10 @@ class _MapTargetMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final spec = MapMarkerLayoutSpec.current;
-    final outerSize = spec.pinSize * 0.84;
-    final innerSize = outerSize * 0.58;
-    final dotSize = spec.centerSize * 0.68;
-
-    return Center(
-      child: Container(
-        width: outerSize,
-        height: outerSize,
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFFDF8),
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: color,
-            width: spec.borderWidth * 1.25,
-          ),
-        ),
-        child: Center(
-          child: Container(
-            width: innerSize,
-            height: innerSize,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: color.withValues(alpha: 0.6),
-                width: spec.borderWidth * 0.75,
-              ),
-            ),
-            child: Center(
-              child: Container(
-                width: dotSize,
-                height: dotSize,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+    return _MapDropMarker(
+      fillColor: const Color(0xFFFFFDF8),
+      borderColor: color,
+      centerColor: color,
     );
   }
 }
@@ -299,70 +262,127 @@ class _MapDropMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spec = MapMarkerLayoutSpec.current;
+    final pinSize = highlighted ? spec.highlightedPinSize : spec.pinSize;
+    final centerSize =
+        highlighted ? spec.highlightedCenterSize : spec.centerSize;
     return Center(
-      child: Transform.rotate(
-        angle: -0.785398,
-        child: Container(
-          width: highlighted
-              ? MapMarkerLayoutSpec.current.highlightedPinSize
-              : MapMarkerLayoutSpec.current.pinSize,
-          height: highlighted
-              ? MapMarkerLayoutSpec.current.highlightedPinSize
-              : MapMarkerLayoutSpec.current.pinSize,
-          decoration: BoxDecoration(
-            color: fillColor,
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(999),
-              topRight: const Radius.circular(999),
-              bottomLeft: const Radius.circular(999),
-              bottomRight:
-                  Radius.circular(MapMarkerLayoutSpec.current.tailRadius),
-            ),
-            border: Border.all(
-              color: borderColor,
-              width: highlighted
-                  ? MapMarkerLayoutSpec.current.highlightedBorderWidth
-                  : MapMarkerLayoutSpec.current.borderWidth,
-            ),
-            boxShadow: MapMarkerLayoutSpec.current.shadowBlur <= 0
-                ? null
-                : [
-                    BoxShadow(
-                      color: Colors.black.withValues(
-                        alpha: highlighted ? 0.3 : 0.18,
-                      ),
-                      blurRadius: highlighted
-                          ? MapMarkerLayoutSpec.current.highlightedShadowBlur
-                          : MapMarkerLayoutSpec.current.shadowBlur,
-                      offset: Offset(
-                        0,
-                        MapMarkerLayoutSpec.current.shadowOffsetY,
-                      ),
-                    ),
-                  ],
+      child: SizedBox(
+        width: spec.bitmapSize,
+        height: spec.bitmapSize,
+        child: CustomPaint(
+          painter: _SoftSquareMarkerPainter(
+            fillColor: fillColor,
+            borderColor: borderColor,
+            borderWidth:
+                highlighted ? spec.highlightedBorderWidth : spec.borderWidth,
+            pinSize: pinSize,
+            centerSize: centerSize,
+            centerColor: centerColor,
           ),
-          child: Center(
-            child: Container(
-              width: highlighted
-                  ? MapMarkerLayoutSpec.current.highlightedCenterSize
-                  : MapMarkerLayoutSpec.current.centerSize,
-              height: highlighted
-                  ? MapMarkerLayoutSpec.current.highlightedCenterSize
-                  : MapMarkerLayoutSpec.current.centerSize,
-              decoration: BoxDecoration(
-                color: centerColor,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: fillColor == Colors.white
-                      ? Colors.transparent
-                      : Colors.white.withValues(alpha: 0.84),
-                  width: MapMarkerLayoutSpec.current.borderWidth * 0.75,
-                ),
-              ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MapUserMarker extends StatelessWidget {
+  const _MapUserMarker({
+    required this.fillColor,
+    required this.borderColor,
+    required this.centerColor,
+  });
+
+  final Color fillColor;
+  final Color borderColor;
+  final Color centerColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final spec = MapMarkerLayoutSpec.current;
+    return Center(
+      child: Container(
+        width: spec.pinSize * 0.84,
+        height: spec.pinSize * 0.84,
+        decoration: BoxDecoration(
+          color: fillColor,
+          shape: BoxShape.circle,
+          border: Border.all(color: borderColor, width: spec.borderWidth),
+        ),
+        child: Center(
+          child: Container(
+            width: spec.centerSize * 0.76,
+            height: spec.centerSize * 0.76,
+            decoration: BoxDecoration(
+              color: centerColor,
+              shape: BoxShape.circle,
             ),
           ),
         ),
       ),
     );
   }
+}
+
+class _SoftSquareMarkerPainter extends CustomPainter {
+  const _SoftSquareMarkerPainter({
+    required this.fillColor,
+    required this.borderColor,
+    required this.borderWidth,
+    required this.pinSize,
+    required this.centerSize,
+    required this.centerColor,
+  });
+
+  final Color fillColor;
+  final Color borderColor;
+  final double borderWidth;
+  final double pinSize;
+  final double centerSize;
+  final Color centerColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final bodyTop = cy - pinSize / 2 - pinSize * 0.08;
+    final bodyRect = Rect.fromLTWH(cx - pinSize / 2, bodyTop, pinSize, pinSize);
+    final rrect = RRect.fromRectAndRadius(
+      bodyRect,
+      Radius.circular(pinSize * 0.32),
+    );
+    final tailHalf = pinSize * 0.18;
+    final tailHeight = pinSize * 0.24;
+    final tailTop = bodyRect.bottom - borderWidth * 0.4;
+    final tailPath = Path()
+      ..moveTo(cx - tailHalf, tailTop)
+      ..lineTo(cx + tailHalf, tailTop)
+      ..lineTo(cx, tailTop + tailHeight)
+      ..close();
+
+    final fill = Paint()..color = fillColor;
+    final stroke = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = borderWidth;
+
+    canvas.drawPath(tailPath, fill);
+    canvas.drawPath(tailPath, stroke);
+    canvas.drawRRect(rrect, fill);
+    canvas.drawRRect(rrect, stroke);
+    canvas.drawCircle(
+      Offset(cx, cy),
+      (centerSize * 0.38).clamp(2, centerSize),
+      Paint()..color = centerColor,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _SoftSquareMarkerPainter oldDelegate) =>
+      fillColor != oldDelegate.fillColor ||
+      borderColor != oldDelegate.borderColor ||
+      borderWidth != oldDelegate.borderWidth ||
+      pinSize != oldDelegate.pinSize ||
+      centerSize != oldDelegate.centerSize ||
+      centerColor != oldDelegate.centerColor;
 }

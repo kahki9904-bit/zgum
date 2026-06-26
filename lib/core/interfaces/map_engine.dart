@@ -44,15 +44,15 @@ abstract class MapEngine {
   /// 색상 변경 시 이 메서드만 수정하면 됩니다.
   int markerColor(MapMarkerModel marker) {
     if (marker.isHighlighted) {
-      return 0xFFC1493F;
+      return 0xFF8C3E1F;
     }
     if (marker.isPartner) {
-      return 0xFF6F7F69;
+      return 0xFF6E294C;
     }
     if (marker.category == MarkerCategory.cinema ||
         marker.category == MarkerCategory.other) {
-      return 0xFFB07A3B;
+      return 0xFF222831;
     }
-    return 0xFF8B6B36;
+    return 0xFF263F3B;
   }
 }

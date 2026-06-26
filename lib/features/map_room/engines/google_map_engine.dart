@@ -198,10 +198,12 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
         ? markerColor
         : Colors.white.withValues(alpha: marker.isHighlighted ? 0.96 : 0.9);
     final cacheKey = Object.hash(
-      isSearch ? 'target' : 'drop',
+      isSearch ? 'soft_square_search_v1' : 'soft_square_event_v1',
       fillColor.toARGB32(),
       borderColor.toARGB32(),
       centerColor.toARGB32(),
+      marker.isHighlighted,
+      _dpr,
     );
     if (_bitmapCache.containsKey(cacheKey)) return _bitmapCache[cacheKey]!;
     final bitmap = isSearch
@@ -221,7 +223,7 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
 
   Future<BitmapDescriptor> _getUserBitmap() async {
     if (_userBitmap != null) return _userBitmap!;
-    _userBitmap = await _buildDropBitmap(
+    _userBitmap = await _buildUserBitmap(
       fillColor: const Color(0xFFD9BD7A),
       borderColor: const Color(0xFFFFFCF4),
       centerColor: Colors.white.withValues(alpha: 0.94),
@@ -248,38 +250,27 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
     );
     canvas.scale(_dpr);
 
-    // 그림자
-    if (spec.shadowBlur > 0) {
-      final shadowPaint = Paint()
-        ..color = Colors.black.withValues(alpha: 0.18)
-        ..maskFilter =
-            ui.MaskFilter.blur(ui.BlurStyle.normal, spec.shadowBlur / 2);
-      canvas.save();
-      canvas.translate(cx, cy + spec.shadowOffsetY * 0.5);
-      canvas.rotate(-math.pi / 4);
-      canvas.drawRRect(
-        RRect.fromRectAndCorners(
-          Rect.fromCenter(center: Offset.zero, width: pinS, height: pinS),
-          topLeft: Radius.circular(pinS / 2),
-          topRight: Radius.circular(pinS / 2),
-          bottomLeft: Radius.circular(pinS / 2),
-          bottomRight: Radius.circular(spec.tailRadius),
-        ),
-        shadowPaint,
-      );
-      canvas.restore();
-    }
+    final borderWidth = spec.borderWidth;
+    final bodyTop = cy - pinS / 2 - pinS * 0.08;
+    final bodyRect = Rect.fromLTWH(cx - pinS / 2, bodyTop, pinS, pinS);
+    final radius = Radius.circular(math.max(pinS * 0.32, 4));
+    final rrect = RRect.fromRectAndRadius(bodyRect, radius);
+    final tailHalf = math.max(pinS * 0.18, 3);
+    final tailHeight = math.max(pinS * 0.24, 4);
+    final tailTop = bodyRect.bottom - borderWidth * 0.4;
+    final tailPath = Path()
+      ..moveTo(cx - tailHalf, tailTop)
+      ..lineTo(cx + tailHalf, tailTop)
+      ..lineTo(cx, tailTop + tailHeight)
+      ..close();
 
-    // 핀 몸통
-    canvas.save();
-    canvas.translate(cx, cy);
-    canvas.rotate(-math.pi / 4);
-    final rrect = RRect.fromRectAndCorners(
-      Rect.fromCenter(center: Offset.zero, width: pinS, height: pinS),
-      topLeft: Radius.circular(pinS / 2),
-      topRight: Radius.circular(pinS / 2),
-      bottomLeft: Radius.circular(pinS / 2),
-      bottomRight: Radius.circular(spec.tailRadius),
+    canvas.drawPath(tailPath, Paint()..color = fillColor);
+    canvas.drawPath(
+      tailPath,
+      Paint()
+        ..color = borderColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = borderWidth,
     );
     canvas.drawRRect(rrect, Paint()..color = fillColor);
     canvas.drawRRect(
@@ -287,26 +278,14 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
       Paint()
         ..color = borderColor
         ..style = PaintingStyle.stroke
-        ..strokeWidth = spec.borderWidth,
+        ..strokeWidth = borderWidth,
     );
-    canvas.restore();
 
-    // 중앙 원
     canvas.drawCircle(
       Offset(cx, cy),
-      spec.centerSize / 2,
+      math.max(spec.centerSize * 0.38, 2),
       Paint()..color = centerColor,
     );
-    if (fillColor != Colors.white) {
-      canvas.drawCircle(
-        Offset(cx, cy),
-        spec.centerSize / 2,
-        Paint()
-          ..color = Colors.white.withValues(alpha: 0.84)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = spec.borderWidth * 0.75,
-      );
-    }
 
     final picture = recorder.endRecording();
     final image = await picture.toImage(imgSize, imgSize);
@@ -316,6 +295,17 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
   }
 
   Future<BitmapDescriptor> _buildTargetBitmap({
+    required Color fillColor,
+    required Color borderColor,
+    required Color centerColor,
+  }) =>
+      _buildDropBitmap(
+        fillColor: fillColor,
+        borderColor: borderColor,
+        centerColor: centerColor,
+      );
+
+  Future<BitmapDescriptor> _buildUserBitmap({
     required Color fillColor,
     required Color borderColor,
     required Color centerColor,
@@ -333,12 +323,8 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
     );
     canvas.scale(_dpr);
 
-    final double outerRadius = spec.pinSize * 0.42;
-    final double innerRadius = outerRadius * 0.58;
-    final double dotRadius = math.max(spec.centerSize * 0.34, 2);
-    final double strokeWidth = math.max(spec.borderWidth * 1.25, 1.4);
+    final outerRadius = spec.pinSize * 0.42;
     final center = Offset(cx, cy);
-
     canvas.drawCircle(center, outerRadius, Paint()..color = fillColor);
     canvas.drawCircle(
       center,
@@ -346,17 +332,13 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
       Paint()
         ..color = borderColor
         ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth,
+        ..strokeWidth = spec.borderWidth,
     );
     canvas.drawCircle(
       center,
-      innerRadius,
-      Paint()
-        ..color = borderColor.withValues(alpha: 0.6)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = math.max(spec.borderWidth * 0.75, 1),
+      math.max(spec.centerSize * 0.38, 2),
+      Paint()..color = centerColor,
     );
-    canvas.drawCircle(center, dotRadius, Paint()..color = centerColor);
 
     final picture = recorder.endRecording();
     final image = await picture.toImage(imgSize, imgSize);

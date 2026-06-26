@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../../core/theme.dart';
+import '../../core/theme/app_colors.dart';
 import '../../features/user_room/providers/auth_provider.dart';
 
 enum _Step { location, identity, done }
@@ -112,7 +112,7 @@ class _LocationCard extends StatelessWidget {
             'Z:GUM',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppTheme.deepBlue,
+              color: AppColors.actionGoldText,
               fontSize: 22,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.5,
@@ -123,18 +123,20 @@ class _LocationCard extends StatelessWidget {
             '개인정보를 수집하지 않습니다.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppTheme.deepBlue.withValues(alpha: 0.55),
+              color: AppColors.actionGoldText.withValues(alpha: 0.58),
               fontSize: 13,
             ),
           ),
           const SizedBox(height: 20),
-          Divider(color: AppTheme.deepBlue.withValues(alpha: 0.12), height: 1),
+          Divider(
+              color: AppColors.actionGoldBorder.withValues(alpha: 0.28),
+              height: 1),
           const SizedBox(height: 20),
           const Text(
             '위치 정보 사용 동의',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppTheme.deepBlue,
+              color: AppColors.actionGoldText,
               fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
@@ -144,7 +146,7 @@ class _LocationCard extends StatelessWidget {
             '주변을 발견하는 역할만 합니다.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppTheme.deepBlue.withValues(alpha: 0.72),
+              color: AppColors.actionGoldText.withValues(alpha: 0.76),
               fontSize: 14,
               height: 1.75,
             ),
@@ -158,9 +160,9 @@ class _LocationCard extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: onDeny,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.deepBlue,
-                      side: BorderSide(
-                        color: AppTheme.deepBlue.withValues(alpha: 0.30),
+                      foregroundColor: AppColors.actionGoldText,
+                      side: const BorderSide(
+                        color: AppColors.actionGoldBorder,
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -183,7 +185,7 @@ class _LocationCard extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: onAllow,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.deepBlue,
+                      backgroundColor: AppColors.actionGold,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -227,7 +229,7 @@ class _IdentityCard extends StatelessWidget {
             '본인 인증',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppTheme.deepBlue,
+              color: AppColors.actionGoldText,
               fontSize: 20,
               fontWeight: FontWeight.w700,
             ),
@@ -237,7 +239,7 @@ class _IdentityCard extends StatelessWidget {
             '인증 후 모든 콘텐츠를\n이용할 수 있습니다.\n인증은 앱내 설정에서\n변경 가능합니다.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppTheme.deepBlue.withValues(alpha: 0.72),
+              color: AppColors.actionGoldText.withValues(alpha: 0.76),
               fontSize: 14,
               height: 1.75,
             ),
@@ -251,9 +253,9 @@ class _IdentityCard extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: onSkip,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.deepBlue,
-                      side: BorderSide(
-                        color: AppTheme.deepBlue.withValues(alpha: 0.30),
+                      foregroundColor: AppColors.actionGoldText,
+                      side: const BorderSide(
+                        color: AppColors.actionGoldBorder,
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -276,7 +278,7 @@ class _IdentityCard extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: onConfirm,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.deepBlue,
+                      backgroundColor: AppColors.actionGold,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
