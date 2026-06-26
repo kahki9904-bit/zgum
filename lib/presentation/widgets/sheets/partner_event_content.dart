@@ -114,7 +114,7 @@ void _showPhotoViewer(BuildContext context, List<String> urls) {
     context: context,
     barrierDismissible: true,
     barrierLabel: '',
-    barrierColor: Colors.black87,
+    barrierColor: Colors.black54,
     transitionDuration: const Duration(milliseconds: 200),
     pageBuilder: (ctx, _, __) => _PhotoViewer(urls: urls),
   );
@@ -226,51 +226,60 @@ class _PhotoViewerState extends State<_PhotoViewer> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
     return GestureDetector(
       onTap: () => Navigator.pop(context),
       behavior: HitTestBehavior.opaque,
-      child: SafeArea(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Expanded(
-              child: PageView.builder(
-                controller: _ctrl,
-                itemCount: widget.urls.length,
-                onPageChanged: (i) => setState(() => _current = i),
-                itemBuilder: (_, i) => GestureDetector(
-                  onTap: () {},
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: _imageWidget(widget.urls[i]),
+      child: Center(
+        child: GestureDetector(
+          onTap: () {},
+          child: Container(
+            width: size.width - 48,
+            height: size.height * 0.65,
+            decoration: BoxDecoration(
+              color: Colors.black87,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            clipBehavior: Clip.hardEdge,
+            child: Column(
+              children: [
+                Expanded(
+                  child: PageView.builder(
+                    controller: _ctrl,
+                    itemCount: widget.urls.length,
+                    onPageChanged: (i) => setState(() => _current = i),
+                    itemBuilder: (_, i) => Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: _imageWidget(widget.urls[i]),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                if (widget.urls.length > 1) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(widget.urls.length, (i) {
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: _current == i ? 16 : 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: _current == i
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+                const SizedBox(height: 20),
+              ],
             ),
-            if (widget.urls.length > 1) ...[
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(widget.urls.length, (i) {
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: _current == i ? 16 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: _current == i
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  );
-                }),
-              ),
-            ],
-            const SizedBox(height: 24),
-          ],
+          ),
         ),
       ),
     );
