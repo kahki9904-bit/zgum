@@ -31,6 +31,9 @@ class CulturalEvent extends Equatable {
   final String description;
   final String? imageUrl;
 
+  /// 파트너 이벤트 사진 목록 (최대 3장, 로컬 경로 또는 URL)
+  final List<String> photoUrls;
+
   /// 이벤트 시작일 (표시용)
   final DateTime startDate;
 
@@ -58,6 +61,7 @@ class CulturalEvent extends Equatable {
     required this.address,
     required this.description,
     this.imageUrl,
+    this.photoUrls = const [],
     required this.startDate,
     required this.endDateTime,
     required this.location,

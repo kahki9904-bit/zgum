@@ -107,10 +107,10 @@ class _IeumRequestDialogState extends State<IeumRequestDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      behavior: HitTestBehavior.translucent,
-      child: Center(
+    return Center(
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.translucent,
         child: ZGumDialog(
           actions: Column(
             mainAxisSize: MainAxisSize.min,

@@ -312,21 +312,22 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
             child: Row(
               children: [
                 const Icon(Icons.store_outlined,
-                    size: 15, color: Color(0xFFFF8C00)),
+                    size: 18, color: Color(0xFFFF8C00)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: SizedBox(
-                    height: 18,
+                    height: 36,
                     child: Marquee(
                       text: widget.event.partnerMessage!,
                       style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF555555),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF333333),
                         height: 1.25,
                       ),
                       scrollAxis: Axis.horizontal,
-                      blankSpace: 40,
-                      velocity: 26,
+                      blankSpace: 200,
+                      velocity: 30,
                       startAfter: const Duration(milliseconds: 900),
                       pauseAfterRound: const Duration(milliseconds: 900),
                     ),

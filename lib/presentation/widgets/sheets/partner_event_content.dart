@@ -1,5 +1,5 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:marquee/marquee.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import 'event_content_base.dart';
@@ -39,24 +39,20 @@ class PartnerEventContent extends EventContentBase {
               ),
             ),
           ),
-        SizedBox(
-          height: 36,
-          child: Marquee(
-            text: event.title,
-            style: EventDetailTextStyles.title,
-            scrollAxis: Axis.horizontal,
-            blankSpace: 40.0,
-            velocity: 40.0,
-            startAfter: const Duration(seconds: 1),
-            pauseAfterRound: const Duration(seconds: 1),
+        if (event.photoUrls.isNotEmpty) ...[
+          _PhotoSection(
+            photoUrls: event.photoUrls,
+            onTap: () => _showPhotoViewer(context, event.photoUrls),
           ),
-        ),
-        const SizedBox(height: 14),
-        Text(
-          event.description,
-          style: EventDetailTextStyles.description,
-        ),
-        const SizedBox(height: 14),
+          const SizedBox(height: 14),
+        ],
+        if (event.description.isNotEmpty) ...[
+          Text(
+            event.description,
+            style: EventDetailTextStyles.description,
+          ),
+          const SizedBox(height: 14),
+        ],
         Row(
           children: [
             Expanded(
@@ -87,8 +83,196 @@ class PartnerEventContent extends EventContentBase {
               ),
           ],
         ),
+        const SizedBox(height: 10),
+        EventInfoRow(
+          Icons.schedule_outlined,
+          '${_fmt(event.startDate)} ~ ${_fmt(event.endDateTime)}',
+          style: EventDetailTextStyles.address,
+        ),
+        if (event.isAdultOnly) ...[
+          const SizedBox(height: 6),
+          EventInfoRow(
+            Icons.lock_outline,
+            '신분증 확인 이벤트',
+            color: const Color(0xFFE74C3C),
+          ),
+        ],
         const SizedBox(height: 8),
       ],
+    );
+  }
+
+  static String _fmt(DateTime dt) {
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '${dt.month}/${dt.day} $h:$m';
+  }
+}
+
+void _showPhotoViewer(BuildContext context, List<String> urls) {
+  showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: '',
+    barrierColor: Colors.black87,
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (ctx, _, __) => _PhotoViewer(urls: urls),
+  );
+}
+
+class _PhotoSection extends StatelessWidget {
+  final List<String> photoUrls;
+  final VoidCallback onTap;
+
+  const _PhotoSection({required this.photoUrls, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              height: 180,
+              width: double.infinity,
+              child: _imageWidget(photoUrls[0]),
+            ),
+          ),
+          if (photoUrls.length > 1)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.photo_library_outlined,
+                        color: Colors.white, size: 13),
+                    const SizedBox(width: 4),
+                    Text(
+                      '+${photoUrls.length - 1}',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+Widget _imageWidget(String path) {
+  if (path.startsWith('http')) {
+    return Image.network(path,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const _PhotoPlaceholder());
+  }
+  return Image.file(File(path),
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => const _PhotoPlaceholder());
+}
+
+class _PhotoPlaceholder extends StatelessWidget {
+  const _PhotoPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFFF0F0F0),
+      child: const Center(
+        child: Icon(Icons.image_outlined, color: Color(0xFFCCCCCC), size: 40),
+      ),
+    );
+  }
+}
+
+class _PhotoViewer extends StatefulWidget {
+  final List<String> urls;
+
+  const _PhotoViewer({required this.urls});
+
+  @override
+  State<_PhotoViewer> createState() => _PhotoViewerState();
+}
+
+class _PhotoViewerState extends State<_PhotoViewer> {
+  late final PageController _ctrl;
+  int _current = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = PageController();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.pop(context),
+      behavior: HitTestBehavior.opaque,
+      child: SafeArea(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              child: PageView.builder(
+                controller: _ctrl,
+                itemCount: widget.urls.length,
+                onPageChanged: (i) => setState(() => _current = i),
+                itemBuilder: (_, i) => GestureDetector(
+                  onTap: () {},
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: _imageWidget(widget.urls[i]),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (widget.urls.length > 1) ...[
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(widget.urls.length, (i) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: _current == i ? 16 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: _current == i
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  );
+                }),
+              ),
+            ],
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
     );
   }
 }
