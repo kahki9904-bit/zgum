@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
@@ -26,8 +27,10 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
   FriendDuration? _duration;
   String? _generatedCode;
   Timer? _timer;
+  Timer? _pollTimer;
   int _secondsLeft = 120;
   bool _loading = false;
+  bool _connected = false;
 
   @override
   void initState() {
@@ -42,7 +45,27 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
   @override
   void dispose() {
     _timer?.cancel();
+    _pollTimer?.cancel();
     super.dispose();
+  }
+
+  void _startConfirmPoll() {
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      if (!mounted) return;
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('friend_requests')
+            .doc(widget.request.id)
+            .get();
+        if (!doc.exists && mounted && !_connected) {
+          setState(() => _connected = true);
+          _pollTimer?.cancel();
+          _timer?.cancel();
+          await Future.delayed(const Duration(milliseconds: 1200));
+          if (mounted) Navigator.pop(context);
+        }
+      } catch (_) {}
+    });
   }
 
   void _startTimer() {
@@ -78,7 +101,10 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
         duration: _duration!,
         skipProximityCheck: true,
       );
-      if (mounted) setState(() => _generatedCode = code ?? '??');
+      if (mounted) {
+        setState(() => _generatedCode = code ?? '??');
+        _startConfirmPoll();
+      }
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
   }
@@ -156,9 +182,17 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
                 ),
               ),
               const SizedBox(height: 8),
-              const Center(
-                child: Text('이 코드를 상대방에게 알려주세요',
-                    style: ZGumDialogTextStyles.caption),
+              Center(
+                child: Text(
+                  _connected ? '이음이 연결됐습니다' : '이 코드를 상대방에게 알려주세요',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _connected
+                        ? const Color(0xFF16213E)
+                        : const Color(0xFF9AA4AD),
+                  ),
+                ),
               ),
             ],
           ],
