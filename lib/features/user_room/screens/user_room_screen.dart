@@ -69,23 +69,33 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
     );
     if (!mounted) return;
     if (requests.isNotEmpty) {
-      showDialog<void>(
+      showGeneralDialog<void>(
         context: context,
         barrierDismissible: true,
-        builder: (_) => IeumAcceptDialog(
+        barrierLabel: '',
+        barrierColor: Colors.black54,
+        transitionDuration: const Duration(milliseconds: 150),
+        pageBuilder: (ctx, _, __) => IeumAcceptDialog(
           request: requests.first,
           location: location,
           repo: repo,
         ),
+        transitionBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
       );
     } else {
-      showDialog<void>(
+      showGeneralDialog<void>(
         context: context,
         barrierDismissible: true,
-        builder: (_) => IeumRequestDialog(
+        barrierLabel: '',
+        barrierColor: Colors.black54,
+        transitionDuration: const Duration(milliseconds: 150),
+        pageBuilder: (ctx, _, __) => IeumRequestDialog(
           location: location,
           repo: repo,
         ),
+        transitionBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
       );
     }
   }

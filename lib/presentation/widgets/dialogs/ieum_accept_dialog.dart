@@ -111,91 +111,99 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: ZGumDialog(
-        actions: ZGumButton(
-          label: _generatedCode == null ? '확인' : '닫기',
-          onTap: _generatedCode == null
-              ? (_loading || _duration == null ? null : _confirm)
-              : () => Navigator.pop(context),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('이음', style: ZGumDialogTextStyles.title),
-                Text(_timerText, style: ZGumDialogTextStyles.caption),
-              ],
+    return GestureDetector(
+      onTap: () => Navigator.pop(context),
+      behavior: HitTestBehavior.opaque,
+      child: Center(
+        child: GestureDetector(
+          onTap: () {},
+          child: ZGumDialog(
+            actions: ZGumButton(
+              label: _generatedCode == null ? '확인' : '닫기',
+              onTap: _generatedCode == null
+                  ? (_loading || _duration == null ? null : _confirm)
+                  : () => Navigator.pop(context),
             ),
-            const SizedBox(height: 20),
-            if (_generatedCode == null) ...[
-              Row(
-                children: [
-                  FriendDuration.oneDay,
-                  FriendDuration.threeMonths,
-                  FriendDuration.sixMonths
-                ].map((d) {
-                  final sel = _duration == d;
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _duration = d),
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: sel
-                              ? AppColors.actionGoldSoft
-                              : const Color(0xFFF4F4F4),
-                          borderRadius: BorderRadius.circular(10),
-                          border: sel
-                              ? Border.all(
-                                  color: AppColors.actionGoldBorder, width: 1)
-                              : null,
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(d.chipLabel,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('이음', style: ZGumDialogTextStyles.title),
+                    Text(_timerText, style: ZGumDialogTextStyles.caption),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                if (_generatedCode == null) ...[
+                  Row(
+                    children: [
+                      FriendDuration.oneDay,
+                      FriendDuration.threeMonths,
+                      FriendDuration.sixMonths
+                    ].map((d) {
+                      final sel = _duration == d;
+                      return Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _duration = d),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 2),
+                            height: 40,
+                            decoration: BoxDecoration(
                               color: sel
-                                  ? AppColors.actionGoldText
-                                  : const Color(0xFF555555),
-                            )),
+                                  ? AppColors.actionGoldSoft
+                                  : const Color(0xFFF4F4F4),
+                              borderRadius: BorderRadius.circular(10),
+                              border: sel
+                                  ? Border.all(
+                                      color: AppColors.actionGoldBorder,
+                                      width: 1)
+                                  : null,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(d.chipLabel,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: sel
+                                      ? AppColors.actionGoldText
+                                      : const Color(0xFF555555),
+                                )),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ] else ...[
+                  Center(
+                    child: Text(
+                      _generatedCode!,
+                      style: const TextStyle(
+                          fontSize: 52,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.actionGoldText,
+                          letterSpacing: 16),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Text(
+                      _connected ? '이음이 연결됐습니다' : '이 코드를 상대방에게 알려주세요',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _connected
+                            ? AppColors.actionGoldText
+                            : const Color(0xFF9AA4AD),
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
-            ] else ...[
-              Center(
-                child: Text(
-                  _generatedCode!,
-                  style: const TextStyle(
-                      fontSize: 52,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.actionGoldText,
-                      letterSpacing: 16),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  _connected ? '이음이 연결됐습니다' : '이 코드를 상대방에게 알려주세요',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _connected
-                        ? AppColors.actionGoldText
-                        : const Color(0xFF9AA4AD),
                   ),
-                ),
-              ),
-            ],
-          ],
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );
