@@ -80,7 +80,7 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
     } else {
       showDialog<void>(
         context: context,
-        barrierDismissible: false,
+        barrierDismissible: true,
         builder: (_) => IeumRequestDialog(
           location: location,
           repo: repo,
