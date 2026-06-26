@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,7 @@ import '../../../core/grid_room_layout.dart';
 import '../../../core/providers/user_location_provider.dart';
 import '../../../data/models/check_in_record.dart';
 import '../../../features/friend/providers/friend_provider.dart';
+import '../../../presentation/widgets/dialogs/ieum_accept_dialog.dart';
 import '../../../presentation/widgets/dialogs/ieum_request_dialog.dart';
 import '../../../presentation/widgets/zgum_orb_button.dart';
 import '../providers/check_in_provider.dart';
@@ -22,16 +25,68 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
   bool _newestFirst = true;
   bool _singleColumn = false;
   bool _showTileText = false;
+  bool _hasNearbyRequest = false;
+  Timer? _pollTimer;
 
-  void _showIeumRequestDialog() {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (_) => IeumRequestDialog(
-        location: ref.read(userLocationProvider),
-        repo: ref.read(friendRepositoryProvider),
-      ),
+  @override
+  void initState() {
+    super.initState();
+    _checkNearbyRequests();
+    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _checkNearbyRequests();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkNearbyRequests() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null || !mounted) return;
+    try {
+      final repo = ref.read(friendRepositoryProvider);
+      final location = ref.read(userLocationProvider);
+      final requests = await repo.getNearbyRequests(
+        myLocation: location,
+        myUserId: uid,
+      );
+      if (mounted) setState(() => _hasNearbyRequest = requests.isNotEmpty);
+    } catch (_) {}
+  }
+
+  Future<void> _onIeumTap() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final repo = ref.read(friendRepositoryProvider);
+    final location = ref.read(userLocationProvider);
+    final requests = await repo.getNearbyRequests(
+      myLocation: location,
+      myUserId: uid,
     );
+    if (!mounted) return;
+    if (requests.isNotEmpty) {
+      showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (_) => IeumAcceptDialog(
+          request: requests.first,
+          location: location,
+          repo: repo,
+        ),
+      );
+    } else {
+      showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (_) => IeumRequestDialog(
+          location: location,
+          repo: repo,
+        ),
+      );
+    }
   }
 
   @override
@@ -76,7 +131,7 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _IeumOrb(onTap: _showIeumRequestDialog),
+                          _IeumOrb(onTap: _onIeumTap, hasNearby: _hasNearbyRequest),
                           const _SettingsSection(),
                         ],
                       ),
@@ -157,14 +212,61 @@ class _HeaderHint extends StatelessWidget {
   }
 }
 
-class _IeumOrb extends StatelessWidget {
-  const _IeumOrb({required this.onTap});
+class _IeumOrb extends StatefulWidget {
+  const _IeumOrb({required this.onTap, required this.hasNearby});
 
   final VoidCallback onTap;
+  final bool hasNearby;
+
+  @override
+  State<_IeumOrb> createState() => _IeumOrbState();
+}
+
+class _IeumOrbState extends State<_IeumOrb>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.2, end: 1.0).animate(_ctrl);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ZGumOrbButton(label: '이음', onTap: onTap);
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        ZGumOrbButton(label: '이음', onTap: widget.onTap),
+        if (widget.hasNearby)
+          Positioned(
+            top: 0,
+            right: 0,
+            child: FadeTransition(
+              opacity: _anim,
+              child: Container(
+                width: 9,
+                height: 9,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFCC3333),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
 
