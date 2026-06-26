@@ -70,7 +70,7 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
     if (requests.isNotEmpty) {
       showDialog<void>(
         context: context,
-        barrierDismissible: false,
+        barrierDismissible: true,
         builder: (_) => IeumAcceptDialog(
           request: requests.first,
           location: location,
