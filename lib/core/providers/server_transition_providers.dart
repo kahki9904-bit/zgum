@@ -12,7 +12,7 @@ import '../../firebase/firebase_auth_repository.dart';
 import '../../firebase/firebase_trace_repository.dart';
 import '../../firebase/firebase_trace_sync_queue.dart';
 import '../../firebase/firebase_partner_repository.dart';
-import '../../dev/mock_push_service.dart';
+import '../../firebase/firebase_push_service.dart';
 import '../../dev/mock_global_config_repository.dart';
 import '../../dev/mock_audit_log_repository.dart';
 import '../../dev/mock_filter_policy_repository.dart';
@@ -42,7 +42,7 @@ final partnerRepositoryProvider = Provider<PartnerRepository>(
 
 final pushServiceProvider = Provider<PushService>(
   (ref) {
-    final service = MockPushService();
+    final service = FirebasePushService();
     ref.onDispose(service.dispose);
     return service;
   },

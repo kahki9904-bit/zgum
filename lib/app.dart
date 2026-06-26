@@ -6,6 +6,7 @@ import 'core/theme.dart';
 import 'core/constants.dart';
 import 'core/providers/locale_provider.dart';
 import 'presentation/screens/auth_gate_screen.dart';
+import 'presentation/screens/consent_guard.dart';
 
 class ZGumApp extends ConsumerWidget {
   const ZGumApp({super.key});
@@ -32,7 +33,7 @@ class ZGumApp extends ConsumerWidget {
         Locale('ja'),
         Locale('zh'),
       ],
-      home: const AuthGateScreen(),
+      home: const ConsentGuard(child: AuthGateScreen()),
     );
   }
 }

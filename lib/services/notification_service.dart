@@ -120,6 +120,28 @@ class NotificationService {
     );
   }
 
+  // FCM 서버 푸시 알림
+  Future<void> showFcmNotification({
+    required String title,
+    required String body,
+  }) async {
+    await init();
+    await _plugin.show(
+      DateTime.now().millisecondsSinceEpoch % 100000,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'zgum_fcm',
+          'Z:GUM 알림',
+          channelDescription: 'Z:GUM 서버 푸시 알림',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
+
   // 만료 예정 친구 알림
   Future<void> showFriendExpiryNotification() async {
     await init();

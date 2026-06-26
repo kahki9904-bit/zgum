@@ -57,7 +57,7 @@ class MapRoomScreen extends ConsumerStatefulWidget {
 }
 
 class MapRoomScreenState extends ConsumerState<MapRoomScreen>
-    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin, WidgetsBindingObserver {
   @override
   bool get wantKeepAlive => true;
 
@@ -130,11 +130,20 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       duration: const Duration(milliseconds: 900),
     );
     _mapCtrl = _engine.createController();
+    WidgetsBinding.instance.addObserver(this);
     _init();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      _rebuildMarkers();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pulseController.dispose();
     for (final t in _eventTimers.values) {
       t.cancel();
