@@ -238,8 +238,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       try {
         publicEvents = await _publicRepo.fetchNearbyEvents(
           center: _center,
-          radiusKm: AppConstants.defaultRadiusKm,
-          isIdentityVerified: isIdentityVerified,
+          radiusKm: AppConstants.publicApiRadiusKm,
+          isIdentityVerified: true,
         );
       } catch (e, st) {
         debugPrint('[MapRoom] public API 실패 — 빈 목록으로 계속: $e');
@@ -252,8 +252,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       try {
         kopisEvents = await _kopisRepo.fetchNearbyEvents(
           center: _center,
-          radiusKm: AppConstants.defaultRadiusKm,
-          isIdentityVerified: isIdentityVerified,
+          radiusKm: AppConstants.publicApiRadiusKm,
+          isIdentityVerified: true,
         );
       } catch (e, st) {
         debugPrint('[MapRoom] KOPIS API 실패 — 빈 목록으로 계속: $e');

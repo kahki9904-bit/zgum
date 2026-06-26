@@ -8,6 +8,9 @@ class AppConstants {
   /// 위치 권한 거부 시 기본 기준점: 서울 시청
   static const LatLng defaultLocation = LatLng(37.5665, 126.9780);
 
+  /// 공공 API 마커 표시 반경 (km) — 도보 1시간 기준
+  static const double publicApiRadiusKm = 5.0;
+
   /// 기본 탐색 반경 (km)
   static const double defaultRadiusKm = 20.0;
 

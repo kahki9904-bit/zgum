@@ -113,12 +113,13 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
       }
     }
     final activeEvent = watchedActiveEvent ?? fallbackActiveEvent;
-    final latest = myEvents.isEmpty
+    final activeMyEvents = myEvents.where((e) => !e.isExpired).toList();
+    final latest = activeMyEvents.isEmpty
         ? null
-        : myEvents.reduce(
+        : activeMyEvents.reduce(
             (a, b) => a.startsAt.isAfter(b.startsAt) ? a : b,
           );
-    final rest = myEvents.where((e) => e.id != latest?.id).toList()
+    final rest = activeMyEvents.where((e) => e.id != latest?.id).toList()
       ..sort(
         (a, b) => _newestFirst
             ? b.startsAt.compareTo(a.startsAt)

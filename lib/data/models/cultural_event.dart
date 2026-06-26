@@ -85,7 +85,7 @@ class CulturalEvent extends Equatable {
       description: json['contents1'] as String? ?? '',
       imageUrl: json['imgUrl'] as String?,
       startDate: DateTime.tryParse(json['startDate'] as String? ?? '') ?? DateTime.now(),
-      endDateTime: endDate.copyWith(hour: 21, minute: 0, second: 0),
+      endDateTime: endDate.add(const Duration(days: 1)).copyWith(hour: 0, minute: 30, second: 0),
       location: LatLng(
         double.tryParse(json['lat']?.toString() ?? '0') ?? 0,
         double.tryParse(json['lon']?.toString() ?? '0') ?? 0,
