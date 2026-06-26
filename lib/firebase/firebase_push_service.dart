@@ -54,12 +54,16 @@ class FirebasePushService implements PushService {
 
   @override
   Future<void> registerDeviceToken(String userId) async {
-    final token = await _fcm.getToken();
-    if (token == null) return;
-    await FirebaseFirestore.instance.collection('users').doc(userId).set(
-      {'fcmToken': token, 'updatedAt': FieldValue.serverTimestamp()},
-      SetOptions(merge: true),
-    );
+    try {
+      final token = await _fcm.getToken();
+      if (token == null) return;
+      await FirebaseFirestore.instance.collection('users').doc(userId).set(
+        {'fcmToken': token, 'updatedAt': FieldValue.serverTimestamp()},
+        SetOptions(merge: true),
+      );
+    } catch (_) {
+      // APNs 미등록 상태(Apple Developer 승인 전)에서는 무시
+    }
   }
 
   @override
