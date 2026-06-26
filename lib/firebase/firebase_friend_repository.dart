@@ -114,6 +114,7 @@ class FirebaseFriendRepository implements FriendRepository {
       await _requestsRef.doc(requestId).update({
         'acceptorDuration': duration.name,
         'responseCode': code,
+        'acceptorId': myUserId,
       });
 
       return code;
@@ -136,10 +137,14 @@ class FirebaseFriendRepository implements FriendRepository {
       final doc = await _requestsRef.doc(requestId).get();
       if (!doc.exists) return null;
 
-      final request = FriendRequest.fromJson(doc.data()!);
+      final rawData = doc.data()!;
+      final request = FriendRequest.fromJson(rawData);
       if (request.isExpired) return null;
       if (request.responseCode == null) return null;
       if (request.responseCode != responseCode) return null;
+
+      final acceptorId = rawData['acceptorId'] as String?;
+      if (acceptorId == null) return null;
 
       final now = DateTime.now();
       final aDur = request.duration.duration;
@@ -147,35 +152,44 @@ class FirebaseFriendRepository implements FriendRepository {
       final effectiveDur = aDur.compareTo(bDur) <= 0 ? aDur : bDur;
 
       final friendId =
-          '${request.requesterId}_${myUserId}_${now.millisecondsSinceEpoch}';
+          '${request.requesterId}_${acceptorId}_${now.millisecondsSinceEpoch}';
 
-      final friend = Friend(
-        id: friendId,
-        friendUserId: request.requesterId,
-        createdAt: now,
-        expiresAt: now.add(effectiveDur),
-      );
-
-      final friendData = {
-        ...friend.toJson(),
-        'expiresAtTs': Timestamp.fromDate(friend.expiresAt),
-      };
-
-      // 양쪽에 이음 저장 (A의 connections에는 B userId, B의 connections에는 A userId)
       final batch = _firestore.batch();
-      batch.set(_connectionsRef(myUserId).doc(friendId), friendData);
-      batch.set(
-        _connectionsRef(request.requesterId).doc(friendId),
-        {
-          ...friendData,
-          'friendUserId': myUserId,
-        },
-      );
+
+      // A의 connections: 상대방은 B
+      final aFriendData = {
+        ...Friend(
+          id: friendId,
+          friendUserId: acceptorId,
+          createdAt: now,
+          expiresAt: now.add(effectiveDur),
+        ).toJson(),
+        'expiresAtTs': Timestamp.fromDate(now.add(effectiveDur)),
+      };
+      batch.set(_connectionsRef(myUserId).doc(friendId), aFriendData);
+
+      // B의 connections: 상대방은 A
+      final bFriendData = {
+        ...Friend(
+          id: friendId,
+          friendUserId: myUserId,
+          createdAt: now,
+          expiresAt: now.add(effectiveDur),
+        ).toJson(),
+        'expiresAtTs': Timestamp.fromDate(now.add(effectiveDur)),
+      };
+      batch.set(_connectionsRef(acceptorId).doc(friendId), bFriendData);
+
       // 사용된 신청 삭제
       batch.delete(_requestsRef.doc(requestId));
       await batch.commit();
 
-      return friend;
+      return Friend(
+        id: friendId,
+        friendUserId: acceptorId,
+        createdAt: now,
+        expiresAt: now.add(effectiveDur),
+      );
     } catch (e) {
       debugPrint('[FriendRepo] confirmRequest 오류: $e');
       return null;
