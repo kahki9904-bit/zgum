@@ -20,7 +20,7 @@ import '../../widgets/dialogs/photo_viewer_popup.dart';
 import '../../widgets/popups/confirm/age_confirm_popup.dart';
 import '../../widgets/popups/confirm/extend_confirm_popup.dart';
 import '../../widgets/popups/confirm/terminate_confirm_popup.dart';
-import '../shell_constants.dart';
+import '../../../core/popup_layout.dart';
 
 class PartnerPanelContent extends ConsumerStatefulWidget {
   final VoidCallback onClose;
@@ -229,8 +229,9 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     }
 
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 100;
-    final compactInput = Platform.isIOS;
-    final formTopPadding = Platform.isIOS ? 18.0 : kShellPanelHandleContentGap;
+    final popup = PopupLayoutSpec.current;
+    final compactInput = popup.compactForm;
+    final formTopPadding = popup.registerFormTopPadding;
     final bottomSafe = MediaQuery.paddingOf(context).bottom;
     final titleVerticalPadding = compactInput ? 8.0 : 12.0;
     final contentVerticalPadding = compactInput ? 8.0 : 14.0;
@@ -354,7 +355,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
   }
 
   Widget _buildPhotoRow() {
-    final compactHint = Platform.isIOS;
+    final compactHint = PopupLayoutSpec.current.compactForm;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [

@@ -1,7 +1,7 @@
-import 'dart:io';
 import '../dialogs/camera_chooser_popup.dart';
 import '../../../core/popup_layout.dart';
 import '../../../core/providers/shell_page_provider.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -222,7 +222,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
             ),
           ],
         );
-        if (!Platform.isIOS) return dialog;
+        if (!PopupLayoutSpec.current.removeViewInsetsOnDialog) return dialog;
         return MediaQuery(
           data: MediaQuery.of(dialogCtx).copyWith(viewInsets: EdgeInsets.zero),
           child: dialog,

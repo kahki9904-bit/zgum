@@ -7,6 +7,8 @@ class ShellGestureLayoutSpec {
     required this.mapEdgeSwipeWidthFactor,
     required this.mapEdgeSwipeVelocity,
     required this.androidBackExclusionWidth,
+    required this.bottomPaddingMin,
+    required this.useTranslucentHitTest,
   });
 
   final double pageSwipeDistance;
@@ -14,6 +16,8 @@ class ShellGestureLayoutSpec {
   final double mapEdgeSwipeWidthFactor;
   final double mapEdgeSwipeVelocity;
   final double androidBackExclusionWidth;
+  final double bottomPaddingMin;
+  final bool useTranslucentHitTest;
 
   static const ios = ShellGestureLayoutSpec(
     pageSwipeDistance: 95,
@@ -21,6 +25,8 @@ class ShellGestureLayoutSpec {
     mapEdgeSwipeWidthFactor: 0.12,
     mapEdgeSwipeVelocity: 650,
     androidBackExclusionWidth: 0,
+    bottomPaddingMin: 0.0,
+    useTranslucentHitTest: true,
   );
 
   static const android = ShellGestureLayoutSpec(
@@ -29,6 +35,8 @@ class ShellGestureLayoutSpec {
     mapEdgeSwipeWidthFactor: 0.15,
     mapEdgeSwipeVelocity: 400,
     androidBackExclusionWidth: 40,
+    bottomPaddingMin: 16.0,
+    useTranslucentHitTest: false,
   );
 
   static ShellGestureLayoutSpec get current =>

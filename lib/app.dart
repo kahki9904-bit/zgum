@@ -34,6 +34,18 @@ class ZGumApp extends ConsumerWidget {
         Locale('zh'),
       ],
       home: const ConsentGuard(child: AuthGateScreen()),
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+            textScaler: mq.textScaler.clamp(
+              minScaleFactor: 1.0,
+              maxScaleFactor: 1.15,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }

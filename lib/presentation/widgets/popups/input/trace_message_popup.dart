@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../../core/popup_layout.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../dialogs/zgum_dialog.dart';
 
@@ -117,7 +117,7 @@ Future<String?> showTraceMessagePopup(BuildContext context) async {
           ),
         ),
       );
-      if (!Platform.isIOS) return dialog;
+      if (!PopupLayoutSpec.current.removeViewInsetsOnDialog) return dialog;
       return MediaQuery(
         data: MediaQuery.of(dialogCtx).copyWith(viewInsets: EdgeInsets.zero),
         child: dialog,

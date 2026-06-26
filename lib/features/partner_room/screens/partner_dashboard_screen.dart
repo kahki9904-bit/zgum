@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/admin_mode_provider.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../dev/mock_partner_event_store.dart';
 import '../../../features/alert/providers/event_stats_provider.dart';
 import '../../../promotions/free_use/free_use_service.dart';
+import '../../../services/firestore_partner_event_service.dart';
 
 class PartnerDashboardScreen extends ConsumerStatefulWidget {
   const PartnerDashboardScreen({super.key});
@@ -51,11 +51,11 @@ class _PartnerDashboardScreenState
   Widget build(BuildContext context) {
     final topPad = MediaQuery.paddingOf(context).top;
     final isAdmin = ref.watch(adminModeProvider);
-    final events = ref.watch(mockPartnerEventStoreProvider);
+    final events = ref.watch(myPartnerEventsStreamProvider).valueOrNull ?? [];
     final statsMap = ref.watch(eventStatsProvider);
 
     final now = DateTime.now();
-    final activeCount = events.where((e) => e.endDateTime.isAfter(now)).length;
+    final activeCount = events.where((e) => e.expiresAt.isAfter(now)).length;
     final expiredCount = events.length - activeCount;
 
     int totalVisitor = 0;

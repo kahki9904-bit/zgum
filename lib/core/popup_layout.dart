@@ -13,6 +13,9 @@ class PopupLayoutSpec {
     required this.registerFormFactor,
     required this.registerFormMargin,
     required this.registerFormRadius,
+    required this.compactForm,
+    required this.registerFormTopPadding,
+    required this.removeViewInsetsOnDialog,
   });
 
   final double confirmHeight;
@@ -25,6 +28,9 @@ class PopupLayoutSpec {
   final double registerFormFactor;
   final EdgeInsets registerFormMargin;
   final double registerFormRadius;
+  final bool compactForm;
+  final double registerFormTopPadding;
+  final bool removeViewInsetsOnDialog;
 
   double heightForFactor(double heightFactor) {
     if (heightFactor <= 0.24) return confirmHeight;
@@ -45,6 +51,9 @@ class PopupLayoutSpec {
     registerFormFactor: 0.52,
     registerFormMargin: EdgeInsets.symmetric(horizontal: 20),
     registerFormRadius: 24,
+    compactForm: true,
+    registerFormTopPadding: 18.0,
+    removeViewInsetsOnDialog: true,
   );
 
   static const android = PopupLayoutSpec(
@@ -58,6 +67,9 @@ class PopupLayoutSpec {
     registerFormFactor: 0.62,
     registerFormMargin: EdgeInsets.symmetric(horizontal: 20),
     registerFormRadius: 24,
+    compactForm: false,
+    registerFormTopPadding: 44.0,
+    removeViewInsetsOnDialog: false,
   );
 
   static PopupLayoutSpec get current => Platform.isAndroid ? android : ios;

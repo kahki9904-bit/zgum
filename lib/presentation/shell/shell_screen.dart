@@ -204,8 +204,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     final availableHeight =
         media.size.height - media.padding.top - media.padding.bottom;
     panelHeight = (availableHeight * 0.68).clamp(420.0, 560.0);
+    final gesture = ShellGestureLayoutSpec.current;
     final bottomPadding =
-        max(media.padding.bottom, Platform.isAndroid ? 16.0 : 0.0) +
+        max(media.padding.bottom, gesture.bottomPaddingMin) +
             kShellIosGestureBuffer;
 
     return ValueListenableBuilder<bool>(

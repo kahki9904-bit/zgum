@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/alert/models/partner_event.dart';
 
@@ -62,4 +63,11 @@ final activePartnerEventsStreamProvider =
   return ref
       .watch(firestorePartnerEventServiceProvider)
       .watchActive();
+});
+
+final myPartnerEventsStreamProvider =
+    StreamProvider<List<PartnerEvent>>((ref) {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return const Stream.empty();
+  return ref.watch(firestorePartnerEventServiceProvider).watchByPartner(uid);
 });
