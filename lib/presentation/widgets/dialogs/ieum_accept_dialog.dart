@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../features/friend/data/models/friend_duration.dart';
@@ -66,11 +67,13 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
 
   Future<void> _confirm() async {
     if (_duration == null) return;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
     setState(() => _loading = true);
     try {
       final code = await widget.repo.respondToRequest(
         requestId: widget.request.id,
-        myUserId: 'mock_user',
+        myUserId: uid,
         myLocation: widget.location,
         duration: _duration!,
         skipProximityCheck: true,

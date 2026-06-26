@@ -1,12 +1,12 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/friend.dart';
 import '../data/repositories/friend_repository.dart';
-import '../../../dev/mock_friend_repository.dart';
+import '../../../firebase/firebase_friend_repository.dart';
 
-// 나중에 FirebaseFriendRepository로 교체만 하면 됨
 final friendRepositoryProvider = Provider<FriendRepository>(
-  (ref) => MockFriendRepository(),
+  (ref) => FirebaseFriendRepository(),
 );
 
 // ── 친구탐험 ON/OFF ──────────────────────────────────────────────────────
@@ -39,8 +39,9 @@ final friendExplorationProvider =
 
 final activeFriendsProvider = FutureProvider<List<Friend>>((ref) async {
   final repo = ref.watch(friendRepositoryProvider);
-  // TODO: 실서버 연동 시 실제 userId로 교체
-  return repo.getActiveFriends('mock_user');
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return [];
+  return repo.getActiveFriends(uid);
 });
 
 // ── 친구 수 (목록 대신 숫자만 노출) ─────────────────────────────────────
