@@ -8,6 +8,8 @@ import 'package:sensors_plus/sensors_plus.dart';
 import '../../../data/models/cultural_event.dart';
 import '../../../core/map_panel_layout.dart';
 import '../../../core/providers/partner_focus_provider.dart';
+import '../../../core/providers/partner_my_events_provider.dart';
+import '../../../core/providers/active_partner_event_provider.dart';
 import '../../../core/providers/shell_page_provider.dart';
 import '../../../core/providers/admin_mode_provider.dart';
 import '../../../core/theme/app_colors.dart';
@@ -100,7 +102,17 @@ class _MapPanelContentState extends ConsumerState<MapPanelContent> {
 
     if (partnerEvents.isNotEmpty) {
       _stopShake();
-      return _PartnerEventPanel(events: partnerEvents, onTap: _tapEvent);
+      final myEventIds = ref
+          .watch(partnerMyEventsProvider)
+          .map((e) => e.id)
+          .toSet();
+      final activeId = ref.watch(activePartnerEventProvider)?.id;
+      return _PartnerEventPanel(
+        events: partnerEvents,
+        onTap: _tapEvent,
+        myEventIds: myEventIds,
+        activeEventId: activeId,
+      );
     }
 
     _startShake();
@@ -286,8 +298,15 @@ class _PhoneShakeIcon extends StatelessWidget {
 class _PartnerEventPanel extends StatelessWidget {
   final List<CulturalEvent> events;
   final void Function(CulturalEvent) onTap;
+  final Set<String> myEventIds;
+  final String? activeEventId;
 
-  const _PartnerEventPanel({required this.events, required this.onTap});
+  const _PartnerEventPanel({
+    required this.events,
+    required this.onTap,
+    required this.myEventIds,
+    this.activeEventId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -305,6 +324,7 @@ class _PartnerEventPanel extends StatelessWidget {
             child: _PartnerNoticeCard(
               event: featured,
               onTap: () => onTap(featured),
+              isMyEvent: myEventIds.contains(featured.id) || featured.id == activeEventId,
             ),
           ),
           const SizedBox(height: 12),
@@ -330,10 +350,15 @@ class _PartnerEventPanel extends StatelessWidget {
 }
 
 class _PartnerNoticeCard extends StatelessWidget {
-  const _PartnerNoticeCard({required this.event, required this.onTap});
+  const _PartnerNoticeCard({
+    required this.event,
+    required this.onTap,
+    this.isMyEvent = false,
+  });
 
   final CulturalEvent event;
   final VoidCallback onTap;
+  final bool isMyEvent;
 
   @override
   Widget build(BuildContext context) {
@@ -359,10 +384,10 @@ class _PartnerNoticeCard extends StatelessWidget {
                 ),
               ),
             ),
-            const Positioned(
+            Positioned(
               left: 14,
               top: 14,
-              child: _NoticeBadge(text: '등록 이벤트'),
+              child: _NoticeBadge(text: isMyEvent ? '나의 이벤트' : '등록 이벤트'),
             ),
             Positioned(
               right: 14,

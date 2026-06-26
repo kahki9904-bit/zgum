@@ -6,7 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _kEventRadiusKey = 'zgum_notif_event_radius_m';
 const _kFriendRadiusKey = 'zgum_notif_friend_radius_m';
 
+// ignore: unused_element
 const _kEventOptions = [1000, 3000, 5000];
+// ignore: unused_element
 const _kFriendOptions = [100, 300, 500];
 
 String _formatDistance(int m) => m < 1000 ? '${m}m' : '${m ~/ 1000}km';
@@ -22,7 +24,9 @@ class NotificationSettingScreen extends ConsumerStatefulWidget {
 class _NotificationSettingScreenState
     extends ConsumerState<NotificationSettingScreen> with WidgetsBindingObserver {
   bool _notifGranted = false;
+  // ignore: unused_field
   int? _eventRadiusM;
+  // ignore: unused_field
   int? _friendRadiusM;
 
   @override
@@ -58,6 +62,7 @@ class _NotificationSettingScreenState
     });
   }
 
+  // ignore: unused_element
   Future<void> _setEventRadius(int? m) async {
     setState(() => _eventRadiusM = m);
     final prefs = await SharedPreferences.getInstance();
@@ -65,6 +70,7 @@ class _NotificationSettingScreenState
     else { prefs.setInt(_kEventRadiusKey, m); }
   }
 
+  // ignore: unused_element
   Future<void> _setFriendRadius(int? m) async {
     setState(() => _friendRadiusM = m);
     final prefs = await SharedPreferences.getInstance();
@@ -105,28 +111,37 @@ class _NotificationSettingScreenState
                   value: _notifGranted,
                   onToggle: openAppSettings,
                 ),
-                const Padding(
-                  padding: EdgeInsets.only(left: 58),
-                  child: _Rule(),
-                ),
-                _DistanceRow(
-                  icon: Icons.event_outlined,
-                  label: '최신이벤트알림',
-                  options: _kEventOptions,
-                  selected: _eventRadiusM,
-                  onChanged: _setEventRadius,
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(left: 58),
-                  child: _Rule(),
-                ),
-                _DistanceRow(
-                  icon: Icons.people_outline,
-                  label: '친구 감지',
-                  options: _kFriendOptions,
-                  selected: _friendRadiusM,
-                  onChanged: _setFriendRadius,
-                ),
+                // [최신이벤트알림 — 비활성화]
+                // 파트너 이벤트 등록 시 반경 내 사용자에게 FCM 푸시를 보내는 기능.
+                // Cloud Functions(Firebase Blaze 플랜)이 필요하여 유료 전환 전까지 UI 숨김.
+                // 설정값 저장 로직(_setEventRadius / _kEventRadiusKey)은 그대로 유지.
+                // 유료 전환 후 아래 주석 해제하면 즉시 복원됨.
+                //
+                // _DistanceRow(
+                //   icon: Icons.event_outlined,
+                //   label: '최신이벤트알림',
+                //   options: _kEventOptions,
+                //   selected: _eventRadiusM,
+                //   onChanged: _setEventRadius,
+                // ),
+                // const Padding(
+                //   padding: EdgeInsets.only(left: 58),
+                //   child: _Rule(),
+                // ),
+
+                // [친구 감지 — 비활성화]
+                // 이음으로 연결된 친구가 반경 내에 있을 때 FCM 푸시를 보내는 기능.
+                // Firestore 위치 저장 + Cloud Functions 필요, 유료 전환 전까지 UI 숨김.
+                // 설정값 저장 로직(_setFriendRadius / _kFriendRadiusKey)은 그대로 유지.
+                // 유료 전환 후 아래 주석 해제하면 즉시 복원됨.
+                //
+                // _DistanceRow(
+                //   icon: Icons.people_outline,
+                //   label: '친구 감지',
+                //   options: _kFriendOptions,
+                //   selected: _friendRadiusM,
+                //   onChanged: _setFriendRadius,
+                // ),
               ],
             ),
           ),
@@ -136,6 +151,7 @@ class _NotificationSettingScreenState
   }
 }
 
+// ignore: unused_element
 class _DistanceRow extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -287,6 +303,7 @@ class _ToggleRow extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _Rule extends StatelessWidget {
   const _Rule();
 

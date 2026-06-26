@@ -652,7 +652,7 @@ class _ActiveEventWaitingViewState
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(_updateRemaining);
-      if (_remaining <= Duration.zero) _finish();
+      if (_remaining <= Duration.zero) unawaited(_finish());
     });
   }
 
@@ -682,26 +682,45 @@ class _ActiveEventWaitingViewState
         ? '시간이 남아있습니다.\n$hours시간 재등록 1회 가능'
         : '${_formatDuration(_remaining)} 남아있습니다.\n종료하시겠습니까?';
     showTerminateConfirmPopup(context, message).then((confirmed) {
-      if (confirmed == true) _terminate();
+      if (confirmed == true) unawaited(_terminate());
     });
   }
 
-  void _finish() {
+  Future<void> _finish() async {
     _timer?.cancel();
     _timer = null;
-    unawaited(
-        ref.read(firestorePartnerEventServiceProvider).expire(widget.event.id));
+    try {
+      await ref
+          .read(firestorePartnerEventServiceProvider)
+          .expire(widget.event.id);
+    } catch (_) {}
+    if (!mounted) return;
     final list = ref.read(partnerMyEventsProvider);
     ref.read(partnerMyEventsProvider.notifier).state = [widget.event, ...list];
     ref.read(activePartnerEventProvider.notifier).state = null;
     widget.onClose();
   }
 
-  void _terminate() {
+  Future<void> _terminate() async {
     _timer?.cancel();
     _timer = null;
-    unawaited(
-        ref.read(firestorePartnerEventServiceProvider).expire(widget.event.id));
+    try {
+      await ref
+          .read(firestorePartnerEventServiceProvider)
+          .expire(widget.event.id);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('종료 처리 중 오류가 발생했습니다. 다시 시도해주세요.')),
+      );
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) return;
+        setState(_updateRemaining);
+        if (_remaining <= Duration.zero) unawaited(_finish());
+      });
+      return;
+    }
+    if (!mounted) return;
     ref.read(activePartnerEventProvider.notifier).state = null;
     widget.onClose();
   }

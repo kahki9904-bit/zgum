@@ -15,8 +15,3 @@ final webAdminAccessProvider = StateProvider<bool>((ref) => false);
 
 // 지도에 로드된 이벤트 — _MapPanelContent에서 공공 API 채우기에 사용
 final mapEventsProvider = StateProvider<List<CulturalEvent>>((ref) => []);
-
-// 지금 패널 모드 스위치
-// false = Phase 1: 파트너 이벤트 없으면 공공 API로 채움
-// true  = Phase 2: 파트너 이벤트만 표시
-final nowPanelPartnerModeProvider = StateProvider<bool>((ref) => false);

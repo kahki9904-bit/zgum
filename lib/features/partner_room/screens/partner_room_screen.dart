@@ -727,26 +727,23 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: isExpired
-                                  ? const Color(0xFFEEEEEE)
-                                  : const Color(0xFF1A1A2E),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              isExpired ? '종료' : '진행 중',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: isExpired
-                                    ? const Color(0xFF888888)
-                                    : Colors.white,
+                          if (!isExpired)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1A1A2E),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'ON',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
-                          ),
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(

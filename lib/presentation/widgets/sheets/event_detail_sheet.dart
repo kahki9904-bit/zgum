@@ -1,5 +1,6 @@
 import 'dart:io';
 import '../dialogs/camera_chooser_popup.dart';
+import '../../../core/popup_layout.dart';
 import '../../../core/providers/shell_page_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +24,7 @@ class EventDetailSheet {
     LatLng? userLocation,
     VoidCallback? onNavigate,
     bool isCheckedIn = false,
+    bool isMyEvent = false,
     void Function(String? memo, String? photoPath)? onCheckIn,
   }) async {
     if (!context.mounted) return;
@@ -47,6 +49,7 @@ class EventDetailSheet {
                 userLocation: userLocation,
                 onNavigate: onNavigate,
                 isCheckedIn: isCheckedIn,
+                isMyEvent: isMyEvent,
                 onCheckIn: onCheckIn,
               ),
             ),
@@ -66,6 +69,7 @@ class EventDetailSheet {
     CulturalEvent event,
     TimeService timeService, {
     bool interestSet = false,
+    bool isMyEvent = false,
     VoidCallback? onInterestTap,
     VoidCallback? onNavigateTap,
   }) {
@@ -73,6 +77,7 @@ class EventDetailSheet {
       EventSource.partner => PartnerEventContent(
           event: event,
           timeService: timeService,
+          isMyEvent: isMyEvent,
           onNavigateTap: onNavigateTap,
         ),
       EventSource.public => PublicEventContent(
@@ -94,6 +99,7 @@ class _SheetWrapper extends ConsumerStatefulWidget {
   final LatLng? userLocation;
   final VoidCallback? onNavigate;
   final bool isCheckedIn;
+  final bool isMyEvent;
   final void Function(String? memo, String? photoPath)? onCheckIn;
 
   const _SheetWrapper({
@@ -102,6 +108,7 @@ class _SheetWrapper extends ConsumerStatefulWidget {
     this.userLocation,
     this.onNavigate,
     this.isCheckedIn = false,
+    this.isMyEvent = false,
     this.onCheckIn,
   });
 
@@ -252,10 +259,11 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
+    final popup = PopupLayoutSpec.current;
 
     return Container(
       width: double.infinity,
-      constraints: BoxConstraints(maxHeight: screenHeight * 0.45),
+      height: screenHeight * popup.registerFormFactor,
       margin: const EdgeInsets.symmetric(horizontal: 20),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -284,6 +292,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
       widget.event,
       widget.timeService,
       interestSet: _interestSet,
+      isMyEvent: widget.isMyEvent,
       onInterestTap: () => setState(() => _interestSet = true),
       onNavigateTap: navigateCallback,
     );

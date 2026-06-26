@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../promotions/free_use/free_use_settings_tile.dart';
+// ignore: unused_import
 import 'adult_verification_screen.dart';
 import 'notification_setting_screen.dart';
 import 'app_info_screen.dart';
+import 'language_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -50,18 +52,11 @@ class SettingsScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _SettingRow(
-                      icon: Icons.verified_user_outlined,
-                      label: context.l10n.settingIdentity,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const AdultVerificationScreen()),
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.only(left: 58),
-                      child: _Rule(),
-                    ),
+                    // [본인인증 — 비활성화]
+                    // 국내 결제·과금 연동 시 NICE/PASS 외부 본인인증으로 채울 자리.
+                    // 그 전까지 UI 숨김. adult_verification_screen.dart는 그대로 유지.
+                    // 과금 연동 후 이 주석 블록을 제거하면 즉시 복원됨.
+
                     _SettingRow(
                       icon: Icons.notifications_outlined,
                       label: context.l10n.settingNotifications,
@@ -80,7 +75,10 @@ class SettingsScreen extends ConsumerWidget {
                       icon: Icons.language_outlined,
                       label: context.l10n.settingLanguage,
                       trailText: currentLangLabel,
-                      onTap: () => _showLanguagePicker(context, ref, currentLocale),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LanguageScreen()),
+                      ),
                     ),
                     const Padding(
                       padding: EdgeInsets.only(left: 58),
@@ -110,94 +108,6 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-
-void _showLanguagePicker(BuildContext context, WidgetRef ref, Locale currentLocale) {
-  showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (sheetContext) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0E0E0),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 12),
-          ..._kLanguages.map((lang) {
-            final isSelected = currentLocale.languageCode == lang.code;
-            return InkWell(
-              onTap: () {
-                ref.read(localeProvider.notifier).setLocale(Locale(lang.code));
-                Navigator.pop(sheetContext);
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: SizedBox(
-                  height: 52,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? const Color(0xFF1A1A2E)
-                              : const Color(0xFFF0F0F0),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Center(
-                          child: Text(
-                            lang.code.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: isSelected
-                                  ? Colors.white
-                                  : const Color(0xFFAAAAAA),
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          lang.label,
-                          style: TextStyle(
-                            color: isSelected
-                                ? const Color(0xFF1A1A2E)
-                                : const Color(0xFF333333),
-                            fontSize: 15,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                      if (isSelected)
-                        const Icon(Icons.check,
-                            color: Color(0xFF1A1A2E), size: 18),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }),
-          const SizedBox(height: 8),
-        ],
-      ),
-    ),
-  );
-}
 
 const _kLanguages = [
   _LangOption(code: 'ko', label: '한국어'),

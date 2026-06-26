@@ -5,10 +5,13 @@ import '../../../core/theme/app_colors.dart';
 import 'event_content_base.dart';
 
 class PartnerEventContent extends EventContentBase {
+  final bool isMyEvent;
+
   const PartnerEventContent({
     super.key,
     required super.event,
     required super.timeService,
+    this.isMyEvent = false,
     super.onNavigateTap,
   });
 
@@ -17,6 +20,25 @@ class PartnerEventContent extends EventContentBase {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (isMyEvent)
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF8C00).withValues(alpha: 0.13),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                  color: const Color(0xFFFF8C00).withValues(alpha: 0.4)),
+            ),
+            child: const Text(
+              '나의 이벤트',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFFF8C00),
+              ),
+            ),
+          ),
         SizedBox(
           height: 36,
           child: Marquee(

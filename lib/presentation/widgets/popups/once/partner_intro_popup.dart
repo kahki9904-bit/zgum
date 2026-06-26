@@ -32,7 +32,7 @@ Future<void> showPartnerIntroPopup(BuildContext context) async {
         child: GestureDetector(
           onTap: () {},
           child: ZGumDialog(
-            heightFactor: PopupLayoutSpec.current.introLongFactor,
+            heightFactor: PopupLayoutSpec.current.introShortFactor,
             child: const Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,

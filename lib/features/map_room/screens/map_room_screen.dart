@@ -286,8 +286,9 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               category: EventCategory.partner,
               isFree: false,
               source: EventSource.partner,
-              partnerMessage: e.title,
+              partnerMessage: e.message,
               isAdultOnly: e.isAdultOnly,
+              imageUrl: e.representativePhotoPath,
             ))
         .toList();
     final all = [
@@ -843,6 +844,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
           .read(checkInProvider.notifier)
           .checkedInEventIds
           .contains(event.id),
+      isMyEvent: isMyEvent,
       onCheckIn: isMyEvent
           ? null
           : (String? memo, String? photoPath) {
