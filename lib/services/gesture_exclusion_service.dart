@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 /// Android Q(10)+ 에서 시스템 백(back) 제스처 영역을 제외시킵니다.
 /// 지도 화면처럼 WebView가 화면을 가득 채워 엣지 스와이프가 OS에 가로채일 때 사용합니다.
 class GestureExclusionService {
-  static const _ch = MethodChannel('com.example.zgum/gesture');
+  static const _ch = MethodChannel('com.zgum.app/gesture');
 
   /// [rects] 의 영역을 Android 시스템 백 제스처에서 제외합니다.
   /// [devicePixelRatio] 는 논리 좌표를 물리 픽셀로 변환하는 배율입니다.
