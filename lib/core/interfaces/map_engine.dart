@@ -46,6 +46,9 @@ abstract class MapEngine {
     if (marker.isExpired()) {
       return 0xFF8A7A67;
     }
+    if (marker.isMine) {
+      return 0xFFD9BD7A;
+    }
     if (marker.isPartner) {
       return 0xFFB9782E;
     }

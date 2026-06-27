@@ -28,15 +28,15 @@ class MapCoordinate {
 /// 새 카테고리가 생기면 여기에만 추가하면 됩니다.
 /// 각 MapEngine 구현체가 이 값을 읽어 색상·아이콘을 결정합니다.
 enum MarkerCategory {
-  movie,       // 영화
-  theater,     // 연극·뮤지컬
-  exhibition,  // 전시·미술
-  show,        // 관람
-  concert,     // 공연
-  sale,        // 타임세일 (파트너)
-  cinema,      // 영화관 (장소)
-  partner,     // 파트너 일반
-  other,       // 기타
+  movie, // 영화
+  theater, // 연극·뮤지컬
+  exhibition, // 전시·미술
+  show, // 관람
+  concert, // 공연
+  sale, // 타임세일 (파트너)
+  cinema, // 영화관 (장소)
+  partner, // 파트너 일반
+  other, // 기타
 }
 
 // ── 마커 데이터 모델 ───────────────────────────────────────────────────────────
@@ -60,7 +60,9 @@ class MapMarkerModel {
   final String title;
   final String? venue;
   final bool isPartner;
+  final bool isMine;
   final bool isHighlighted;
+  final bool isSelected;
 
   /// 강조 반경 밖 마커: 시각적으로 흐리게 표시. 데이터는 유지됨.
   final bool isDimmed;
@@ -84,7 +86,9 @@ class MapMarkerModel {
     required this.title,
     this.venue,
     this.isPartner = false,
+    this.isMine = false,
     this.isHighlighted = false,
+    this.isSelected = false,
     this.isDimmed = false,
     this.payload,
     this.roadAddress,

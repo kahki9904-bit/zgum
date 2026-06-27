@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart' hide Path;
@@ -20,6 +21,7 @@ import '../../../data/repositories/cultural_event_repository.dart';
 import '../../../data/repositories/kopis_repository.dart';
 import '../../../dev/mock_cultural_event_repository.dart';
 import '../../../services/firestore_partner_event_service.dart';
+import '../../../services/device_id_service.dart';
 import '../../alert/models/partner_event.dart';
 import '../../../data/repositories/sdsc_store_repository.dart';
 import '../../../services/location_service.dart';
@@ -88,6 +90,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   List<CulturalEvent> _events = [];
   Map<String, CulturalEvent> _eventById = {};
   List<MapMarkerModel> _markers = [];
+  Set<String> _myPartnerEventIds = {};
 
   // ── 이벤트별 종료/소멸 타이머 ────────────────────────────────────────────────
   final Map<String, Timer> _eventTimers = {};
@@ -277,6 +280,12 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     if (!mounted) return;
     final firestorePartnerEvents =
         ref.read(activePartnerEventsStreamProvider).valueOrNull ?? [];
+    final currentPartnerId =
+        FirebaseAuth.instance.currentUser?.uid ?? await DeviceIdService.getId();
+    final myPartnerEventIds = firestorePartnerEvents
+        .where((e) => e.partnerId == currentPartnerId)
+        .map((e) => e.id)
+        .toSet();
     final partnerFromFirestore = firestorePartnerEvents
         .map((PartnerEvent e) => CulturalEvent(
               id: e.id,
@@ -310,6 +319,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     setState(() {
       _events = active;
       _eventById = {for (final e in active) e.id: e};
+      _myPartnerEventIds = myPartnerEventIds;
     });
     ref.read(mapEventsProvider.notifier).state = active;
     _scheduleEventTimers(active);
@@ -373,10 +383,16 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     final visible = _visibleEvents(filter);
     final focusCoord = _searchFocusCoord;
     final checkedInIds = ref.read(checkInProvider.notifier).checkedInEventIds;
+    final myEventIds =
+        ref.read(partnerMyEventsProvider).map((e) => e.id).toSet();
+    final activeEvent = ref.read(activePartnerEventProvider);
 
     MapMarkerModel applyState(MapMarkerModel m, {required bool dimmed}) {
       final isHL = m.id == _highlightedEventId;
       final isCI = checkedInIds.contains(m.id);
+      final isMine = _myPartnerEventIds.contains(m.id) ||
+          myEventIds.contains(m.id) ||
+          activeEvent?.id == m.id;
       return MapMarkerModel(
         id: m.id,
         location: m.location,
@@ -386,7 +402,9 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
         title: m.title,
         venue: m.venue,
         isPartner: m.isPartner,
+        isMine: isMine,
         isHighlighted: isHL || isCI,
+        isSelected: isHL,
         isDimmed: dimmed && !isHL && !isCI,
         payload: m.payload,
       );
@@ -546,8 +564,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
         kakaoItems.isNotEmpty ||
         kopisItems.isNotEmpty ||
         tourItems.isNotEmpty;
-    final bool allSearched =
-        kakaoState.hasSearched && unifiedState.hasSearched;
+    final bool allSearched = kakaoState.hasSearched && unifiedState.hasSearched;
 
     return Column(
       children: [
@@ -567,8 +584,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
                 hintText: '2글자 이상 입력하세요',
-                hintStyle: const TextStyle(
-                    color: Color(0xFFBBBBBB), fontSize: 13),
+                hintStyle:
+                    const TextStyle(color: Color(0xFFBBBBBB), fontSize: 13),
                 prefixIcon: const Icon(Icons.search,
                     color: Color(0xFFBBBBBB), size: 20),
                 suffixIcon: _searchQuery.isNotEmpty
@@ -918,8 +935,14 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
       return;
     }
     final activeOwnEvent = ref.read(activePartnerEventProvider);
-    if (activeOwnEvent != null && activeOwnEvent.id == event.id) return;
+    if (activeOwnEvent != null && activeOwnEvent.id == event.id) {
+      setState(() => _highlightedEventId = event.id);
+      _rebuildMarkers();
+      return;
+    }
     debugPrint('[MapRoom] show sheet: ${event.id} / ${event.title}');
+    setState(() => _highlightedEventId = event.id);
+    _rebuildMarkers();
     _mapCtrl.move(
       MapCoordinate(event.location.latitude, event.location.longitude),
       AppConstants.defaultZoom,
@@ -962,10 +985,9 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     const emptyTouchZone = 60.0;
     final effectiveBottom =
         keyboardHeight > 0 ? keyboardHeight + emptyTouchZone : bottomPadding;
-    final maxSearchPanelHeight =
-        (screenHeight - safePadding - effectiveBottom)
-            .clamp(120.0, double.infinity)
-            .toDouble();
+    final maxSearchPanelHeight = (screenHeight - safePadding - effectiveBottom)
+        .clamp(120.0, double.infinity)
+        .toDouble();
     final panelHeight =
         (screenHeight * 0.55).clamp(120.0, maxSearchPanelHeight).toDouble();
     final kakaoResults = ref.watch(kakaoSearchProvider).results;

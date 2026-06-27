@@ -59,6 +59,8 @@ class FlutterMapEngine extends MapEngine {
   }) {
     final ctrl = (controller.raw as MapController);
     final routeLatLngs = routePoints?.map((c) => c.toLatLng()).toList();
+    final orderedMarkers = [...markers]..sort(
+        (a, b) => a.isSelected == b.isSelected ? 0 : (a.isSelected ? 1 : -1));
 
     return FlutterMap(
       mapController: ctrl,
@@ -84,7 +86,7 @@ class FlutterMapEngine extends MapEngine {
         MarkerLayer(
           markers: [
             if (userLocation != null) _buildUserMarker(userLocation),
-            ...markers.map((m) => _buildMarker(m, onMarkerTap)),
+            ...orderedMarkers.map((m) => _buildMarker(m, onMarkerTap)),
           ],
         ),
       ],
@@ -117,7 +119,8 @@ class FlutterMapEngine extends MapEngine {
     final shouldBlink = !expired && !marker.isDimmed;
 
     final spec = MapMarkerLayoutSpec.current;
-    final markerSize = highlighted ? spec.highlightedBitmapSize : spec.bitmapSize;
+    final markerSize =
+        highlighted ? spec.highlightedBitmapSize : spec.bitmapSize;
     return Marker(
       point: marker.location.toLatLng(),
       width: markerSize + 8,
@@ -270,8 +273,8 @@ class _MapDropMarker extends StatelessWidget {
         highlighted ? spec.highlightedCenterSize : spec.centerSize;
     return Center(
       child: SizedBox(
-        width: spec.bitmapSize,
-        height: spec.bitmapSize,
+        width: highlighted ? spec.highlightedBitmapSize : spec.bitmapSize,
+        height: highlighted ? spec.highlightedBitmapSize : spec.bitmapSize,
         child: CustomPaint(
           painter: _SoftSquareMarkerPainter(
             fillColor: fillColor,

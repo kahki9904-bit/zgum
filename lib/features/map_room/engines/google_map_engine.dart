@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -190,20 +191,24 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
       marker.category == MarkerCategory.other ||
       marker.category == MarkerCategory.cinema;
 
-  Future<BitmapDescriptor> _getMarkerBitmap(MapMarkerModel marker) async {
+  Future<BitmapDescriptor> _getMarkerBitmap(
+    MapMarkerModel marker, {
+    bool? forceHighlighted,
+  }) async {
     final isSearch = _isSearchMarker(marker);
     final markerColor = Color(widget.colorForMarker(marker));
+    final highlighted = forceHighlighted ?? marker.isHighlighted;
     final fillColor = isSearch ? const Color(0xFFFFFDF8) : markerColor;
     final borderColor = isSearch ? markerColor : const Color(0xFFFFFCF4);
     final centerColor = isSearch
         ? markerColor
-        : Colors.white.withValues(alpha: marker.isHighlighted ? 0.96 : 0.9);
+        : Colors.white.withValues(alpha: highlighted ? 0.96 : 0.9);
     final cacheKey = Object.hash(
       isSearch ? 'soft_square_search_v1' : 'soft_square_event_v1',
       fillColor.toARGB32(),
       borderColor.toARGB32(),
       centerColor.toARGB32(),
-      marker.isHighlighted,
+      highlighted,
       _dpr,
     );
     if (_bitmapCache.containsKey(cacheKey)) return _bitmapCache[cacheKey]!;
@@ -217,6 +222,7 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
             fillColor: fillColor,
             borderColor: borderColor,
             centerColor: centerColor,
+            highlighted: highlighted,
           );
     _bitmapCache[cacheKey] = bitmap;
     return bitmap;
@@ -236,10 +242,14 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
     required Color fillColor,
     required Color borderColor,
     required Color centerColor,
+    bool highlighted = false,
   }) async {
     final spec = MapMarkerLayoutSpec.current;
-    final double size = spec.bitmapSize;
-    final double pinS = spec.pinSize;
+    final double size =
+        highlighted ? spec.highlightedBitmapSize : spec.bitmapSize;
+    final double pinS = highlighted ? spec.highlightedPinSize : spec.pinSize;
+    final double centerS =
+        highlighted ? spec.highlightedCenterSize : spec.centerSize;
     final double cx = size / 2;
     final double cy = size / 2;
     final int imgSize = (size * _dpr).toInt();
@@ -251,7 +261,8 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
     );
     canvas.scale(_dpr);
 
-    final borderWidth = spec.borderWidth;
+    final borderWidth =
+        highlighted ? spec.highlightedBorderWidth : spec.borderWidth;
     final bodyTop = cy - pinS / 2 - pinS * 0.08;
     final bodyRect = Rect.fromLTWH(cx - pinS / 2, bodyTop, pinS, pinS);
     final radius = Radius.circular(math.max(pinS * 0.32, 4));
@@ -284,7 +295,7 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
 
     canvas.drawCircle(
       Offset(cx, cy),
-      math.max(spec.centerSize * 0.38, 2),
+      math.max(centerS * 0.38, 2),
       Paint()..color = centerColor,
     );
 
@@ -373,12 +384,15 @@ class _GoogleMapViewState extends State<_GoogleMapView> {
       for (final m in List.of(widget.markers)) {
         if (!mounted) break;
         final icon = await _getMarkerBitmap(m);
+        if (!m.isHighlighted && !_isSearchMarker(m)) {
+          unawaited(_getMarkerBitmap(m, forceHighlighted: true));
+        }
         result.add(Marker(
           markerId: MarkerId(m.id),
           position: LatLng(m.location.latitude, m.location.longitude),
           icon: icon,
           anchor: const Offset(0.5, 0.5),
-          zIndexInt: 1,
+          zIndexInt: m.isSelected ? 10 : (m.isHighlighted ? 5 : 1),
           onTap: () {
             debugPrint('[GoogleMap] marker tapped: ${m.id} / ${m.title}');
             widget.onMarkerTap(m);
