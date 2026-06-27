@@ -39,6 +39,7 @@ class KakaoSearchNotifier extends StateNotifier<KakaoSearchState> {
   Future<void> search({
     required String query,
     required MapCoordinate center,
+    int? radiusM,
     KakaoSearchContext context = KakaoSearchContext.userDiscovery,
   }) async {
     if (query.trim().isEmpty) {
@@ -52,7 +53,8 @@ class KakaoSearchNotifier extends StateNotifier<KakaoSearchState> {
       final results = await _repo.fetchNearbyPlaces(
         center: center,
         query: query.trim(),
-        size: 5,
+        size: 15,
+        radiusM: radiusM,
         context: context,
       );
       state = KakaoSearchState(results: results, isLoading: false, hasSearched: true);

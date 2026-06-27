@@ -16,6 +16,7 @@ abstract class KakaoLocalRepository {
     required MapCoordinate center,
     required String query,
     int size = 5,
+    int? radiusM,
     KakaoSearchContext context = KakaoSearchContext.userDiscovery,
   });
 }
@@ -27,6 +28,7 @@ class StubKakaoLocalRepository implements KakaoLocalRepository {
     required MapCoordinate center,
     required String query,
     int size = 5,
+    int? radiusM,
     KakaoSearchContext context = KakaoSearchContext.userDiscovery,
   }) async {
     debugPrint('[KakaoLocal] STUB 모드 — 장소 검색 비활성화');
@@ -81,6 +83,7 @@ class ApiKakaoLocalRepository implements KakaoLocalRepository {
     required MapCoordinate center,
     required String query,
     int size = 5,
+    int? radiusM,
     KakaoSearchContext context = KakaoSearchContext.userDiscovery,
   }) async {
     final cacheKey =
@@ -92,15 +95,18 @@ class ApiKakaoLocalRepository implements KakaoLocalRepository {
 
     debugPrint('[KakaoLocal] 검색 요청: "$query" @ ${center.latitude.toStringAsFixed(4)}, ${center.longitude.toStringAsFixed(4)}');
 
+    final params = <String, dynamic>{
+      'query': query,
+      'size': size.clamp(1, 15),
+      'sort': 'distance',
+      'x': center.longitude.toString(),
+      'y': center.latitude.toString(),
+    };
+    if (radiusM != null) params['radius'] = radiusM.clamp(1, 20000);
+
     final response = await _dio.get<Map<String, dynamic>>(
       '/v2/local/search/keyword.json',
-      queryParameters: {
-        'query': query,
-        'size': size.clamp(1, 5),
-        'sort': 'distance',
-        'x': center.longitude.toString(),
-        'y': center.latitude.toString(),
-      },
+      queryParameters: params,
     );
 
     final documents =

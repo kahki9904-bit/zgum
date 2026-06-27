@@ -102,6 +102,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   bool _searchOpen = false;
   final _searchCtrl = TextEditingController();
   final _searchFocus = FocusNode();
+  final _searchScrollCtrl = ScrollController();
   String _searchQuery = '';
   String? _highlightedEventId;
   Timer? _searchDebounce;
@@ -154,6 +155,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     _searchDebounce?.cancel();
     _searchCtrl.dispose();
     _searchFocus.dispose();
+    _searchScrollCtrl.dispose();
     super.dispose();
   }
 
@@ -441,12 +443,19 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   List<CulturalEvent> get _searchResults {
     if (_searchQuery.length < 2) return [];
     final q = _searchQuery.toLowerCase();
-    return _events
+    final matched = _events
         .where((e) =>
             e.title.toLowerCase().contains(q) ||
             e.venue.toLowerCase().contains(q))
-        .take(5)
-        .toList();
+        .toList()
+      ..sort((a, b) => haversineKm(_center, a.location)
+          .compareTo(haversineKm(_center, b.location)));
+    if (_searchQuery.trim().length == 2) {
+      return matched
+          .where((e) => haversineKm(_center, e.location) <= 2.0)
+          .toList();
+    }
+    return matched;
   }
 
   void _onSearchChanged(String query) {
@@ -454,7 +463,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     _searchDebounce?.cancel();
     if (query.trim().length >= 2) {
       _searchDebounce = Timer(const Duration(milliseconds: 400), () {
-        _runKakaoSearch(query);
+        final radiusM = query.trim().length == 2 ? 2000 : null;
+        _runKakaoSearch(query, radiusM: radiusM);
         ref.read(unifiedSearchProvider.notifier).search(query);
       });
     }
@@ -514,11 +524,12 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
 
   // ── 검색 패널 ──────────────────────────────────────────────────────────────
 
-  void _runKakaoSearch(String query) {
+  void _runKakaoSearch(String query, {int? radiusM}) {
     if (query.trim().length < 2) return;
     ref.read(kakaoSearchProvider.notifier).search(
           query: query,
           center: _centerCoord,
+          radiusM: radiusM,
         );
     ref.read(unifiedSearchProvider.notifier).search(query);
   }
@@ -527,17 +538,16 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     final kakaoState = ref.watch(kakaoSearchProvider);
     final unifiedState = ref.watch(unifiedSearchProvider);
     final zgumItems = _searchResults;
-    final remaining = (5 - zgumItems.length).clamp(0, 5);
-    final kakaoItems = remaining > 0
-        ? kakaoState.results.take(remaining).toList()
-        : <MapMarkerModel>[];
-    final kopisItems = unifiedState.kopisResults.take(5).toList();
-    final tourItems = unifiedState.tourResults.take(5).toList();
+    final kakaoItems = kakaoState.results;
+    final kopisItems = unifiedState.kopisResults;
+    final tourItems = unifiedState.tourResults;
 
     final bool hasAnyResult = zgumItems.isNotEmpty ||
         kakaoItems.isNotEmpty ||
         kopisItems.isNotEmpty ||
         tourItems.isNotEmpty;
+    final bool allSearched =
+        kakaoState.hasSearched && unifiedState.hasSearched;
 
     return Column(
       children: [
@@ -556,7 +566,9 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
               cursorColor: AppColors.actionGold,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                hintText: null,
+                hintText: '2글자 이상 입력하세요',
+                hintStyle: const TextStyle(
+                    color: Color(0xFFBBBBBB), fontSize: 13),
                 prefixIcon: const Icon(Icons.search,
                     color: Color(0xFFBBBBBB), size: 20),
                 suffixIcon: _searchQuery.isNotEmpty
@@ -576,90 +588,59 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
               onChanged: _onSearchChanged,
-              onSubmitted: _runKakaoSearch,
+              onSubmitted: (q) => _runKakaoSearch(q,
+                  radiusM: q.trim().length == 2 ? 2000 : null),
             ),
           ),
         ),
         const SizedBox(height: 8),
         Flexible(
           child: _searchQuery.length < 2
-              ? const Center(
-                  child: Text(
-                    '2글자 이상 입력하세요',
-                    style: TextStyle(color: Color(0xFFCCCCCC), fontSize: 13),
-                  ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  children: [
-                    // 주변 이벤트 (20km 내 로컬)
-                    ...zgumItems.map((e) => _searchResultTile(
-                          title: e.title,
-                          subtitle: e.venue,
-                          onTap: () => _selectResult(e),
-                        )),
-                    // 공연·행사 (KOPIS + Tour API 전국 검색)
-                    if (unifiedState.isLoading)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Center(
-                          child: SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Color(0xFFBBBBBB),
-                            ),
-                          ),
-                        ),
-                      )
-                    else if (kopisItems.isNotEmpty || tourItems.isNotEmpty) ...[
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8, bottom: 4),
-                        child: Text(
-                          '공연·행사',
-                          style:
-                              TextStyle(fontSize: 11, color: Color(0xFFAAAAAA)),
-                        ),
-                      ),
-                      ...kopisItems.map((r) => _searchResultTile(
-                            title: r.title,
-                            subtitle: '${r.venue}  ${r.startDate}~${r.endDate}',
-                            onTap: () => _selectKopisResult(r),
-                          )),
-                      ...tourItems.map((e) => _searchResultTile(
+              ? const SizedBox.shrink()
+              : RawScrollbar(
+                  controller: _searchScrollCtrl,
+                  thumbVisibility: true,
+                  thickness: 4,
+                  radius: const Radius.circular(2),
+                  thumbColor: const Color(0x99888888),
+                  child: ListView(
+                    controller: _searchScrollCtrl,
+                    padding: const EdgeInsets.fromLTRB(16, 4, 24, 24),
+                    children: [
+                      // ── 1순위: Z:GUM 등록 이벤트 (거리순) ────────────────
+                      ...zgumItems.map((e) => _searchResultTile(
                             title: e.title,
                             subtitle: e.venue,
                             onTap: () => _selectResult(e),
                           )),
-                    ],
-                    // 장소 (카카오)
-                    if (kakaoState.isLoading)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Center(
-                          child: SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Color(0xFFBBBBBB),
+
+                      // ── 2순위: 카카오 장소 ─────────────────────────────
+                      if (kakaoState.isLoading)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Center(
+                            child: SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFBBBBBB),
+                              ),
                             ),
                           ),
-                        ),
-                      )
-                    else if (kakaoState.error != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Text(kakaoState.error!,
-                            style: const TextStyle(
-                                fontSize: 12, color: Color(0xFFCCCCCC))),
-                      )
-                    else ...[
-                      if (kakaoItems.isNotEmpty) ...[
-                        const Padding(
-                          padding: EdgeInsets.only(top: 8, bottom: 4),
-                          child: Text(
+                        )
+                      else if (kakaoState.error != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Text(kakaoState.error!,
+                              style: const TextStyle(
+                                  fontSize: 12, color: Color(0xFFCCCCCC))),
+                        )
+                      else if (kakaoItems.isNotEmpty) ...[
+                        Padding(
+                          padding: EdgeInsets.only(
+                              top: zgumItems.isNotEmpty ? 8 : 0, bottom: 4),
+                          child: const Text(
                             '장소',
                             style: TextStyle(
                                 fontSize: 11, color: Color(0xFFAAAAAA)),
@@ -671,9 +652,52 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                               onTap: () => _selectKakaoPlace(m),
                             )),
                       ],
-                      if (!hasAnyResult &&
-                          kakaoState.hasSearched &&
-                          unifiedState.hasSearched)
+
+                      // ── 3순위: 공연·행사 (KOPIS + Tour API) ──────────────
+                      if (unifiedState.isLoading)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Center(
+                            child: SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFBBBBBB),
+                              ),
+                            ),
+                          ),
+                        )
+                      else if (kopisItems.isNotEmpty ||
+                          tourItems.isNotEmpty) ...[
+                        Padding(
+                          padding: EdgeInsets.only(
+                              top: (zgumItems.isNotEmpty ||
+                                      kakaoItems.isNotEmpty)
+                                  ? 8
+                                  : 0,
+                              bottom: 4),
+                          child: const Text(
+                            '공연·행사',
+                            style: TextStyle(
+                                fontSize: 11, color: Color(0xFFAAAAAA)),
+                          ),
+                        ),
+                        ...kopisItems.map((r) => _searchResultTile(
+                              title: r.title,
+                              subtitle:
+                                  '${r.venue}  ${r.startDate}~${r.endDate}',
+                              onTap: () => _selectKopisResult(r),
+                            )),
+                        ...tourItems.map((e) => _searchResultTile(
+                              title: e.title,
+                              subtitle: e.venue,
+                              onTap: () => _selectResult(e),
+                            )),
+                      ],
+
+                      // ── 결과 없음 ─────────────────────────────────────
+                      if (!hasAnyResult && allSearched)
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 12),
                           child: Text(
@@ -683,7 +707,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
                           ),
                         ),
                     ],
-                  ],
+                  ),
                 ),
         ),
       ],
@@ -932,13 +956,18 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
 
     final safePadding = MediaQuery.paddingOf(context).top;
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final screenHeight = MediaQuery.sizeOf(context).height;
+    // 키보드가 올라왔을 때: 키보드 위 60px 빈 공간(터치 닫기용) 확보
+    const emptyTouchZone = 60.0;
+    final effectiveBottom =
+        keyboardHeight > 0 ? keyboardHeight + emptyTouchZone : bottomPadding;
     final maxSearchPanelHeight =
-        (screenHeight - safePadding - bottomPadding - 120)
-            .clamp(220.0, double.infinity)
+        (screenHeight - safePadding - effectiveBottom)
+            .clamp(120.0, double.infinity)
             .toDouble();
     final panelHeight =
-        (screenHeight * 0.48).clamp(220.0, maxSearchPanelHeight).toDouble();
+        (screenHeight * 0.55).clamp(120.0, maxSearchPanelHeight).toDouble();
     final kakaoResults = ref.watch(kakaoSearchProvider).results;
     final hasResults = _searchQuery.isNotEmpty &&
         (kakaoResults.isNotEmpty || _searchResults.isNotEmpty);
