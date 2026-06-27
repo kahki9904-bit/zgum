@@ -78,12 +78,21 @@ class _IeumRequestDialogState extends State<IeumRequestDialog> {
       final code = _codeCtrl.text.trim();
       if (code.isNotEmpty && _requestId != null) {
         try {
-          await widget.repo.confirmRequest(
+          final friend = await widget.repo.confirmRequest(
             requestId: _requestId!,
             responseCode: code,
             myUserId: uid,
             myLocation: widget.location,
           );
+          // [이스터에그] 총괄 단말기에서 이음 완료 시 관리자 지정 가능
+          // 활성화 시 아래 주석 해제 후 사용:
+          // if (friend != null) {
+          //   final isSuperAdmin = await SuperAdminService.isCurrentDeviceAdmin();
+          //   if (isSuperAdmin) {
+          //     await AdminDesignationService.designate(friend.friendUserId);
+          //   }
+          // }
+          assert(friend != null || friend == null);
           if (mounted) {
             setState(() {
               _resultMessage = '이음이 연결됐습니다';

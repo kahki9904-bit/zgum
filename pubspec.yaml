@@ -60,6 +60,9 @@ dependencies:
   # 흔들기 감지
   sensors_plus: ^6.1.0
 
+  # 암호화 (총괄 인증 해시 비교용)
+  crypto: ^3.0.6
+
   # Firebase
   firebase_core: ^3.6.0
   cloud_firestore: ^5.4.4

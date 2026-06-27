@@ -22,6 +22,7 @@ import '../../../data/repositories/kopis_repository.dart';
 import '../../../dev/mock_cultural_event_repository.dart';
 import '../../../services/firestore_partner_event_service.dart';
 import '../../../services/device_id_service.dart';
+import '../../../services/super_admin_service.dart';
 import '../../alert/models/partner_event.dart';
 import '../../../data/repositories/sdsc_store_repository.dart';
 import '../../../services/location_service.dart';
@@ -479,6 +480,15 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   void _onSearchChanged(String query) {
     setState(() => _searchQuery = query);
     _searchDebounce?.cancel();
+
+    // [이스터에그] 총괄 인증 감지 — SuperAdminService._enabled = false 시 무조건 통과
+    if (SuperAdminService.isCandidate(query)) {
+      SuperAdminService.tryActivate(query).then((_) {
+        if (mounted) _closeSearch();
+      });
+      return;
+    }
+
     if (query.trim().length >= 2) {
       _searchDebounce = Timer(const Duration(milliseconds: 400), () {
         final radiusM = query.trim().length == 2 ? 2000 : null;
