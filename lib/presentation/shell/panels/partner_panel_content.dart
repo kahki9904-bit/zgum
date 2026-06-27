@@ -84,6 +84,64 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     await showPhotoViewerPopup(context, _photos, initialIndex: index);
   }
 
+  Future<List<PartnerPhoto>> _uploadPhotos({
+    required String uid,
+    required String eventId,
+  }) async {
+    final storage = FirebaseStorage.instance;
+    final uploaded = <PartnerPhoto>[];
+
+    for (int i = 0; i < _photos.length; i++) {
+      final ref = storage
+          .ref()
+          .child('partner_events')
+          .child(uid)
+          .child(eventId)
+          .child('$i.jpg');
+      await ref.putFile(_photos[i]);
+      final url = await ref.getDownloadURL();
+      uploaded.add(PartnerPhoto(path: url));
+    }
+
+    return uploaded;
+  }
+
+  void _showRegisterFailure(String message) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (ctx, __, ___) => GestureDetector(
+        onTap: () => Navigator.of(ctx).pop(),
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: GestureDetector(
+            onTap: () {},
+            child: ZGumDialog(
+              heightFactor: 0.22,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('등록 실패', style: ZGumDialogTextStyles.sectionTitle),
+                  const SizedBox(height: 10),
+                  Text(
+                    message,
+                    style: ZGumDialogTextStyles.confirmBody,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      transitionBuilder: (_, animation, __, child) =>
+          FadeTransition(opacity: animation, child: child),
+    );
+  }
+
   Future<void> _submit() async {
     if (_submitting) return;
     final title = _titleCtrl.text.trim();
@@ -106,13 +164,24 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     final locationResult = await LocationService().acquireLocation();
     if (!mounted) return;
 
-    final photoList = _photos.map((f) => PartnerPhoto(path: f.path)).toList();
-
     final now = DateTime.now();
     final uid =
         FirebaseAuth.instance.currentUser?.uid ?? await DeviceIdService.getId();
+    final eventId = now.millisecondsSinceEpoch.toString();
+
+    List<PartnerPhoto> photoList;
+    try {
+      photoList = await _uploadPhotos(uid: uid, eventId: eventId);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      _showRegisterFailure('사진 저장 중 오류가 발생했습니다.\n잠시 후 다시 시도해 주세요.');
+      return;
+    }
+
+    if (!mounted) return;
     final event = PartnerEvent(
-      id: now.millisecondsSinceEpoch.toString(),
+      id: eventId,
       partnerId: uid,
       title: title,
       venue: title,
@@ -134,79 +203,17 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     final paidEvent =
         event.copyWith(paymentStatus: PaymentStatus.paid, paidAt: now);
 
-    ref.read(activePartnerEventProvider.notifier).state = paidEvent;
-
     try {
       await ref.read(firestorePartnerEventServiceProvider).save(paidEvent);
     } catch (_) {
-      if (mounted) ref.read(activePartnerEventProvider.notifier).state = null;
       if (!mounted) return;
       setState(() => _submitting = false);
-      showGeneralDialog(
-        context: context,
-        barrierDismissible: true,
-        barrierLabel: '',
-        barrierColor: Colors.black54,
-        transitionDuration: const Duration(milliseconds: 200),
-        pageBuilder: (ctx, __, ___) => GestureDetector(
-          onTap: () => Navigator.of(ctx).pop(),
-          behavior: HitTestBehavior.opaque,
-          child: Center(
-            child: GestureDetector(
-              onTap: () {},
-              child: const ZGumDialog(
-                heightFactor: 0.22,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('등록 실패', style: ZGumDialogTextStyles.sectionTitle),
-                    SizedBox(height: 10),
-                    Text(
-                      '저장 중 오류가 발생했습니다.\n잠시 후 다시 시도해 주세요.',
-                      style: ZGumDialogTextStyles.confirmBody,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        transitionBuilder: (_, animation, __, child) =>
-            FadeTransition(opacity: animation, child: child),
-      );
+      _showRegisterFailure('저장 중 오류가 발생했습니다.\n잠시 후 다시 시도해 주세요.');
       return;
     }
 
-    // 사진 Storage 업로드 (실패해도 이벤트 등록엔 영향 없음)
-    try {
-      final storage = FirebaseStorage.instance;
-      final updatedPhotos = <PartnerPhoto>[];
-      for (int i = 0; i < _photos.length; i++) {
-        try {
-          final ref = storage
-              .ref()
-              .child('partner_events')
-              .child(uid)
-              .child(paidEvent.id)
-              .child('$i.jpg');
-          await ref.putFile(_photos[i]);
-          final url = await ref.getDownloadURL();
-          updatedPhotos.add(PartnerPhoto(path: url));
-        } catch (_) {
-          updatedPhotos.add(paidEvent.photos[i]);
-        }
-      }
-      if (updatedPhotos.any((p) => p.path.startsWith('http'))) {
-        final updatedEvent = paidEvent.copyWith(photos: updatedPhotos);
-        await ref.read(firestorePartnerEventServiceProvider).save(updatedEvent);
-        if (mounted) {
-          ref.read(activePartnerEventProvider.notifier).state = updatedEvent;
-        }
-      }
-    } catch (_) {}
-
     if (!mounted) return;
+    ref.read(activePartnerEventProvider.notifier).state = paidEvent;
     widget.onClose();
     ref.read(shellPageProvider.notifier).state = 1;
   }
