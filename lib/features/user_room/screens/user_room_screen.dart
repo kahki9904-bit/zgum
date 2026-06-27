@@ -12,6 +12,7 @@ import '../../../features/friend/providers/friend_provider.dart';
 import '../../../presentation/widgets/dialogs/ieum_accept_dialog.dart';
 import '../../../presentation/widgets/dialogs/ieum_request_dialog.dart';
 import '../../../presentation/widgets/zgum_orb_button.dart';
+import '../../../services/photo_save_service.dart';
 import '../providers/check_in_provider.dart';
 import 'settings_screen.dart';
 
@@ -467,7 +468,7 @@ class _TraceGridTile extends StatelessWidget {
   }
 }
 
-class _TracePhotoViewer extends ConsumerWidget {
+class _TracePhotoViewer extends ConsumerStatefulWidget {
   const _TracePhotoViewer({
     required this.record,
     required this.index,
@@ -481,12 +482,44 @@ class _TracePhotoViewer extends ConsumerWidget {
   final bool showForget;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TracePhotoViewer> createState() => _TracePhotoViewerState();
+}
+
+class _TracePhotoViewerState extends ConsumerState<_TracePhotoViewer> {
+  bool _savingPhoto = false;
+
+  Future<void> _savePhoto(BuildContext context) async {
+    final path = widget.record.photoPath;
+    if (_savingPhoto || path == null) return;
+    setState(() => _savingPhoto = true);
+    try {
+      final result = await PhotoSaveService.saveImage(path);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result == PhotoSaveResult.saved ? '사진을 저장했습니다' : '이미 저장된 사진입니다',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('사진 저장에 실패했습니다')),
+      );
+    } finally {
+      if (mounted) setState(() => _savingPhoto = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final record = widget.record;
     final dt = record.checkedInAt;
     final dateStr = '${dt.month}.${dt.day.toString().padLeft(2, '0')}';
     final hasMemo = record.memo != null && record.memo!.isNotEmpty;
     final hasPhoto = record.photoPath != null;
-    final showDownloadMarker = hasPhoto && !showForget;
+    final showDownloadMarker = hasPhoto && !widget.showForget;
 
     return Container(
       width: double.infinity,
@@ -536,21 +569,23 @@ class _TracePhotoViewer extends ConsumerWidget {
                     ),
                   ),
                 const Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0x00000000),
-                          Color(0x00000000),
-                          Color(0xCCFFFFFF),
-                        ],
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0x00000000),
+                            Color(0x00000000),
+                            Color(0xCCFFFFFF),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-                if (showForget)
+                if (widget.showForget)
                   Positioned(
                     left: 12,
                     top: 12,
@@ -579,10 +614,13 @@ class _TracePhotoViewer extends ConsumerWidget {
                     ),
                   ),
                 if (showDownloadMarker)
-                  const Positioned(
+                  Positioned(
                     left: 12,
                     top: 12,
-                    child: _DownloadPhotoMarker(),
+                    child: GestureDetector(
+                      onTap: () => _savePhoto(context),
+                      child: _DownloadPhotoMarker(saving: _savingPhoto),
+                    ),
                   ),
                 Positioned(
                   right: 12,
@@ -639,7 +677,7 @@ class _TracePhotoViewer extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
-                          '${index + 1} / $totalCount',
+                          '${widget.index + 1} / ${widget.totalCount}',
                           style: const TextStyle(
                             color: AppColors.actionGoldText,
                             fontSize: 11,
@@ -681,7 +719,9 @@ class _TracePhotoViewer extends ConsumerWidget {
 }
 
 class _DownloadPhotoMarker extends StatelessWidget {
-  const _DownloadPhotoMarker();
+  const _DownloadPhotoMarker({this.saving = false});
+
+  final bool saving;
 
   @override
   Widget build(BuildContext context) {
@@ -693,11 +733,19 @@ class _DownloadPhotoMarker extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
       ),
-      child: const Icon(
-        Icons.download_rounded,
-        size: 17,
-        color: Colors.white,
-      ),
+      child: saving
+          ? const Padding(
+              padding: EdgeInsets.all(9),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Icon(
+              Icons.download_rounded,
+              size: 17,
+              color: Colors.white,
+            ),
     );
   }
 }

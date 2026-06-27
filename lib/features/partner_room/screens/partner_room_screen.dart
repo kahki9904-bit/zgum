@@ -14,6 +14,7 @@ import '../../../presentation/shell/panels/partner_panel_content.dart';
 import '../../../presentation/widgets/dialogs/zgum_dialog.dart';
 import '../../../presentation/widgets/zgum_orb_button.dart';
 import '../../../services/firestore_partner_event_service.dart';
+import '../../../services/photo_save_service.dart';
 import 'partner_dashboard_screen.dart';
 
 class PartnerRoomScreen extends ConsumerStatefulWidget {
@@ -540,7 +541,9 @@ class _PartnerEventPhoto extends StatelessWidget {
 }
 
 class _DownloadPhotoMarker extends StatelessWidget {
-  const _DownloadPhotoMarker();
+  const _DownloadPhotoMarker({this.saving = false});
+
+  final bool saving;
 
   @override
   Widget build(BuildContext context) {
@@ -552,11 +555,19 @@ class _DownloadPhotoMarker extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
       ),
-      child: const Icon(
-        Icons.download_rounded,
-        size: 17,
-        color: Colors.white,
-      ),
+      child: saving
+          ? const Padding(
+              padding: EdgeInsets.all(9),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Icon(
+              Icons.download_rounded,
+              size: 17,
+              color: Colors.white,
+            ),
     );
   }
 }
@@ -580,6 +591,7 @@ class _EventDetailPopup extends StatefulWidget {
 class _EventDetailPopupState extends State<_EventDetailPopup> {
   late final PageController _photoCtrl;
   int _currentPhoto = 0;
+  bool _savingPhoto = false;
 
   @override
   void initState() {
@@ -600,6 +612,30 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
     final hours =
         widget.event.expiresAt.difference(widget.event.startsAt).inHours;
     return '$hours시간';
+  }
+
+  Future<void> _saveCurrentPhoto() async {
+    final photos = widget.event.photos;
+    if (_savingPhoto || photos.isEmpty) return;
+    setState(() => _savingPhoto = true);
+    try {
+      final result = await PhotoSaveService.saveImage(photos[_currentPhoto].path);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result == PhotoSaveResult.saved ? '사진을 저장했습니다' : '이미 저장된 사진입니다',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('사진 저장에 실패했습니다')),
+      );
+    } finally {
+      if (mounted) setState(() => _savingPhoto = false);
+    }
   }
 
   @override
@@ -651,11 +687,31 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                   )
                 else
                   _noPhotoHeader(),
+                const Positioned.fill(
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0x00000000),
+                            Color(0x00000000),
+                            Color(0xCCFFFFFF),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 if (photos.isNotEmpty && widget.showDownloadMarker)
-                  const Positioned(
+                  Positioned(
                     left: 12,
                     top: 12,
-                    child: _DownloadPhotoMarker(),
+                    child: GestureDetector(
+                      onTap: _saveCurrentPhoto,
+                      child: _DownloadPhotoMarker(saving: _savingPhoto),
+                    ),
                   ),
                 if (photos.length > 1)
                   Positioned(
@@ -681,21 +737,6 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                       ),
                     ),
                   ),
-                const Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0x00000000),
-                          Color(0x00000000),
-                          Color(0xCCFFFFFF),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
                 Positioned(
                   right: 12,
                   top: 12,
@@ -751,22 +792,23 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                               ),
                             ),
                           const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF4F4F7),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              _durationLabel(),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF888888),
+                          if (!isExpired)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF4F4F7),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                _durationLabel(),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF888888),
+                                ),
                               ),
                             ),
-                          ),
                           if (stats != null &&
                               (stats.visitorCount > 0 ||
                                   stats.traceCount > 0)) ...[
