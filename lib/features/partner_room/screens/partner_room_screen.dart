@@ -438,27 +438,26 @@ class _EventGridTile extends ConsumerWidget {
                 ),
               ),
             ),
-          Positioned(
-            left: 8,
-            top: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-              decoration: BoxDecoration(
-                color: isExpired
-                    ? const Color(0xCCEEEEEE)
-                    : const Color(0xCC071426),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                isExpired ? '종료' : '진행',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: isExpired ? const Color(0xFF777777) : Colors.white,
+          if (!isExpired)
+            Positioned(
+              left: 8,
+              top: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xCC071426),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Text(
+                  '진행',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
-          ),
           Positioned(
             left: 0,
             right: 0,
