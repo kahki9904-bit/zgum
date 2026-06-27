@@ -55,7 +55,7 @@ class PopupLayoutSpec {
     registerFormMargin: EdgeInsets.symmetric(horizontal: 20),
     registerFormRadius: 24,
     compactForm: true,
-    registerFormTopPadding: 18.0,
+    registerFormTopPadding: 40.0,
     removeViewInsetsOnDialog: true,
   );
 

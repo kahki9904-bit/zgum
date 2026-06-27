@@ -128,9 +128,9 @@ class ZGumDialogTextStyles {
   );
 
   static const body = TextStyle(
-    fontSize: 15,
+    fontSize: 14,
     color: Color(0xFF333333),
-    height: 1.6,
+    height: 1.5,
   );
 
   static const sectionTitle = TextStyle(
@@ -141,15 +141,15 @@ class ZGumDialogTextStyles {
   );
 
   static const support = TextStyle(
-    fontSize: 14,
+    fontSize: 13,
     color: Color(0xFF777777),
-    height: 1.65,
+    height: 1.5,
   );
 
   static const confirmBody = TextStyle(
-    fontSize: 15,
+    fontSize: 14,
     color: Color(0xFF555555),
-    height: 1.45,
+    height: 1.4,
   );
 
   static const caption = TextStyle(

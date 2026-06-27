@@ -7,7 +7,6 @@ import '../../../features/alert/models/partner_event.dart';
 import '../../../core/providers/admin_mode_provider.dart';
 import '../../../core/providers/active_partner_event_provider.dart';
 import '../../../core/providers/partner_my_events_provider.dart';
-import '../../../core/providers/shell_page_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../promotions/free_use/free_use_service.dart';
 import '../../../services/location_service.dart';
@@ -215,9 +214,6 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     if (!mounted) return;
     ref.read(activePartnerEventProvider.notifier).state = paidEvent;
     widget.onClose();
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-    ref.read(shellPageProvider.notifier).state = 1;
   }
 
   @override
@@ -258,7 +254,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
               24,
               formTopPadding,
               24,
-              keyboardVisible ? 16 : 82 + bottomSafe,
+              keyboardVisible ? 16 : 70 + bottomSafe,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,7 +346,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
             Positioned(
               left: 24,
               right: 24,
-              bottom: 18 + bottomSafe,
+              bottom: 8 + bottomSafe,
               child: Center(
                 child: SizedBox(
                   width: MediaQuery.sizeOf(context).width * 0.5,

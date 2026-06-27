@@ -21,8 +21,9 @@ class AppTheme {
           onSurface: AppColors.primaryDark,
         ),
         scaffoldBackgroundColor: AppColors.background,
+        fontFamily: GoogleFonts.notoSansKr().fontFamily,
 
-        textTheme: GoogleFonts.gothicA1TextTheme(const TextTheme(
+        textTheme: GoogleFonts.notoSansKrTextTheme(const TextTheme(
           displayLarge: TextStyle(
             color: AppColors.primaryDark,
             fontWeight: FontWeight.w300,
@@ -151,6 +152,7 @@ class AppTheme {
   static ThemeData get dark => ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
+        fontFamily: GoogleFonts.notoSansKr().fontFamily,
         colorScheme: const ColorScheme.dark(
           primary: AppColors.catExhibit,
           surface: AppColors.primary,

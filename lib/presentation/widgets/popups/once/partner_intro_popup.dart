@@ -43,8 +43,8 @@ Future<void> showPartnerIntroPopup(BuildContext context) async {
                 ),
                 SizedBox(height: 12),
                 Text(
-                  '지금 알리고 싶은 어떠한 이벤트로 등록하여\n'
-                  '홍보 할 수있습니다.',
+                  '지금 알리고 싶은 어떠한 이벤트도\n'
+                  '등록하여 홍보 할 수 있습니다.',
                   style: ZGumDialogTextStyles.body,
                 ),
                 SizedBox(height: 24),
@@ -56,6 +56,8 @@ Future<void> showPartnerIntroPopup(BuildContext context) async {
                 Text(
                   '· 이벤트 제목과 노출시간을 입력해 주세요\n'
                   '· 사진은 최대 3장까지 추가할 수 있습니다\n'
+                  '· 노출된 이벤트에 누구든\n'
+                  '  흔적을 남길수가 있습니다\n'
                   '· 등록한 이벤트는 노출시간이 지나면\n'
                   '  자동으로 노출이 종료됩니다',
                   style: ZGumDialogTextStyles.support,

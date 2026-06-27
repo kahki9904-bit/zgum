@@ -51,12 +51,12 @@ class _FreeUseSettingsTileState extends State<FreeUseSettingsTile> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: SizedBox(
-            height: 52,
+            height: 60,
             child: Row(
               children: [
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: const Color(0xFFF0F0F0),
                     borderRadius: BorderRadius.circular(8),
@@ -68,14 +68,18 @@ class _FreeUseSettingsTileState extends State<FreeUseSettingsTile> {
                 const Expanded(
                   child: Text(
                     '무료이용',
-                    style: TextStyle(color: Color(0xFF333333), fontSize: 15),
+                    style: TextStyle(
+                      color: Color(0xFF333333),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
                 Text(
                   statusText,
                   style: TextStyle(
                     color: statusColor,
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -84,7 +88,7 @@ class _FreeUseSettingsTileState extends State<FreeUseSettingsTile> {
                   Text(
                     '$_remaining일',
                     style:
-                        const TextStyle(color: Color(0xFFAAAAAA), fontSize: 12),
+                        const TextStyle(color: Color(0xFFAAAAAA), fontSize: 13),
                   ),
                 ],
               ],

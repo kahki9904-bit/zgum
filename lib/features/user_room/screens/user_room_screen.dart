@@ -187,6 +187,9 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
                       crossAxisCount: _singleColumn ? 1 : 3,
                       mainAxisSpacing: 2,
                       crossAxisSpacing: 2,
+                      childAspectRatio: _singleColumn
+                          ? layout.singleColumnTileAspectRatio
+                          : layout.tileAspectRatio,
                     ),
                     itemCount: sorted.length,
                     itemBuilder: (context, index) => _TraceGridTile(
@@ -517,7 +520,6 @@ class _TracePhotoViewerState extends ConsumerState<_TracePhotoViewer> {
     final record = widget.record;
     final dt = record.checkedInAt;
     final dateStr = '${dt.month}.${dt.day.toString().padLeft(2, '0')}';
-    final hasMemo = record.memo != null && record.memo!.isNotEmpty;
     final hasPhoto = record.photoPath != null;
     final showDownloadMarker = hasPhoto && !widget.showForget;
 
@@ -577,11 +579,27 @@ class _TracePhotoViewerState extends ConsumerState<_TracePhotoViewer> {
                           end: Alignment.bottomCenter,
                           colors: [
                             Color(0x00000000),
-                            Color(0x00000000),
+                            Color(0x22000000),
                             Color(0xCCFFFFFF),
                           ],
                         ),
                       ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 18,
+                  right: 18,
+                  bottom: 12,
+                  child: Text(
+                    record.eventTitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.actionGoldText,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      height: 1.25,
                     ),
                   ),
                 ),
@@ -646,48 +664,22 @@ class _TracePhotoViewerState extends ConsumerState<_TracePhotoViewer> {
             ),
           ),
           Transform.translate(
-            offset: const Offset(0, -30),
+            offset: Offset.zero,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+              padding: const EdgeInsets.fromLTRB(18, 2, 18, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          record.eventTitle,
-                          style: const TextStyle(
-                            color: AppColors.actionGoldText,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            height: 1.3,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 6),
-                        decoration: BoxDecoration(
-                          color:
-                              AppColors.actionGoldSoft.withValues(alpha: 0.72),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          '${widget.index + 1} / ${widget.totalCount}',
-                          style: const TextStyle(
-                            color: AppColors.actionGoldText,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    record.memo ?? '',
+                    style: const TextStyle(
+                      color: Color(0xFF333333),
+                      fontSize: 14,
+                      height: 1.6,
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Text(
                     '${record.venue}  ·  $dateStr',
                     style: const TextStyle(
@@ -696,17 +688,6 @@ class _TracePhotoViewerState extends ConsumerState<_TracePhotoViewer> {
                       height: 1.45,
                     ),
                   ),
-                  if (hasMemo) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      record.memo!,
-                      style: const TextStyle(
-                        color: Color(0xFF333333),
-                        fontSize: 14,
-                        height: 1.6,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),

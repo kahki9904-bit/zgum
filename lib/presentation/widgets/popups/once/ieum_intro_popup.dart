@@ -43,8 +43,9 @@ Future<void> showIeumIntroPopup(BuildContext context) async {
                 ),
                 SizedBox(height: 12),
                 Text(
-                  '주변 사람과 연결되는 기능입니다.\n'
-                  '이음 요청을 보내면 상대방이 수락할 수 있습니다.',
+                  '지금 곁에 있는 사람과 연결되는 기능 입니다.\n'
+                  '이음 단추를 누르면 신청/수락이\n'
+                  '가능 합니다.',
                   style: ZGumDialogTextStyles.body,
                 ),
                 SizedBox(height: 24),
@@ -54,9 +55,10 @@ Future<void> showIeumIntroPopup(BuildContext context) async {
                 ),
                 SizedBox(height: 10),
                 Text(
-                  '· 이음 요청을 실시간으로 받을 수 있습니다\n'
-                  '· 상대방의 수락 여부를 즉시 알 수 있습니다\n'
-                  '· 알림은 설정에서 언제든 변경할 수 있습니다',
+                  '이어진 누군가가 주변에\n'
+                  '있다는 것을 알려줍니다\n'
+                  '알림은 설정에서 언제든\n'
+                  '변경 가능합니다.',
                   style: ZGumDialogTextStyles.support,
                 ),
               ],

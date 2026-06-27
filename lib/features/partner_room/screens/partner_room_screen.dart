@@ -206,6 +206,9 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
                   crossAxisCount: _singleColumn ? 1 : 3,
                   mainAxisSpacing: 2,
                   crossAxisSpacing: 2,
+                  childAspectRatio: _singleColumn
+                      ? layout.singleColumnTileAspectRatio
+                      : layout.tileAspectRatio,
                 ),
                 itemCount: sorted.length,
                 itemBuilder: (context, index) => _EventGridTile(
@@ -696,11 +699,28 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                           end: Alignment.bottomCenter,
                           colors: [
                             Color(0x00000000),
-                            Color(0x00000000),
+                            Color(0x22000000),
                             Color(0xCCFFFFFF),
                           ],
                         ),
                       ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 18,
+                  right: 18,
+                  bottom: 12,
+                  child: Text(
+                    event.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.actionGoldText,
+                      height: 1.25,
+                      letterSpacing: -0.3,
                     ),
                   ),
                 ),
@@ -717,7 +737,7 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                   Positioned(
                     left: 0,
                     right: 0,
-                    bottom: 42,
+                    top: 8,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(
@@ -761,7 +781,7 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
             ),
           ),
           Transform.translate(
-            offset: const Offset(0, -30),
+            offset: Offset.zero,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
               child: ConstrainedBox(
@@ -819,15 +839,14 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                           ],
                         ],
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 4),
                       Text(
-                        event.title,
+                        event.message ?? '',
                         style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.actionGoldText,
-                          height: 1.3,
-                          letterSpacing: -0.3,
+                          fontSize: 16,
+                          color: Color(0xFF333333),
+                          height: 1.6,
+                          letterSpacing: -0.2,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -836,22 +855,11 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                         style: const TextStyle(
                             fontSize: 13, color: Color(0xFFAAAAAA)),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 10),
                       _infoRow('시작', _formatDateTime(event.startsAt)),
                       const SizedBox(height: 6),
                       _infoRow('종료', _formatDateTime(event.expiresAt)),
-                      if (event.message != null) ...[
-                        const SizedBox(height: 24),
-                        Text(
-                          event.message!,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF333333),
-                            height: 1.85,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ],
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ),
