@@ -215,6 +215,8 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
     if (!mounted) return;
     ref.read(activePartnerEventProvider.notifier).state = paidEvent;
     widget.onClose();
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
     ref.read(shellPageProvider.notifier).state = 1;
   }
 
