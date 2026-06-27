@@ -260,10 +260,12 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
     final popup = PopupLayoutSpec.current;
+    final heightFactor =
+        Platform.isIOS ? popup.eventDetailFactor : popup.registerFormFactor;
 
     return Container(
       width: double.infinity,
-      height: screenHeight * popup.registerFormFactor,
+      height: screenHeight * heightFactor,
       margin: const EdgeInsets.symmetric(horizontal: 20),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -282,6 +284,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
   }
 
   Widget _detailView(BuildContext context) {
+    final isIOS = Platform.isIOS;
     final navigateCallback = widget.onNavigate != null
         ? () {
             Navigator.pop(context);
@@ -302,8 +305,11 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
         if (widget.event.source == EventSource.partner &&
             widget.event.partnerMessage != null)
           Container(
-            margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            margin: EdgeInsets.fromLTRB(20, isIOS ? 14 : 12, 20, 0),
+            padding: EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: isIOS ? 8 : 10,
+            ),
             decoration: BoxDecoration(
               color: const Color(0xFFFFF8EC),
               borderRadius: BorderRadius.circular(10),
@@ -311,18 +317,18 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.store_outlined,
-                    size: 18, color: Color(0xFFFF8C00)),
+                Icon(Icons.store_outlined,
+                    size: isIOS ? 16 : 18, color: const Color(0xFFFF8C00)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: SizedBox(
-                    height: 36,
+                    height: isIOS ? 29 : 36,
                     child: Marquee(
                       text: widget.event.partnerMessage!,
-                      style: const TextStyle(
-                        fontSize: 17,
+                      style: TextStyle(
+                        fontSize: isIOS ? 16 : 17,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF333333),
+                        color: const Color(0xFF333333),
                         height: 1.25,
                       ),
                       scrollAxis: Axis.horizontal,
@@ -338,7 +344,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
           ),
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            padding: EdgeInsets.fromLTRB(20, isIOS ? 20 : 16, 20, 8),
             children: [content],
           ),
         ),

@@ -224,60 +224,18 @@ class _HeaderHint extends StatelessWidget {
   }
 }
 
-class _IeumOrb extends StatefulWidget {
+class _IeumOrb extends StatelessWidget {
   const _IeumOrb({required this.onTap, required this.hasNearby});
 
   final VoidCallback onTap;
   final bool hasNearby;
 
   @override
-  State<_IeumOrb> createState() => _IeumOrbState();
-}
-
-class _IeumOrbState extends State<_IeumOrb>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _anim;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    )..repeat(reverse: true);
-    _anim = Tween<double>(begin: 0.2, end: 1.0).animate(_ctrl);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        ZGumOrbButton(label: '이음', onTap: widget.onTap),
-        if (widget.hasNearby)
-          Positioned(
-            top: 0,
-            right: 0,
-            child: FadeTransition(
-              opacity: _anim,
-              child: Container(
-                width: 9,
-                height: 9,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFCC3333),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ),
-      ],
+    return ZGumOrbButton(
+      label: '이음',
+      onTap: onTap,
+      attention: hasNearby,
     );
   }
 }

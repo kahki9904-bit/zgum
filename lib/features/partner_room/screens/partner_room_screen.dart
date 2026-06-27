@@ -113,13 +113,12 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
       }
     }
     final activeEvent = watchedActiveEvent ?? fallbackActiveEvent;
-    final activeMyEvents = myEvents.where((e) => !e.isExpired).toList();
-    final latest = activeMyEvents.isEmpty
+    final latest = myEvents.isEmpty
         ? null
-        : activeMyEvents.reduce(
+        : myEvents.reduce(
             (a, b) => a.startsAt.isAfter(b.startsAt) ? a : b,
           );
-    final rest = activeMyEvents.where((e) => e.id != latest?.id).toList()
+    final rest = myEvents.where((e) => e.id != latest?.id).toList()
       ..sort(
         (a, b) => _newestFirst
             ? b.startsAt.compareTo(a.startsAt)
@@ -146,6 +145,7 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
                   children: [
                     _RegisterOrb(
                       label: activeEvent == null ? '이곳' : '변경',
+                      attention: activeEvent != null,
                       onTap: () => _openRegister(context, activeEvent),
                     ),
                     GestureDetector(
@@ -239,14 +239,19 @@ class _HeaderHint extends StatelessWidget {
 }
 
 class _RegisterOrb extends StatelessWidget {
-  const _RegisterOrb({required this.label, required this.onTap});
+  const _RegisterOrb({
+    required this.label,
+    required this.onTap,
+    required this.attention,
+  });
 
   final String label;
   final VoidCallback onTap;
+  final bool attention;
 
   @override
   Widget build(BuildContext context) {
-    return ZGumOrbButton(label: label, onTap: onTap);
+    return ZGumOrbButton(label: label, onTap: onTap, attention: attention);
   }
 }
 

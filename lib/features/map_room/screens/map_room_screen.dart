@@ -89,7 +89,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
   Map<String, CulturalEvent> _eventById = {};
   List<MapMarkerModel> _markers = [];
 
-  // ── 이벤트별 만료 타이머 (4번: 즉시 삭제) ────────────────────────────────────
+  // ── 이벤트별 종료/소멸 타이머 ────────────────────────────────────────────────
   final Map<String, Timer> _eventTimers = {};
 
   // ── 공공 API 호출 간격 제한 ──────────────────────────────────────────────────
@@ -325,11 +325,20 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
 
     final now = _timeService.now();
     for (final event in events) {
+      final endDelay = event.endDateTime.difference(now);
+      if (endDelay > Duration.zero) {
+        _eventTimers['${event.id}:ended'] = Timer(endDelay, () {
+          if (!mounted) return;
+          _rebuildMarkers();
+        });
+      }
+
       // 종료 후 1시간이 지나면 완전 소멸
       final expiryTime = event.endDateTime.add(const Duration(hours: 1));
       final delay = expiryTime.difference(now);
       if (delay <= Duration.zero) continue;
-      _eventTimers[event.id] = Timer(delay, () => _expireEventNow(event.id));
+      _eventTimers['${event.id}:expired'] =
+          Timer(delay, () => _expireEventNow(event.id));
     }
   }
 
@@ -338,7 +347,8 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     setState(() {
       _events.removeWhere((e) => e.id == eventId);
       _eventById.remove(eventId);
-      _eventTimers.remove(eventId);
+      _eventTimers.remove('$eventId:ended');
+      _eventTimers.remove('$eventId:expired');
     });
     _rebuildMarkers();
   }

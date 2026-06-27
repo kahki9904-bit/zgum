@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../core/popup_layout.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import 'event_content_base.dart';
@@ -17,6 +18,7 @@ class PartnerEventContent extends EventContentBase {
 
   @override
   Widget build(BuildContext context) {
+    final isIOS = Platform.isIOS;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -42,6 +44,7 @@ class PartnerEventContent extends EventContentBase {
         if (event.photoUrls.isNotEmpty) ...[
           _PhotoSection(
             photoUrls: event.photoUrls,
+            height: isIOS ? 128 : 180,
             onTap: () => _showPhotoViewer(context, event.photoUrls),
           ),
           const SizedBox(height: 14),
@@ -91,10 +94,10 @@ class PartnerEventContent extends EventContentBase {
         ),
         if (event.isAdultOnly) ...[
           const SizedBox(height: 6),
-          EventInfoRow(
+          const EventInfoRow(
             Icons.lock_outline,
             '신분증 확인 이벤트',
-            color: const Color(0xFFE74C3C),
+            color: Color(0xFFE74C3C),
           ),
         ],
         const SizedBox(height: 8),
@@ -122,9 +125,14 @@ void _showPhotoViewer(BuildContext context, List<String> urls) {
 
 class _PhotoSection extends StatelessWidget {
   final List<String> photoUrls;
+  final double height;
   final VoidCallback onTap;
 
-  const _PhotoSection({required this.photoUrls, required this.onTap});
+  const _PhotoSection({
+    required this.photoUrls,
+    required this.height,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +143,7 @@ class _PhotoSection extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: SizedBox(
-              height: 180,
+              height: height,
               width: double.infinity,
               child: _imageWidget(photoUrls[0]),
             ),
@@ -145,8 +153,7 @@ class _PhotoSection extends StatelessWidget {
               top: 8,
               right: 8,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(12),
@@ -174,15 +181,13 @@ class _PhotoSection extends StatelessWidget {
   }
 }
 
-Widget _imageWidget(String path) {
+Widget _imageWidget(String path, {BoxFit fit = BoxFit.cover}) {
   if (path.startsWith('http')) {
     return Image.network(path,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const _PhotoPlaceholder());
+        fit: fit, errorBuilder: (_, __, ___) => const _PhotoPlaceholder());
   }
   return Image.file(File(path),
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => const _PhotoPlaceholder());
+      fit: fit, errorBuilder: (_, __, ___) => const _PhotoPlaceholder());
 }
 
 class _PhotoPlaceholder extends StatelessWidget {
@@ -227,6 +232,10 @@ class _PhotoViewerState extends State<_PhotoViewer> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    final popup = PopupLayoutSpec.current;
+    final viewerHeight = Platform.isIOS
+        ? size.height * popup.eventDetailFactor
+        : size.height * 0.65;
     return GestureDetector(
       onTap: () => Navigator.pop(context),
       behavior: HitTestBehavior.opaque,
@@ -234,11 +243,18 @@ class _PhotoViewerState extends State<_PhotoViewer> {
         child: GestureDetector(
           onTap: () {},
           child: Container(
-            width: size.width - 48,
-            height: size.height * 0.65,
+            width: size.width - 40,
+            height: viewerHeight,
             decoration: BoxDecoration(
-              color: Colors.black87,
+              color: const Color(0xFFFFFDF8),
               borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 22,
+                  offset: Offset(0, 10),
+                ),
+              ],
             ),
             clipBehavior: Clip.hardEdge,
             child: Column(
@@ -252,7 +268,8 @@ class _PhotoViewerState extends State<_PhotoViewer> {
                       padding: const EdgeInsets.all(12),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: _imageWidget(widget.urls[i]),
+                        child:
+                            _imageWidget(widget.urls[i], fit: BoxFit.contain),
                       ),
                     ),
                   ),
@@ -268,8 +285,9 @@ class _PhotoViewerState extends State<_PhotoViewer> {
                         height: 8,
                         decoration: BoxDecoration(
                           color: _current == i
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.4),
+                              ? AppColors.actionGold
+                              : AppColors.actionGoldBorder
+                                  .withValues(alpha: 0.38),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       );

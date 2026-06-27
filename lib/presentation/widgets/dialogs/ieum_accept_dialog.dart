@@ -27,7 +27,8 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
   FriendDuration? _duration;
   String? _generatedCode;
   Timer? _timer;
-  Timer? _pollTimer;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
+      _confirmSubscription;
   int _secondsLeft = 120;
   bool _loading = false;
   bool _connected = false;
@@ -45,26 +46,24 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
   @override
   void dispose() {
     _timer?.cancel();
-    _pollTimer?.cancel();
+    _confirmSubscription?.cancel();
     super.dispose();
   }
 
   void _startConfirmPoll() {
-    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
-      if (!mounted) return;
-      try {
-        final doc = await FirebaseFirestore.instance
-            .collection('friend_requests')
-            .doc(widget.request.id)
-            .get();
-        if (!doc.exists && mounted && !_connected) {
-          setState(() => _connected = true);
-          _pollTimer?.cancel();
-          _timer?.cancel();
-          await Future.delayed(const Duration(milliseconds: 1200));
-          if (mounted) Navigator.pop(context);
-        }
-      } catch (_) {}
+    _confirmSubscription?.cancel();
+    _confirmSubscription = FirebaseFirestore.instance
+        .collection('friend_requests')
+        .doc(widget.request.id)
+        .snapshots()
+        .listen((doc) async {
+      if (!mounted || _connected || doc.exists) return;
+      setState(() => _connected = true);
+      await _confirmSubscription?.cancel();
+      _confirmSubscription = null;
+      _timer?.cancel();
+      await Future.delayed(const Duration(milliseconds: 700));
+      if (mounted) Navigator.pop(context);
     });
   }
 
@@ -102,7 +101,8 @@ class _IeumAcceptDialogState extends State<IeumAcceptDialog> {
         skipProximityCheck: true,
       );
       if (mounted) {
-        setState(() => _generatedCode = code ?? '??');
+        if (code == null) return;
+        setState(() => _generatedCode = code);
         _startConfirmPoll();
       }
     } catch (_) {}

@@ -112,15 +112,16 @@ class FlutterMapEngine extends MapEngine {
     final now = DateTime.now();
     final deadline = marker.deadline;
     final expired = marker.isExpired(now: now);
-    final color =
-        expired ? const Color(0xFF9E9E9E) : Color(markerColor(marker));
+    final color = Color(markerColor(marker));
     final highlighted = marker.isHighlighted;
     final shouldBlink = !expired && !marker.isDimmed;
 
+    final spec = MapMarkerLayoutSpec.current;
+    final markerSize = highlighted ? spec.highlightedBitmapSize : spec.bitmapSize;
     return Marker(
       point: marker.location.toLatLng(),
-      width: MapMarkerLayoutSpec.current.bitmapSize + 8,
-      height: MapMarkerLayoutSpec.current.bitmapSize + 12,
+      width: markerSize + 8,
+      height: markerSize + 12,
       alignment: Alignment.bottomCenter,
       child: Opacity(
         opacity: marker.isDimmed ? 0.22 : 1.0,
@@ -199,8 +200,8 @@ class _MarkerPinState extends State<_MarkerPin>
   Widget build(BuildContext context) {
     final deadline = widget.deadline;
     final fade = deadline != null ? EventFade.opacity(deadline, _now) : 1.0;
-    final pinColor = (deadline != null && EventFade.isGrayed(deadline, _now))
-        ? const Color(0xFF9E9E9E)
+    final pinColor = (deadline != null && !_now.isBefore(deadline))
+        ? const Color(0xFF8A7A67)
         : widget.color;
 
     Widget pin = Opacity(

@@ -10,6 +10,7 @@ class PopupLayoutSpec {
     required this.longHeight,
     required this.introShortFactor,
     required this.introLongFactor,
+    required this.eventDetailFactor,
     required this.registerFormFactor,
     required this.registerFormMargin,
     required this.registerFormRadius,
@@ -25,6 +26,7 @@ class PopupLayoutSpec {
   final double longHeight;
   final double introShortFactor;
   final double introLongFactor;
+  final double eventDetailFactor;
   final double registerFormFactor;
   final EdgeInsets registerFormMargin;
   final double registerFormRadius;
@@ -48,6 +50,7 @@ class PopupLayoutSpec {
     longHeight: 430,
     introShortFactor: 0.48,
     introLongFactor: 0.60,
+    eventDetailFactor: 0.68,
     registerFormFactor: 0.52,
     registerFormMargin: EdgeInsets.symmetric(horizontal: 20),
     registerFormRadius: 24,
@@ -64,6 +67,7 @@ class PopupLayoutSpec {
     longHeight: 430,
     introShortFactor: 0.48,
     introLongFactor: 0.60,
+    eventDetailFactor: 0.62,
     registerFormFactor: 0.62,
     registerFormMargin: EdgeInsets.symmetric(horizontal: 20),
     registerFormRadius: 24,
