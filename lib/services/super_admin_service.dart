@@ -25,7 +25,8 @@ class SuperAdminService {
   // [비활성화 스위치] 출시 직전 true 로 변경
   static const bool _enabled = false;
 
-  // 총괄 인증 해시값 — 주민번호 SHA-256 (원본 번호 아님, 수정 금지)
+  // 총괄 인증 해시값 — 수정 금지
+  // [출시 전 삭제] 위 줄의 설명 주석은 출시 직전 반드시 삭제할 것
   static const String _secretHash =
       '9e96189e5ef81a578e023ee47df50fa1752ddfe8a1835b26733cd51e3c75d8c5';
 
