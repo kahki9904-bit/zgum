@@ -213,7 +213,7 @@ class _PartnerRoomScreenState extends ConsumerState<PartnerRoomScreen> {
                 itemCount: sorted.length,
                 itemBuilder: (context, index) => _EventGridTile(
                   event: sorted[index],
-                  showDownloadMarker: index != 0,
+                  showDownloadMarker: sorted[index].expiresAt.isBefore(DateTime.now()),
                 ),
               ),
             ),
@@ -608,7 +608,8 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
     super.dispose();
   }
 
-  String _formatDateTime(DateTime dt) => '${dt.year}년 ${dt.month}월 ${dt.day}일  '
+  String _shortDate(DateTime dt) => '${dt.month}월 ${dt.day}일';
+  String _hhmm(DateTime dt) =>
       '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
   String _durationLabel() {
@@ -710,7 +711,7 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                 Positioned(
                   left: 18,
                   right: 18,
-                  bottom: 12,
+                  bottom: 6,
                   child: Text(
                     event.title,
                     maxLines: 2,
@@ -791,6 +792,7 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (Platform.isAndroid) const SizedBox(height: 12),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -849,17 +851,23 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                           letterSpacing: -0.2,
                         ),
                       ),
+                      SizedBox(height: Platform.isAndroid ? 36 : 10),
+                      if (Platform.isAndroid)
+                        Text(
+                          '${_shortDate(event.startsAt)}  ${_hhmm(event.startsAt)} ~ ${_hhmm(event.expiresAt)}',
+                          style: const TextStyle(
+                              fontSize: 13, color: Color(0xFF555555)),
+                        )
+                      else
+                        Center(
+                          child: Text(
+                            '${_shortDate(event.startsAt)}  ${_hhmm(event.startsAt)} ~ ${_hhmm(event.expiresAt)}',
+                            style: const TextStyle(
+                                fontSize: 13, color: Color(0xFF555555)),
+                          ),
+                        ),
                       const SizedBox(height: 8),
-                      Text(
-                        event.venue,
-                        style: const TextStyle(
-                            fontSize: 13, color: Color(0xFFAAAAAA)),
-                      ),
-                      const SizedBox(height: 10),
-                      _infoRow('시작', _formatDateTime(event.startsAt)),
-                      const SizedBox(height: 6),
-                      _infoRow('종료', _formatDateTime(event.expiresAt)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: Platform.isAndroid ? 12 : 50),
                     ],
                   ),
                 ),
@@ -872,23 +880,6 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
     );
   }
 
-  Widget _infoRow(String label, String value) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 36,
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: Color(0xFFBBBBBB)),
-          ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 13, color: Color(0xFF555555)),
-        ),
-      ],
-    );
-  }
 
   Widget _statChip(String label, int count) {
     return Container(

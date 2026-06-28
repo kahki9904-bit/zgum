@@ -143,13 +143,16 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
 
   Future<void> _submit() async {
     if (_submitting) return;
+    FocusScope.of(context).unfocus();
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) return;
     if (_photos.isEmpty) return;
 
     if (!mounted) return;
     final isAdultOnly = await showAgeConfirmPopup(context);
-    if (isAdultOnly == null || !mounted) return;
+    if (!mounted) return;
+    FocusScope.of(context).unfocus();
+    if (isAdultOnly == null) return;
 
     final isAdmin = ref.read(adminModeProvider);
     final isFreeActive = isAdmin || await FreeUseService.instance.isActive();
@@ -213,6 +216,8 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
 
     if (!mounted) return;
     ref.read(activePartnerEventProvider.notifier).state = paidEvent;
+    final list = ref.read(partnerMyEventsProvider);
+    ref.read(partnerMyEventsProvider.notifier).state = [paidEvent, ...list];
     widget.onClose();
   }
 
@@ -346,7 +351,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
             Positioned(
               left: 24,
               right: 24,
-              bottom: 8 + bottomSafe,
+              bottom: 24 + bottomSafe,
               child: Center(
                 child: SizedBox(
                   width: MediaQuery.sizeOf(context).width * 0.5,
@@ -687,8 +692,8 @@ class _ActiveEventWaitingViewState
     final message = withinThreshold
         ? '시간이 남아있습니다.\n$hours시간 재등록 1회 가능'
         : '${_formatDuration(_remaining)} 남아있습니다.\n종료하시겠습니까?';
-    showTerminateConfirmPopup(context, message).then((confirmed) {
-      if (confirmed == true) unawaited(_terminate());
+    showTerminateConfirmPopup(context, message).then((confirmed) async {
+      if (confirmed == true) await _terminate();
     });
   }
 
@@ -702,7 +707,8 @@ class _ActiveEventWaitingViewState
     } catch (_) {}
     if (!mounted) return;
     final list = ref.read(partnerMyEventsProvider);
-    ref.read(partnerMyEventsProvider.notifier).state = [widget.event, ...list];
+    ref.read(partnerMyEventsProvider.notifier).state =
+        list.map((e) => e.id == widget.event.id ? widget.event : e).toList();
     ref.read(activePartnerEventProvider.notifier).state = null;
     widget.onClose();
   }
@@ -727,6 +733,12 @@ class _ActiveEventWaitingViewState
       return;
     }
     if (!mounted) return;
+    final expired = widget.event.copyWith(
+      expiresAt: DateTime.now().subtract(const Duration(seconds: 1)),
+    );
+    final list = ref.read(partnerMyEventsProvider);
+    ref.read(partnerMyEventsProvider.notifier).state =
+        list.map((e) => e.id == widget.event.id ? expired : e).toList();
     ref.read(activePartnerEventProvider.notifier).state = null;
     widget.onClose();
   }

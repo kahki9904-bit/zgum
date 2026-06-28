@@ -30,7 +30,7 @@ Future<bool?> showAgeConfirmPopup(BuildContext context) {
                       ),
                       alignment: Alignment.center,
                       child: const Text(
-                        '전체이용',
+                        '연령제한없음',
                         style: TextStyle(
                           fontSize: 15,
                           color: Color(0xFF888888),
@@ -52,7 +52,7 @@ Future<bool?> showAgeConfirmPopup(BuildContext context) {
                       ),
                       alignment: Alignment.center,
                       child: const Text(
-                        '신분증확인',
+                        '연령확인필요',
                         style: TextStyle(
                           fontSize: 15,
                           color: Colors.white,
@@ -65,7 +65,7 @@ Future<bool?> showAgeConfirmPopup(BuildContext context) {
               ],
             ),
             child: const Text(
-              '대상연령확인',
+              '참여연령설정',
               textAlign: TextAlign.center,
               style: ZGumDialogTextStyles.confirmBody,
             ),

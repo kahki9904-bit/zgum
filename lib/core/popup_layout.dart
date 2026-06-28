@@ -65,7 +65,7 @@ class PopupLayoutSpec {
     mediumHeight: 300,
     standardHeight: 340,
     longHeight: 430,
-    introShortFactor: 0.48,
+    introShortFactor: 0.38,
     introLongFactor: 0.60,
     eventDetailFactor: 0.62,
     registerFormFactor: 0.62,
