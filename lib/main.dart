@@ -18,6 +18,7 @@ const _popupHistoryKeys = [
   'camera_chooser_popup_shown',
   'partner_intro_shown',
   'ieum_intro_shown',
+  'trace_intro_shown',
 ];
 
 @pragma('vm:entry-point')

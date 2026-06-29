@@ -1,12 +1,8 @@
-import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sensors_plus/sensors_plus.dart';
 import '../../../data/models/cultural_event.dart';
-import '../../../core/map_panel_layout.dart';
 import '../../../core/providers/partner_focus_provider.dart';
 import '../../../core/providers/partner_my_events_provider.dart';
 import '../../../core/providers/active_partner_event_provider.dart';
@@ -26,61 +22,6 @@ class MapPanelContent extends ConsumerStatefulWidget {
 }
 
 class _MapPanelContentState extends ConsumerState<MapPanelContent> {
-  final _shownIds = <String>{};
-  StreamSubscription<AccelerometerEvent>? _accelSub;
-  DateTime? _lastShake;
-
-  @override
-  void dispose() {
-    _accelSub?.cancel();
-    super.dispose();
-  }
-
-  void _startShake() {
-    if (_accelSub != null) return;
-    _accelSub = accelerometerEventStream().listen((event) {
-      if (!widget.isOpen) return;
-      final mag =
-          sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
-      if (mag > 18) {
-        final now = DateTime.now();
-        if (_lastShake == null ||
-            now.difference(_lastShake!) > const Duration(milliseconds: 1500)) {
-          _lastShake = now;
-          _onShake();
-        }
-      }
-    });
-  }
-
-  void _stopShake() {
-    _accelSub?.cancel();
-    _accelSub = null;
-  }
-
-  void _onShake() {
-    final now = DateTime.now();
-    var candidates = ref
-        .read(mapEventsProvider)
-        .where((e) => e.endDateTime.isAfter(now))
-        .toList();
-    if (candidates.isEmpty) {
-      HapticFeedback.lightImpact();
-      return;
-    }
-    final unseen = candidates.where((e) => !_shownIds.contains(e.id)).toList();
-    if (unseen.isEmpty) {
-      _shownIds.clear();
-    } else {
-      candidates = unseen;
-    }
-    candidates.shuffle();
-    final picked = candidates.first;
-    _shownIds.add(picked.id);
-    HapticFeedback.heavyImpact();
-    _tapEvent(picked);
-  }
-
   void _tapEvent(CulturalEvent event) {
     widget.onClose();
     ref.read(partnerFocusPendingProvider.notifier).state = true;
@@ -101,7 +42,6 @@ class _MapPanelContentState extends ConsumerState<MapPanelContent> {
       ..sort((a, b) => a.endDateTime.compareTo(b.endDateTime));
 
     if (partnerEvents.isNotEmpty) {
-      _stopShake();
       final myEventIds =
           ref.watch(partnerMyEventsProvider).map((e) => e.id).toSet();
       final activeId = ref.watch(activePartnerEventProvider)?.id;
@@ -113,183 +53,7 @@ class _MapPanelContentState extends ConsumerState<MapPanelContent> {
       );
     }
 
-    _startShake();
-    return const _ShakePanel();
-  }
-}
-
-class _ShakePanel extends StatelessWidget {
-  const _ShakePanel();
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final topPad = kShellCapsuleHeight + 14 - bottomInset;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, topPad, 16, 18),
-      child: const _ShakeDeviceStage(),
-    );
-  }
-}
-
-class _ShakeDeviceStage extends StatelessWidget {
-  const _ShakeDeviceStage();
-
-  @override
-  Widget build(BuildContext context) {
-    final layout = ShakePanelLayoutSpec.current;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FBFC),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEDF0F4)),
-      ),
-      child: Center(
-        child: Transform.translate(
-          offset: Offset(0, layout.stageOffsetY),
-          child: SizedBox(
-            width: layout.stageWidth,
-            height: layout.stageHeight,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Positioned(
-                  left: 0,
-                  child: _ShakeWave(left: true, layout: layout),
-                ),
-                Positioned(
-                  right: 0,
-                  child: _ShakeWave(left: false, layout: layout),
-                ),
-                Transform.rotate(
-                  angle: -0.12,
-                  child: _PhoneShakeIcon(layout: layout),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ShakeWave extends StatelessWidget {
-  const _ShakeWave({required this.left, required this.layout});
-
-  final bool left;
-  final ShakePanelLayoutSpec layout;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: layout.waveWidth,
-      height: layout.waveHeight,
-      child: CustomPaint(
-        painter: _ShakeWavePainter(left: left),
-      ),
-    );
-  }
-}
-
-class _ShakeWavePainter extends CustomPainter {
-  const _ShakeWavePainter({required this.left});
-
-  final bool left;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.actionGoldBright.withValues(alpha: 0.34)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-    final path = Path();
-    if (left) {
-      path.moveTo(size.width, 0);
-      path.quadraticBezierTo(0, size.height / 2, size.width, size.height);
-    } else {
-      path.moveTo(0, 0);
-      path.quadraticBezierTo(size.width, size.height / 2, 0, size.height);
-    }
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _ShakeWavePainter oldDelegate) =>
-      oldDelegate.left != left;
-}
-
-class _PhoneShakeIcon extends StatelessWidget {
-  const _PhoneShakeIcon({required this.layout});
-
-  final ShakePanelLayoutSpec layout;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: layout.phoneWidth,
-      height: layout.phoneHeight,
-      padding: EdgeInsets.all(layout.phonePadding),
-      decoration: BoxDecoration(
-        color: AppColors.actionGold,
-        borderRadius: BorderRadius.circular(layout.phoneRadius),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.actionGold.withValues(alpha: 0.24),
-            blurRadius: layout.shadowBlur,
-            offset: Offset(0, layout.shadowOffsetY),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(layout.innerRadius),
-        child: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFFFFFCF4), Color(0xFFF3E8D1)],
-            ),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Positioned(
-                top: layout.notchTop,
-                child: Container(
-                  width: layout.notchWidth,
-                  height: layout.notchHeight,
-                  decoration: BoxDecoration(
-                    color: AppColors.actionGold.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-              ),
-              Container(
-                width: layout.centerGlowSize,
-                height: layout.centerGlowSize,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    center: Alignment(0, -0.16),
-                    radius: 0.78,
-                    colors: [
-                      Color(0xFF6D5633),
-                      Color(0xFF6D5633),
-                      Color(0xFFFFFFFF),
-                      Color(0xFFFFFFFF),
-                      Color(0xFFE4C67E),
-                    ],
-                    stops: [0.0, 0.20, 0.21, 0.47, 1.0],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }
 

@@ -1,4 +1,5 @@
 import '../dialogs/camera_chooser_popup.dart';
+import '../popups/once/trace_intro_popup.dart';
 import '../../../core/popup_layout.dart';
 import '../../../core/providers/shell_page_provider.dart';
 import 'dart:io';
@@ -126,9 +127,27 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
   bool _saving = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showTraceIntroIfNeeded();
+    });
+  }
+
+  @override
   void dispose() {
     _memoCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _showTraceIntroIfNeeded() async {
+    if (widget.onCheckIn == null) return;
+    final shown = await isTraceIntroShown();
+    if (shown || !mounted) return;
+
+    await Future<void>.delayed(const Duration(milliseconds: 320));
+    if (!mounted) return;
+    await showTraceIntroPopup(context);
   }
 
   Future<void> _openCamera() async {

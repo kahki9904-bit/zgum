@@ -1015,7 +1015,7 @@ class MapRoomScreenState extends ConsumerState<MapRoomScreen>
     final routeButtonFg =
         routeButtonIsEnd ? AppColors.actionGoldText : Colors.white;
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white,
       resizeToAvoidBottomInset: false,
       body: Stack(
         fit: StackFit.expand,

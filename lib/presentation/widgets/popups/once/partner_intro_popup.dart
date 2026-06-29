@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/popup_layout.dart';
 import '../../dialogs/zgum_dialog.dart';
 
@@ -33,6 +34,7 @@ Future<void> showPartnerIntroPopup(BuildContext context) async {
           onTap: () {},
           child: ZGumDialog(
             heightFactor: PopupLayoutSpec.current.introShortFactor,
+            contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
             child: const Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -41,26 +43,28 @@ Future<void> showPartnerIntroPopup(BuildContext context) async {
                   '등록',
                   style: ZGumDialogTextStyles.title,
                 ),
-                SizedBox(height: 12),
+                SizedBox(height: 8),
                 Text(
-                  '지금 알리고 싶은 어떠한 이벤트도\n'
-                  '등록하여 홍보 할 수 있습니다.',
+                  '당신의 이벤트를 주변에 알릴 수 있습니다.',
                   style: ZGumDialogTextStyles.body,
                 ),
-                SizedBox(height: 24),
-                Text(
-                  '이렇게 활용하세요',
-                  style: ZGumDialogTextStyles.sectionTitle,
-                ),
+                SizedBox(height: 12),
+                _RegisterFlowPreview(),
                 SizedBox(height: 10),
                 Text(
-                  '· 이벤트 제목과 노출시간을 입력해 주세요\n'
-                  '· 사진은 최대 3장까지 추가할 수 있습니다\n'
-                  '· 노출된 이벤트에 누구든\n'
-                  '  흔적을 남길수가 있습니다\n'
-                  '· 등록한 이벤트는 노출시간이 지나면\n'
-                  '  자동으로 노출이 종료됩니다',
-                  style: ZGumDialogTextStyles.support,
+                  '유료등록 기준이나 일정기간 무료이용 가능합니다.\n'
+                  '1일 3회',
+                  style: ZGumDialogTextStyles.caption,
+                ),
+                SizedBox(height: 10),
+                _GuideText(
+                  title: '노출',
+                  text: '주변 사람에게 내 이벤트를 알려줍니다.',
+                ),
+                SizedBox(height: 8),
+                _GuideText(
+                  title: '기록',
+                  text: '기록으로 내 이벤트 반응을 확인할 수 있습니다.',
                 ),
               ],
             ),
@@ -71,4 +75,115 @@ Future<void> showPartnerIntroPopup(BuildContext context) async {
     transitionBuilder: (_, animation, __, child) =>
         FadeTransition(opacity: animation, child: child),
   );
+}
+
+class _RegisterFlowPreview extends StatelessWidget {
+  const _RegisterFlowPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        _RoundToken(label: '이곳'),
+        Expanded(
+          child: Center(
+            child: Text(
+              '→',
+              style: TextStyle(
+                color: AppColors.actionGoldText,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+        _SquareToken(label: '등록'),
+      ],
+    );
+  }
+}
+
+class _RoundToken extends StatelessWidget {
+  const _RoundToken({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 58,
+      height: 58,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.actionGoldSoft,
+        border: Border.all(color: AppColors.actionGoldBorder, width: 1.5),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w800,
+          color: AppColors.actionGoldText,
+        ),
+      ),
+    );
+  }
+}
+
+class _SquareToken extends StatelessWidget {
+  const _SquareToken({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 66,
+      height: 48,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.actionGold,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
+class _GuideText extends StatelessWidget {
+  const _GuideText({required this.title, required this.text});
+
+  final String title;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 36,
+          child: Text(
+            title,
+            style: ZGumDialogTextStyles.sectionTitle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: ZGumDialogTextStyles.support,
+          ),
+        ),
+      ],
+    );
+  }
 }

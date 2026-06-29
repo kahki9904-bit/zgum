@@ -351,7 +351,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
             Positioned(
               left: 24,
               right: 24,
-              bottom: 24 + bottomSafe,
+              bottom: Platform.isIOS ? 0 : 24 + bottomSafe,
               child: Center(
                 child: SizedBox(
                   width: MediaQuery.sizeOf(context).width * 0.5,

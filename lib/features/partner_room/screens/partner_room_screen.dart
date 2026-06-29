@@ -785,91 +785,85 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
             offset: Offset.zero,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: screenHeight * 0.34),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (Platform.isAndroid) const SizedBox(height: 12),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (!isExpired)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.actionGoldText,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Text(
-                                'ON',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
+              child: SizedBox(
+                height:
+                    Platform.isAndroid ? screenHeight * 0.34 : screenHeight * 0.22,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (Platform.isAndroid) const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (!isExpired)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.actionGoldText,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'ON',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
                               ),
                             ),
+                          ),
+                        const SizedBox(width: 8),
+                        if (!isExpired)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF4F4F7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              _durationLabel(),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF888888),
+                              ),
+                            ),
+                          ),
+                        if (stats != null &&
+                            (stats.visitorCount > 0 ||
+                                stats.traceCount > 0)) ...[
                           const SizedBox(width: 8),
-                          if (!isExpired)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF4F4F7),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                _durationLabel(),
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF888888),
-                                ),
-                              ),
-                            ),
-                          if (stats != null &&
-                              (stats.visitorCount > 0 ||
-                                  stats.traceCount > 0)) ...[
-                            const SizedBox(width: 8),
-                            _statChip('방문', stats.visitorCount),
-                            const SizedBox(width: 6),
-                            _statChip('흔적', stats.traceCount),
-                          ],
+                          _statChip('방문', stats.visitorCount),
+                          const SizedBox(width: 6),
+                          _statChip('흔적', stats.traceCount),
                         ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        event.message ?? '',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFF333333),
-                          height: 1.6,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      SizedBox(height: Platform.isAndroid ? 36 : 10),
-                      if (Platform.isAndroid)
-                        Text(
-                          '${_shortDate(event.startsAt)}  ${_hhmm(event.startsAt)} ~ ${_hhmm(event.expiresAt)}',
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: Text(
+                          event.message ?? '',
+                          maxLines: Platform.isAndroid ? 3 : 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 13, color: Color(0xFF555555)),
-                        )
-                      else
-                        Center(
-                          child: Text(
-                            '${_shortDate(event.startsAt)}  ${_hhmm(event.startsAt)} ~ ${_hhmm(event.expiresAt)}',
-                            style: const TextStyle(
-                                fontSize: 13, color: Color(0xFF555555)),
+                            fontSize: 16,
+                            color: Color(0xFF333333),
+                            height: 1.6,
+                            letterSpacing: -0.2,
                           ),
                         ),
-                      const SizedBox(height: 8),
-                      SizedBox(height: Platform.isAndroid ? 12 : 50),
-                    ],
-                  ),
+                      ),
+                    ),
+                    Text(
+                      '${_shortDate(event.startsAt)}  ${_hhmm(event.startsAt)} ~ ${_hhmm(event.expiresAt)}',
+                      style: const TextStyle(
+                          fontSize: 13, color: Color(0xFF555555)),
+                    ),
+                    SizedBox(height: Platform.isAndroid ? 12 : 16),
+                  ],
                 ),
               ),
             ),
