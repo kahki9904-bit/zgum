@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
+import 'firebase/firebase_friend_repository.dart';
 import 'firebase/firebase_push_service.dart';
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
@@ -47,6 +48,7 @@ void main() async {
   final uid = FirebaseAuth.instance.currentUser?.uid;
   if (uid != null) {
     unawaited(FirebasePushService.instance.registerDeviceToken(uid));
+    unawaited(FirebaseFriendRepository().removeExpiredFriends(uid));
   }
 
   unawaited(FirebasePushService.init());

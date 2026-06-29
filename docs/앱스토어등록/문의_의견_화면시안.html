@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Z:GUM 문의 및 의견 화면 시안</title>
+  <style>
+    :root {
+      --blue: #1f4f8f;
+      --gold: #c59a3d;
+      --gold-soft: #fff8ec;
+      --ink: #282828;
+      --muted: #8a8a8a;
+      --line: #ececec;
+      --paper: #ffffff;
+      --bg: #f5f6f8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+    .board {
+      width: 1280px;
+      min-height: 820px;
+      margin: 0 auto;
+      padding: 34px 42px 42px;
+    }
+    .title {
+      margin: 0 0 8px;
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--blue);
+    }
+    .subtitle {
+      margin: 0 0 22px;
+      color: #666;
+      font-size: 15px;
+      line-height: 1.55;
+    }
+    .frames {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+    .phone-wrap { display: flex; flex-direction: column; gap: 12px; }
+    .caption {
+      padding-left: 6px;
+      font-size: 14px;
+      color: #555;
+      line-height: 1.45;
+    }
+    .caption strong { color: var(--blue); }
+    .phone {
+      width: 270px;
+      height: 585px;
+      background: var(--paper);
+      border: 1px solid #ddd;
+      border-radius: 30px;
+      box-shadow: 0 16px 34px rgba(30, 40, 60, .16);
+      overflow: hidden;
+      position: relative;
+    }
+    .status {
+      height: 30px;
+      padding: 10px 20px 0;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #444;
+      font-weight: 700;
+    }
+    .bar-icons { display: flex; gap: 4px; align-items: center; }
+    .dot { width: 4px; height: 4px; border-radius: 50%; background: #444; }
+    .appbar {
+      height: 44px;
+      display: grid;
+      grid-template-columns: 42px 1fr 42px;
+      align-items: center;
+      padding: 0 14px;
+      border-bottom: 1px solid #f2f2f2;
+    }
+    .appbar h2 {
+      margin: 0;
+      text-align: center;
+      color: var(--gold);
+      font-size: 16px;
+      font-weight: 800;
+    }
+    .icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      color: #9a9a9a;
+      font-size: 18px;
+    }
+    .screen {
+      height: calc(100% - 82px);
+      padding: 18px 16px;
+      overflow: hidden;
+    }
+    .settings-card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .row {
+      height: 54px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 14px;
+      border-bottom: 1px solid #f1f1f1;
+    }
+    .row:last-child { border-bottom: 0; }
+    .row-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: #f1f1f1;
+      color: #aaa;
+      font-size: 17px;
+    }
+    .row-label {
+      flex: 1;
+      font-size: 15px;
+      font-weight: 650;
+      color: #333;
+    }
+    .trail {
+      color: #bbb;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .form-section-title {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: #777;
+      font-weight: 800;
+    }
+    .chips {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .chip {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 7px 9px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      color: #333;
+      background: #fff;
+    }
+    .chip.active {
+      border-color: #f1cc79;
+      background: var(--gold-soft);
+      color: #7b5a13;
+      font-weight: 800;
+    }
+    .textarea {
+      height: 86px;
+      border-radius: 13px;
+      background: #f8f8f8;
+      padding: 14px;
+      color: #aaa;
+      font-size: 14px;
+      line-height: 1.5;
+      border: 1px solid #f0f0f0;
+    }
+    .notice {
+      margin-top: 12px;
+      font-size: 11px;
+      color: #888;
+      line-height: 1.45;
+    }
+    .primary {
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      bottom: 24px;
+      height: 50px;
+      border-radius: 15px;
+      border: 0;
+      background: var(--gold);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 800;
+    }
+    .event-image {
+      height: 120px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #f8b85f, #316e9f);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .event-image:after {
+      content: "";
+      position: absolute;
+      inset: auto -20px -32px -20px;
+      height: 82px;
+      background: rgba(255,255,255,.32);
+      transform: rotate(-4deg);
+    }
+    .partner-banner {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border: 1px solid #ffd580;
+      border-radius: 11px;
+      background: var(--gold-soft);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: #333;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .event-desc {
+      margin: 0 0 12px;
+      font-size: 14px;
+      line-height: 1.55;
+      color: #444;
+    }
+    .info {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      margin: 7px 0;
+      font-size: 11px;
+      color: #777;
+      line-height: 1.35;
+    }
+    .age {
+      color: #e74c3c;
+      font-weight: 800;
+    }
+    .soft-action {
+      margin-top: 14px;
+      height: 34px;
+      border-radius: 12px;
+      border: 1px solid #e7e7e7;
+      background: #fff;
+      color: #666;
+      font-weight: 750;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 13px;
+    }
+    .now-button {
+      position: absolute;
+      left: 68px;
+      right: 68px;
+      bottom: 24px;
+      height: 46px;
+      border-radius: 16px;
+      background: var(--gold);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 2px;
+    }
+    .map-bg {
+      position: absolute;
+      inset: 74px 0 0;
+      background:
+        linear-gradient(120deg, rgba(255,255,255,.72) 0 8%, transparent 8% 14%, rgba(255,255,255,.55) 14% 21%, transparent 21%),
+        linear-gradient(35deg, #eef3f5, #f6f1e8 55%, #e5edf2);
+    }
+    .map-bg:before,
+    .map-bg:after {
+      content: "";
+      position: absolute;
+      background: rgba(197,154,61,.22);
+      border-radius: 999px;
+    }
+    .map-bg:before { width: 52px; height: 52px; left: 40px; top: 80px; }
+    .map-bg:after { width: 38px; height: 38px; right: 42px; bottom: 116px; }
+    .detail-sheet {
+      position: absolute;
+      left: 20px;
+      right: 20px;
+      top: 110px;
+      height: 372px;
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.22);
+      overflow: hidden;
+    }
+    .sheet-scroll {
+      position: absolute;
+      inset: 0 0 72px;
+      padding: 12px 14px 8px;
+      overflow: hidden;
+    }
+    .sheet-footer {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 72px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(to bottom, rgba(255,255,255,.72), #fff 30%);
+    }
+    .sheet-footer .now-button {
+      position: static;
+      width: 134px;
+      height: 46px;
+    }
+    .sheet-banner {
+      margin: 0 0 10px;
+      padding: 8px 10px;
+      border: 1px solid #ffd580;
+      border-radius: 10px;
+      background: var(--gold-soft);
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: #333;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .sheet-photo {
+      height: 70px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f6b95f, #7196a8);
+      margin-bottom: 9px;
+      overflow: hidden;
+      position: relative;
+    }
+    .sheet-photo:after {
+      content: "";
+      position: absolute;
+      left: -18px;
+      right: -18px;
+      bottom: -22px;
+      height: 64px;
+      background: rgba(255,255,255,.34);
+      transform: rotate(-4deg);
+    }
+    .sheet-copy {
+      margin: 0 0 8px;
+      font-size: 11px;
+      line-height: 1.38;
+      color: #333;
+    }
+    .sheet-row {
+      display: flex;
+      gap: 7px;
+      margin: 5px 0;
+      font-size: 11px;
+      line-height: 1.35;
+      color: rgba(109,86,51,.72);
+    }
+    .sheet-row strong {
+      margin-left: auto;
+      padding: 3px 7px;
+      border-radius: 8px;
+      background: var(--gold);
+      color: #fff;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .sheet-age {
+      color: #e74c3c;
+      font-size: 11px;
+      font-weight: 800;
+      margin-top: 6px;
+    }
+    .sheet-opinion {
+      margin-top: 8px;
+      height: 30px;
+      border: 1px solid #e8e8e8;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #666;
+      font-weight: 750;
+      background: #fff;
+    }
+    .modal-scrim {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,.28);
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .modal {
+      width: 100%;
+      height: 300px;
+      background: #fff;
+      border-radius: 22px;
+      box-shadow: 0 18px 40px rgba(0,0,0,.25);
+      padding: 18px 18px 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal h3 {
+      margin: 0 0 6px;
+      color: var(--gold);
+      text-align: center;
+      font-size: 17px;
+      font-weight: 850;
+    }
+    .modal p {
+      margin: 0 0 12px;
+      text-align: center;
+      color: #666;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .modal .chips { gap: 6px; margin-bottom: 10px; }
+    .modal .chip {
+      min-height: 29px;
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 11px;
+    }
+    .modal .textarea { height: 44px; font-size: 12px; }
+    .modal .notice {
+      margin-top: 6px;
+      font-size: 10px;
+      line-height: 1.3;
+    }
+    .modal-scroll {
+      min-height: 0;
+      overflow: hidden;
+      flex: 1;
+    }
+    .modal-actions {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: .8fr 1.2fr;
+      gap: 8px;
+    }
+    .secondary, .modal-primary {
+      height: 40px;
+      border-radius: 13px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .secondary {
+      border: 1px solid #e4e4e4;
+      background: #fff;
+      color: #777;
+    }
+    .modal-primary {
+      border: 0;
+      background: var(--gold);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <h1 class="title">Z:GUM 문의 및 의견 기능 화면 시안</h1>
+    <p class="subtitle">
+      앱의 현재 설정 리스트와 표준 미디움 팝업 구조에 맞춘 초안입니다.
+      상세페이지는 기존 구성은 유지하고 `의견 보내기` 항목만 추가하는 방향입니다.
+    </p>
+
+    <section class="frames">
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="status"><span>9:41</span><span class="bar-icons"><i class="dot"></i><i class="dot"></i><i class="dot"></i></span></div>
+          <div class="appbar"><span></span><h2>설정</h2><span></span></div>
+          <div class="screen">
+            <div class="settings-card">
+              <div class="row"><div class="row-icon">🔔</div><div class="row-label">알림 설정</div><div class="trail">›</div></div>
+              <div class="row"><div class="row-icon">🌐</div><div class="row-label">언어</div><div class="trail">한국어 ›</div></div>
+              <div class="row"><div class="row-icon">ℹ</div><div class="row-label">앱 정보</div><div class="trail">›</div></div>
+              <div class="row"><div class="row-icon">💬</div><div class="row-label">문의 및 의견</div><div class="trail">›</div></div>
+              <div class="row"><div class="row-icon">⏱</div><div class="row-label">무료이용 상태</div><div class="trail">›</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="caption"><strong>설정 리스트</strong><br>기존 설정 카드 안에 `문의 및 의견`을 한 줄로 추가.</div>
+      </div>
+
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="status"><span>9:41</span><span class="bar-icons"><i class="dot"></i><i class="dot"></i><i class="dot"></i></span></div>
+          <div class="appbar"><span></span><h2>설정</h2><span></span></div>
+          <div class="screen">
+            <div class="settings-card">
+              <div class="row"><div class="row-icon">🔔</div><div class="row-label">알림 설정</div><div class="trail">›</div></div>
+              <div class="row"><div class="row-icon">💬</div><div class="row-label">문의 및 의견</div><div class="trail">›</div></div>
+            </div>
+          </div>
+          <div class="modal-scrim">
+            <div class="modal">
+              <h3>문의 및 의견</h3>
+              <p>확인이 필요한 내용을 운영자에게 보낼 수 있습니다.</p>
+              <div class="modal-scroll">
+                <div class="chips">
+                  <div class="chip active">서비스 이용 문의 <span>✓</span></div>
+                  <div class="chip">이벤트 등록 문의</div>
+                  <div class="chip">이벤트 삭제 요청</div>
+                  <div class="chip">오류 제보</div>
+                </div>
+                <div class="textarea">내용을 적어 주세요.</div>
+                <div class="notice">서비스 확인과 개선을 위해 관련 앱 기록을 함께 확인할 수 있습니다.</div>
+              </div>
+              <div class="modal-actions">
+                <button class="secondary">닫기</button>
+                <button class="modal-primary">보내기</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="caption"><strong>문의 팝업</strong><br>설정에서 바로 열리는 미디움 크기 통합 문의 팝업.</div>
+      </div>
+
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="status"><span>9:41</span><span class="bar-icons"><i class="dot"></i><i class="dot"></i><i class="dot"></i></span></div>
+          <div class="appbar"><span></span><h2>지금</h2><span></span></div>
+          <div class="map-bg"></div>
+          <div class="detail-sheet">
+            <div class="sheet-scroll">
+              <div class="sheet-banner">🏪 오늘 2시간만 진행하는 등록 이벤트</div>
+              <div class="sheet-photo"></div>
+              <p class="sheet-copy">근처 사용자에게 표시되는 등록 이벤트입니다.</p>
+              <div class="sheet-row">📍 부산광역시 해운대구 센텀로 00</div>
+              <div class="sheet-opinion">💬 의견 보내기</div>
+            </div>
+            <div class="sheet-footer">
+              <div class="now-button">지금</div>
+            </div>
+          </div>
+          <div class="modal-scrim">
+            <div class="modal">
+              <h3>이벤트 의견 보내기</h3>
+              <p>이 이벤트에 대해 확인이 필요한 내용을 운영자에게 보낼 수 있습니다.</p>
+              <div class="modal-scroll">
+                <div class="chips">
+                  <div class="chip active">정보가 달라요 <span>✓</span></div>
+                  <div class="chip">위치가 맞지 않아요</div>
+                  <div class="chip">부적절한 내용이 있어요</div>
+                  <div class="chip">이미 종료된 이벤트예요</div>
+                </div>
+                <div class="textarea">내용을 적어 주세요.</div>
+                <div class="notice">이벤트 제목, 위치, 등록 시간이 함께 전달될 수 있습니다.</div>
+              </div>
+              <div class="modal-actions">
+                <button class="secondary">닫기</button>
+                <button class="modal-primary">보내기</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="caption"><strong>이벤트 의견 팝업</strong><br>기존 상세페이지에 추가한 `의견 보내기` 항목에서 열림.</div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

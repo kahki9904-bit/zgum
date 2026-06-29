@@ -1,12 +1,16 @@
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui' show lerpDouble;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/partner_focus_provider.dart';
 import '../../core/providers/shell_page_provider.dart';
+import '../../core/providers/user_location_provider.dart';
 import '../../core/shell_gesture_layout.dart';
 import '../../core/theme/app_colors.dart';
+import '../../features/friend/providers/friend_provider.dart';
+import '../../features/friend/services/friend_proximity_service.dart';
 import '../../features/map_room/screens/map_room_screen.dart';
 import '../../features/partner_room/screens/partner_room_screen.dart';
 import '../../features/user_room/screens/user_room_screen.dart';
@@ -69,6 +73,26 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     if (!shown && mounted) await showPartnerIntroPopup(context);
   }
 
+  Future<void> _runFriendTasks() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final location = ref.read(userLocationProvider);
+    final repo = ref.read(friendRepositoryProvider);
+    final service = FriendProximityService(repo);
+    await FriendProximityService.recordPresence(uid, location);
+    await service.checkAndRenewNearbyFriends(
+      myUserId: uid,
+      myLocation: location,
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _runFriendTasks();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +102,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _showIntroIfNeeded();
+      _runFriendTasks();
       final animation = ModalRoute.of(context)?.animation;
       if (animation == null || animation.status == AnimationStatus.completed) {
         _onRouteAnimationComplete();

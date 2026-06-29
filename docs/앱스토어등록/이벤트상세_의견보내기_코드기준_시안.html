@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Z:GUM 이벤트 상세 의견보내기 코드기준 시안</title>
+  <style>
+    :root {
+      --gold: #5a452d;
+      --gold-text: #6d5633;
+      --gold-border: #d9bd7a;
+      --partner: #ff8c00;
+      --paper: #ffffff;
+      --ink: #333333;
+      --sub: #8a8a8a;
+      --line: #f0f0f0;
+      --map: #f4f6fb;
+      --danger: #e74c3c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #f5f6f8;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+      color: var(--ink);
+      letter-spacing: 0;
+    }
+
+    .board {
+      width: 980px;
+      min-height: 720px;
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      gap: 36px;
+      align-items: center;
+      padding: 34px;
+    }
+
+    .phone {
+      width: 390px;
+      height: 844px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 32px;
+      background: var(--map);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, .18);
+      border: 1px solid #e3e3e3;
+    }
+
+    .map-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(120deg, transparent 0 24%, rgba(255,255,255,.82) 24% 26%, transparent 26%),
+        linear-gradient(30deg, transparent 0 38%, rgba(255,255,255,.95) 38% 40%, transparent 40%),
+        linear-gradient(150deg, transparent 0 48%, rgba(255,255,255,.8) 48% 50%, transparent 50%),
+        #f4f6fb;
+    }
+
+    .map-pin {
+      position: absolute;
+      width: 46px;
+      height: 46px;
+      border-radius: 50% 50% 50% 8px;
+      transform: rotate(-45deg);
+      background: var(--partner);
+      left: 168px;
+      top: 214px;
+      box-shadow: 0 8px 16px rgba(0,0,0,.2);
+    }
+
+    .map-pin::after {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      left: 16px;
+      top: 16px;
+    }
+
+    .scrim {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(0, 0, 0, .54);
+      padding: 0 20px;
+    }
+
+    .sheet {
+      width: 100%;
+      height: 523px;
+      overflow: hidden;
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: 0 8px 24px rgba(0,0,0,.22);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .partner-message {
+      margin: 12px 20px 0;
+      padding: 10px 12px;
+      border: 1px solid #ffd580;
+      border-radius: 10px;
+      background: #fff8ec;
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .store-icon {
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      color: var(--partner);
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .partner-text {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      white-space: nowrap;
+      font-size: 17px;
+      line-height: 1.25;
+      font-weight: 700;
+      color: #333333;
+    }
+
+    .content {
+      flex: 1;
+      min-height: 0;
+      padding: 16px 20px 8px;
+      overflow: hidden;
+    }
+
+    .mine-badge {
+      display: inline-flex;
+      align-items: center;
+      height: 23px;
+      margin-bottom: 10px;
+      padding: 0 10px;
+      border-radius: 8px;
+      background: rgba(255, 140, 0, .13);
+      border: 1px solid rgba(255, 140, 0, .4);
+      color: var(--partner);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .photo {
+      height: 180px;
+      border-radius: 12px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 72% 22%, rgba(255,255,255,.65) 0 24px, transparent 25px),
+        linear-gradient(135deg, #f0a54a 0%, #d9653b 38%, #316e9f 100%);
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    .photo::after {
+      content: "";
+      position: absolute;
+      left: -16px;
+      right: -16px;
+      bottom: -32px;
+      height: 86px;
+      transform: rotate(-4deg);
+      background: rgba(255,255,255,.30);
+    }
+
+    .photo-count {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 8px;
+      border-radius: 12px;
+      background: rgba(0,0,0,.54);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .description {
+      margin: 0 0 14px;
+      color: #333;
+      font-size: 14px;
+      line-height: 1.72;
+    }
+
+    .address-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: start;
+      margin-bottom: 10px;
+    }
+
+    .address {
+      color: rgba(109, 86, 51, .6);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .navigate {
+      min-width: 44px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: var(--gold);
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .info-row {
+      display: grid;
+      grid-template-columns: 16px 1fr;
+      gap: 8px;
+      align-items: start;
+      margin-bottom: 6px;
+      color: rgba(109, 86, 51, .6);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .info-row.age {
+      margin-top: 6px;
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .feedback {
+      margin-top: 12px;
+      height: 36px;
+      border: 1px solid var(--gold-border);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      color: var(--gold-text);
+      font-size: 13px;
+      font-weight: 800;
+      background: #fffdf8;
+    }
+
+    .now-area {
+      padding-bottom: 16px;
+      display: grid;
+      place-items: center;
+    }
+
+    .now-button {
+      width: 195px;
+      height: 52px;
+      border-radius: 16px;
+      background: var(--gold);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: 2px;
+    }
+
+    .note h1 {
+      margin: 0 0 14px;
+      color: var(--gold-text);
+      font-size: 26px;
+      line-height: 1.25;
+    }
+
+    .note p {
+      margin: 0 0 10px;
+      max-width: 440px;
+      color: #555;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .spec {
+      margin-top: 20px;
+      padding: 16px;
+      border: 1px solid #e6e0d4;
+      border-radius: 14px;
+      background: #fffdf8;
+    }
+
+    .spec div {
+      margin: 6px 0;
+      color: #6d5633;
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <section class="phone" aria-label="Z:GUM 이벤트 상세 화면">
+      <div class="map-bg"></div>
+      <div class="map-pin"></div>
+
+      <div class="scrim">
+        <article class="sheet">
+          <div class="partner-message">
+            <div class="store-icon">□</div>
+            <div class="partner-text">지금 현장에서 바로 참여 가능한 이벤트를 진행 중입니다.</div>
+          </div>
+
+          <div class="content">
+            <div class="mine-badge">나의 이벤트</div>
+
+            <div class="photo">
+              <div class="photo-count">▣ +2</div>
+            </div>
+
+            <p class="description">
+              매장 앞 작은 팝업 이벤트입니다. 근처에 있다면 지금 바로 들러서 참여할 수 있어요.
+            </p>
+
+            <div class="address-row">
+              <div class="address">부산광역시 해운대구 센텀중앙로 00</div>
+              <div class="navigate">길찾기</div>
+            </div>
+
+            <div class="info-row">
+              <div>◷</div>
+              <div>6/29 14:00 ~ 6/29 18:00</div>
+            </div>
+
+            <div class="info-row age">
+              <div>⌕</div>
+              <div>연령 확인 이벤트</div>
+            </div>
+
+            <div class="feedback">✎ 의견 보내기</div>
+          </div>
+
+          <div class="now-area">
+            <div class="now-button">지금</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <aside class="note">
+      <h1>이벤트 상세페이지 코드기준 시안</h1>
+      <p>
+        현재 구현된 상세 팝업 구조를 기준으로 만든 시안입니다. 상세페이지 자체 구조는 유지하고,
+        하단 정보 영역에 <strong>의견 보내기</strong> 항목만 추가하는 방향입니다.
+      </p>
+      <p>
+        실제 앱 코드 변경용이 아니라 클로드에게 전달할 화면 기준 이미지입니다.
+      </p>
+      <div class="spec">
+        <div>화면 기준: 390 x 844</div>
+        <div>팝업 기준: 좌우 20px 여백, 높이 0.62배 약 523px</div>
+        <div>팝업 형태: 중앙 정렬, 흰 배경, 24px 라운드</div>
+        <div>추가 항목: 신고 대신 부드러운 표현의 의견 보내기</div>
+      </div>
+    </aside>
+  </main>
+</body>
+</html>

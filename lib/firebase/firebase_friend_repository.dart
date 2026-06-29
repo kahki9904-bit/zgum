@@ -2,6 +2,7 @@
 // 전환 시: friend_provider.dart 에서 MockFriendRepository → FirebaseFriendRepository 교체
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import '../features/friend/data/models/friend.dart';
@@ -228,15 +229,29 @@ class FirebaseFriendRepository implements FriendRepository {
 
   @override
   Future<void> recordNotification(String friendId) async {
-    // friendId만으로는 userId를 알 수 없어 현재 사용자 기기에서만 업데이트
-    // 실제 알림 기록은 FCM 연동 후 확장
-    debugPrint('[FriendRepo] recordNotification: $friendId');
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      await _connectionsRef(uid).doc(friendId).update({
+        'lastNotifiedAt': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('[FriendRepo] recordNotification 오류: $e');
+    }
   }
 
   @override
   Future<void> renewFriend(String friendId, DateTime newExpiry) async {
-    // 이음 갱신은 양쪽 모두 업데이트 필요 — FCM 연동 후 확장
-    debugPrint('[FriendRepo] renewFriend: $friendId → $newExpiry');
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      await _connectionsRef(uid).doc(friendId).update({
+        'expiresAt': newExpiry.toIso8601String(),
+        'expiresAtTs': Timestamp.fromDate(newExpiry),
+      });
+    } catch (e) {
+      debugPrint('[FriendRepo] renewFriend 오류: $e');
+    }
   }
 
   @override
