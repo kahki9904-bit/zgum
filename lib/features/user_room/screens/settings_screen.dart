@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
@@ -69,9 +71,9 @@ class SettingsScreen extends ConsumerWidget {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  const NotificationSettingScreen()),
+                          Platform.isAndroid
+                              ? CupertinoPageRoute(builder: (_) => const NotificationSettingScreen())
+                              : MaterialPageRoute(builder: (_) => const NotificationSettingScreen()),
                         );
                       },
                     ),
@@ -85,8 +87,9 @@ class SettingsScreen extends ConsumerWidget {
                       trailText: currentLangLabel,
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (_) => const LanguageScreen()),
+                        Platform.isAndroid
+                            ? CupertinoPageRoute(builder: (_) => const LanguageScreen())
+                            : MaterialPageRoute(builder: (_) => const LanguageScreen()),
                       ),
                     ),
                     const Padding(
@@ -98,8 +101,9 @@ class SettingsScreen extends ConsumerWidget {
                       label: context.l10n.settingAppInfo,
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (_) => const AppInfoScreen()),
+                        Platform.isAndroid
+                            ? CupertinoPageRoute(builder: (_) => const AppInfoScreen())
+                            : MaterialPageRoute(builder: (_) => const AppInfoScreen()),
                       ),
                     ),
                     const Padding(

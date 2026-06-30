@@ -530,9 +530,12 @@ class _TracePhotoViewerState extends ConsumerState<_TracePhotoViewer> {
   Widget build(BuildContext context) {
     final record = widget.record;
     final dt = record.checkedInAt;
-    final dateStr = '${dt.month}.${dt.day.toString().padLeft(2, '0')}';
+    final dateStr = Platform.isAndroid
+        ? '${dt.year.toString().substring(2)}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')} ${dt.hour}시${dt.minute.toString().padLeft(2, '0')}분'
+        : '${dt.month}.${dt.day.toString().padLeft(2, '0')}';
     final hasPhoto = record.photoPath != null;
     final showDownloadMarker = hasPhoto && !widget.showForget;
+    final screenHeight = MediaQuery.sizeOf(context).height;
 
     return Container(
       width: double.infinity,
@@ -624,18 +627,18 @@ class _TracePhotoViewerState extends ConsumerState<_TracePhotoViewer> {
                         Navigator.of(context).pop();
                       },
                       child: Container(
+                        width: 34,
                         height: 34,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
                           color: AppColors.actionGold.withValues(alpha: 0.86),
-                          borderRadius: BorderRadius.circular(999),
+                          shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
                         child: const Text(
                           '잊기',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -674,10 +677,46 @@ class _TracePhotoViewerState extends ConsumerState<_TracePhotoViewer> {
               ],
             ),
           ),
-          Transform.translate(
-            offset: Offset.zero,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 2, 18, 0),
+          if (Platform.isAndroid)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+              child: SizedBox(
+                height: screenHeight * 0.34,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: Text(
+                          record.memo ?? '',
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF333333),
+                            fontSize: 14,
+                            height: 1.6,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      dateStr,
+                      style: const TextStyle(
+                        color: Color(0xFF9AA4AD),
+                        fontSize: 12,
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 2, 18, 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -692,7 +731,7 @@ class _TracePhotoViewerState extends ConsumerState<_TracePhotoViewer> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    '${record.venue}  ·  $dateStr',
+                    '${record.venue}  ·  ${dt.month}.${dt.day.toString().padLeft(2, '0')}',
                     style: const TextStyle(
                       color: Color(0xFF9AA4AD),
                       fontSize: 12,
@@ -702,7 +741,6 @@ class _TracePhotoViewerState extends ConsumerState<_TracePhotoViewer> {
                 ],
               ),
             ),
-          ),
           const SizedBox(height: 2),
         ],
       ),

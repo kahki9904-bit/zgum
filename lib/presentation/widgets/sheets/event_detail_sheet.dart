@@ -412,7 +412,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
 
   Widget _traceFormView() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+      padding: EdgeInsets.fromLTRB(24, 28, 24, Platform.isAndroid ? 52 : 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

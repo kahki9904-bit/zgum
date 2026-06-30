@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:marquee/marquee.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/map_marker_model.dart';
 import '../../../core/theme/app_colors.dart';
@@ -81,18 +80,11 @@ class _PlaceSheet extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
           shrinkWrap: true,
           children: [
-            SizedBox(
-              height: 36,
-              child: Marquee(
-                text: place.title,
-                style: theme.textTheme.titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
-                scrollAxis: Axis.horizontal,
-                blankSpace: 40.0,
-                velocity: 40.0,
-                startAfter: const Duration(seconds: 1),
-                pauseAfterRound: const Duration(seconds: 1),
-              ),
+            Text(
+              place.title,
+              maxLines: 2,
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 14),
             const Text(

@@ -53,9 +53,22 @@ class PartnerEventContent extends EventContentBase {
           const SizedBox(height: 14),
         ],
         if (event.description.isNotEmpty) ...[
-          Text(
-            event.description,
-            style: EventDetailTextStyles.description,
+          Text.rich(
+            TextSpan(
+              style: EventDetailTextStyles.description,
+              children: [
+                if (Platform.isAndroid && event.isAdultOnly)
+                  const TextSpan(
+                    text: '연령제한  ',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.actionGoldText,
+                    ),
+                  ),
+                TextSpan(text: event.description),
+              ],
+            ),
           ),
           const SizedBox(height: 14),
         ],
@@ -96,7 +109,9 @@ class PartnerEventContent extends EventContentBase {
             Expanded(
               child: EventInfoRow(
                 Icons.schedule_outlined,
-                '${_fmt(event.startDate)} ~ ${_fmt(event.endDateTime)}',
+                Platform.isAndroid
+                    ? _fmt(event.startDate)
+                    : '${_fmt(event.startDate)} ~ ${_fmt(event.endDateTime)}',
                 style: EventDetailTextStyles.address,
               ),
             ),
@@ -110,7 +125,7 @@ class PartnerEventContent extends EventContentBase {
             ),
           ],
         ),
-        if (event.isAdultOnly) ...[
+        if (!Platform.isAndroid && event.isAdultOnly) ...[
           const SizedBox(height: 6),
           const EventInfoRow(
             Icons.lock_outline,
@@ -124,6 +139,13 @@ class PartnerEventContent extends EventContentBase {
   }
 
   static String _fmt(DateTime dt) {
+    if (Platform.isAndroid) {
+      final yy = dt.year.toString().substring(2);
+      final mo = dt.month.toString().padLeft(2, '0');
+      final d = dt.day.toString().padLeft(2, '0');
+      final mi = dt.minute.toString().padLeft(2, '0');
+      return '$yy/$mo/$d ${dt.hour}시$mi분';
+    }
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
     return '${dt.month}/${dt.day} $h:$m';
@@ -308,7 +330,7 @@ class _EventFeedbackDialogState extends State<_EventFeedbackDialog> {
   @override
   Widget build(BuildContext context) {
     return ZGumDialog(
-      heightFactor: PopupLayoutSpec.current.introShortFactor,
+      heightFactor: PopupLayoutSpec.current.introLongFactor,
       contentPadding: const EdgeInsets.fromLTRB(26, 30, 26, 0),
       actionsPadding: const EdgeInsets.fromLTRB(26, 14, 26, 26),
       actions: Row(

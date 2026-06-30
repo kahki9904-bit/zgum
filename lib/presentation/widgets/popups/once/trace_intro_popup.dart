@@ -33,8 +33,8 @@ Future<void> showTraceIntroPopup(BuildContext context) async {
         child: GestureDetector(
           onTap: () {},
           child: ZGumDialog(
-            heightFactor: PopupLayoutSpec.current.introShortFactor,
-            contentPadding: const EdgeInsets.fromLTRB(24, 22, 24, 0),
+            heightFactor: PopupLayoutSpec.current.introLongFactor,
+            contentPadding: const EdgeInsets.fromLTRB(24, 26, 24, 0),
             child: const Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
