@@ -207,7 +207,6 @@ class _TraceGuideTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: const Color(0xFFF8F8F8),
@@ -215,14 +214,12 @@ class _TraceGuideTile extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(title, style: ZGumDialogTextStyles.sectionTitle),
           const SizedBox(height: 2),
           Text(
             text,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 11,
               color: Color(0xFF777777),

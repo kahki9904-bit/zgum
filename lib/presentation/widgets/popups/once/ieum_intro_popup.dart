@@ -44,8 +44,12 @@ Future<void> showIeumIntroPopup(BuildContext context) async {
                   style: ZGumDialogTextStyles.title,
                 ),
                 SizedBox(height: 10),
+                _SingleLineText(
+                  '지금 곁에 있는 사람과 이어지는 기능입니다.',
+                  style: ZGumDialogTextStyles.body,
+                ),
+                SizedBox(height: 2),
                 Text(
-                  '지금 곁에 있는 사람과 이어지는 기능입니다.\n'
                   '주변에 친구가 있음을 알려 줍니다.',
                   style: ZGumDialogTextStyles.body,
                 ),
@@ -70,6 +74,27 @@ Future<void> showIeumIntroPopup(BuildContext context) async {
     transitionBuilder: (_, animation, __, child) =>
         FadeTransition(opacity: animation, child: child),
   );
+}
+
+class _SingleLineText extends StatelessWidget {
+  const _SingleLineText(this.text, {required this.style});
+
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        maxLines: 1,
+        softWrap: false,
+        style: style,
+      ),
+    );
+  }
 }
 
 class _IeumFlowPreview extends StatelessWidget {

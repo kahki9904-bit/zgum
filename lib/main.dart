@@ -20,6 +20,8 @@ const _popupHistoryKeys = [
   'partner_intro_shown',
   'ieum_intro_shown',
   'trace_intro_shown',
+  'map_marker_intro_shown',
+  'email_recovery_popup_shown',
 ];
 
 @pragma('vm:entry-point')

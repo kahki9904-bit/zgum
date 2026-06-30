@@ -17,6 +17,7 @@ import '../../features/user_room/screens/user_room_screen.dart';
 import '../../services/gesture_exclusion_service.dart';
 import '../../promotions/free_use/free_use_service.dart';
 import '../widgets/popups/once/ieum_intro_popup.dart';
+import '../widgets/popups/once/map_marker_intro_popup.dart';
 import '../widgets/popups/once/partner_intro_popup.dart';
 import 'shell_constants.dart';
 import 'panels/map_panel_content.dart';
@@ -41,6 +42,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   bool _tabVisible = false;
   bool _showNowTab = false;
   bool _mapReady = false;
+  bool _mapMarkerIntroRequested = false;
 
   void _onRouteAnimationComplete() {
     setState(() => _tabVisible = true);
@@ -57,6 +59,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       _showNowTab = true;
       _mapReady = true;
     });
+    _showMapMarkerIntroAfterReady();
   }
 
   Future<void> _showIntroIfNeeded() async {
@@ -71,6 +74,16 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   Future<void> _showPartnerIntroIfNeeded() async {
     final shown = await isPartnerIntroShown();
     if (!shown && mounted) await showPartnerIntroPopup(context);
+  }
+
+  Future<void> _showMapMarkerIntroAfterReady() async {
+    if (_mapMarkerIntroRequested) return;
+    _mapMarkerIntroRequested = true;
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    final shown = await isMapMarkerIntroShown();
+    if (!shown && mounted && _page == 1) {
+      await showMapMarkerIntroPopup(context);
+    }
   }
 
   Future<void> _runFriendTasks() async {
@@ -230,9 +243,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
         media.size.height - media.padding.top - media.padding.bottom;
     panelHeight = (availableHeight * 0.68).clamp(420.0, 560.0);
     final gesture = ShellGestureLayoutSpec.current;
-    final bottomPadding =
-        max(media.padding.bottom, gesture.bottomPaddingMin) +
-            kShellIosGestureBuffer;
+    final bottomPadding = max(media.padding.bottom, gesture.bottomPaddingMin) +
+        kShellIosGestureBuffer;
 
     return ValueListenableBuilder<bool>(
       valueListenable: _nowPanelOpen,

@@ -15,6 +15,8 @@ import '../../../presentation/widgets/zgum_orb_button.dart';
 import '../../../services/photo_save_service.dart';
 import '../providers/check_in_provider.dart';
 import 'settings_screen.dart';
+import '../../../core/providers/email_recovery_provider.dart';
+import '../../../presentation/widgets/popups/once/email_recovery_notice_popup.dart';
 
 class UserRoomScreen extends ConsumerStatefulWidget {
   const UserRoomScreen({super.key});
@@ -103,6 +105,15 @@ class _UserRoomScreenState extends ConsumerState<UserRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<bool>(emailRecoveryPromptProvider, (_, show) {
+      if (!show) return;
+      ref.read(emailRecoveryPromptProvider.notifier).state = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        markEmailRecoveryPopupShown();
+        showEmailRecoveryNoticePopup(context);
+      });
+    });
     final records = ref.watch(checkInProvider);
     final latest = records.isEmpty
         ? null

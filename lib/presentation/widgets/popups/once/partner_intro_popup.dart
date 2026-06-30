@@ -44,7 +44,7 @@ Future<void> showPartnerIntroPopup(BuildContext context) async {
                   style: ZGumDialogTextStyles.title,
                 ),
                 SizedBox(height: 8),
-                Text(
+                _SingleLineText(
                   '당신의 이벤트를 주변에 알릴 수 있습니다.',
                   style: ZGumDialogTextStyles.body,
                 ),
@@ -52,19 +52,21 @@ Future<void> showPartnerIntroPopup(BuildContext context) async {
                 _RegisterFlowPreview(),
                 SizedBox(height: 10),
                 Text(
-                  '유료등록 기준이나 일정기간 무료이용 가능합니다.\n'
-                  '1일 3회',
+                  '유료등록 기준이지만 일정기간동안\n'
+                  '무료이용 가능합니다.(1일1회)',
                   style: ZGumDialogTextStyles.caption,
                 ),
                 SizedBox(height: 10),
                 _GuideText(
                   title: '노출',
-                  text: '주변 사람에게 내 이벤트를 알려줍니다.',
+                  text: '주변사람에게 내 이벤트를 알려줍니다.',
+                  singleLine: true,
                 ),
                 SizedBox(height: 8),
                 _GuideText(
                   title: '기록',
-                  text: '기록으로 내 이벤트 반응을 확인할 수 있습니다.',
+                  text: '내 이벤트를 기록할 수 있습니다.',
+                  singleLine: true,
                 ),
               ],
             ),
@@ -75,6 +77,27 @@ Future<void> showPartnerIntroPopup(BuildContext context) async {
     transitionBuilder: (_, animation, __, child) =>
         FadeTransition(opacity: animation, child: child),
   );
+}
+
+class _SingleLineText extends StatelessWidget {
+  const _SingleLineText(this.text, {required this.style});
+
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        maxLines: 1,
+        softWrap: false,
+        style: style,
+      ),
+    );
+  }
 }
 
 class _RegisterFlowPreview extends StatelessWidget {
@@ -159,10 +182,11 @@ class _SquareToken extends StatelessWidget {
 }
 
 class _GuideText extends StatelessWidget {
-  const _GuideText({required this.title, required this.text});
+  const _GuideText({required this.title, required this.text, this.singleLine = false});
 
   final String title;
   final String text;
+  final bool singleLine;
 
   @override
   Widget build(BuildContext context) {
@@ -176,12 +200,32 @@ class _GuideText extends StatelessWidget {
             style: ZGumDialogTextStyles.sectionTitle,
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
         Expanded(
-          child: Text(
-            text,
-            style: ZGumDialogTextStyles.support,
-          ),
+          child: singleLine
+              ? FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    text,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: ZGumDialogTextStyles.support.copyWith(
+                      fontSize: 12.2,
+                      height: 1.35,
+                    ),
+                  ),
+                )
+              : Text(
+                  text,
+                  maxLines: 2,
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                  style: ZGumDialogTextStyles.support.copyWith(
+                    fontSize: 12.2,
+                    height: 1.35,
+                  ),
+                ),
         ),
       ],
     );

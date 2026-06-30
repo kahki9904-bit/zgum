@@ -2,6 +2,7 @@ import '../dialogs/camera_chooser_popup.dart';
 import '../popups/once/trace_intro_popup.dart';
 import '../../../core/popup_layout.dart';
 import '../../../core/providers/shell_page_provider.dart';
+import '../../../core/providers/email_recovery_provider.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -264,6 +265,11 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
     // 다이얼로그 종료 애니메이션(280ms)이 완전히 끝난 뒤 페이지 이동
     await Future.delayed(const Duration(milliseconds: 350));
     pageNotifier.state = 0;
+    // 이메일 복구 안내 팝업 — 미표시 상태일 때만 트리거
+    final shown = await isEmailRecoveryPopupShown();
+    if (!shown) {
+      ref.read(emailRecoveryPromptProvider.notifier).state = true;
+    }
   }
 
   void _cancelTrace() {

@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../../core/popup_layout.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
+import '../dialogs/zgum_dialog.dart';
 import 'event_content_base.dart';
 
 class PartnerEventContent extends EventContentBase {
@@ -87,10 +90,25 @@ class PartnerEventContent extends EventContentBase {
           ],
         ),
         const SizedBox(height: 10),
-        EventInfoRow(
-          Icons.schedule_outlined,
-          '${_fmt(event.startDate)} ~ ${_fmt(event.endDateTime)}',
-          style: EventDetailTextStyles.address,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: EventInfoRow(
+                Icons.schedule_outlined,
+                '${_fmt(event.startDate)} ~ ${_fmt(event.endDateTime)}',
+                style: EventDetailTextStyles.address,
+              ),
+            ),
+            const SizedBox(width: 8),
+            _EventFeedbackButton(
+              onTap: () => _showEventFeedbackDialog(
+                context,
+                eventId: event.id,
+                eventTitle: event.title,
+              ),
+            ),
+          ],
         ),
         if (event.isAdultOnly) ...[
           const SizedBox(height: 6),
@@ -110,6 +128,35 @@ class PartnerEventContent extends EventContentBase {
     final m = dt.minute.toString().padLeft(2, '0');
     return '${dt.month}/${dt.day} $h:$m';
   }
+}
+
+void _showEventFeedbackDialog(
+  BuildContext context, {
+  required String eventId,
+  required String eventTitle,
+}) {
+  showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: '',
+    barrierColor: Colors.black54,
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (dialogContext, _, __) {
+      return GestureDetector(
+        onTap: () => Navigator.of(dialogContext).pop(),
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: GestureDetector(
+            onTap: () {},
+            child: _EventFeedbackDialog(
+              eventId: eventId,
+              eventTitle: eventTitle,
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
 
 void _showPhotoViewer(BuildContext context, List<String> urls) {
@@ -176,6 +223,213 @@ class _PhotoSection extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _EventFeedbackButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _EventFeedbackButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.actionGoldSoft.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: AppColors.actionGoldBorder.withValues(alpha: 0.45),
+          ),
+        ),
+        alignment: Alignment.center,
+        child: const Text(
+          '의견 보내기',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.actionGoldText,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EventFeedbackDialog extends StatefulWidget {
+  final String eventId;
+  final String eventTitle;
+
+  const _EventFeedbackDialog({
+    required this.eventId,
+    required this.eventTitle,
+  });
+
+  @override
+  State<_EventFeedbackDialog> createState() => _EventFeedbackDialogState();
+}
+
+class _EventFeedbackDialogState extends State<_EventFeedbackDialog> {
+  static const _items = [
+    '정보가 다름',
+    '위치가 다름',
+    '부적절함',
+    '이미 종료됨',
+  ];
+
+  int? _selectedIndex;
+  bool _sending = false;
+  bool _sent = false;
+
+  Future<void> _onSend() async {
+    if (_selectedIndex == null) return;
+    setState(() => _sending = true);
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
+      await FirebaseFirestore.instance.collection('event_feedbacks').add({
+        'eventId': widget.eventId,
+        'eventTitle': widget.eventTitle,
+        'category': _items[_selectedIndex!],
+        'uid': uid,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      if (mounted) setState(() { _sending = false; _sent = true; });
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ZGumDialog(
+      heightFactor: PopupLayoutSpec.current.introShortFactor,
+      contentPadding: const EdgeInsets.fromLTRB(26, 30, 26, 0),
+      actionsPadding: const EdgeInsets.fromLTRB(26, 14, 26, 26),
+      actions: Row(
+        children: [
+          Expanded(
+            child: ZGumButton(
+              label: '닫기',
+              onTap: () => Navigator.of(context).pop(),
+              color: const Color(0xFFF1F1F2),
+              textColor: const Color(0xFF777777),
+              widthFactor: 1,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 2,
+            child: ZGumButton(
+              label: _sent ? '전송됨' : (_sending ? '전송 중...' : '보내기'),
+              onTap: (_sending || _sent || _selectedIndex == null) ? () {} : _onSend,
+              widthFactor: 1,
+            ),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('이벤트 의견 보내기', style: ZGumDialogTextStyles.title),
+          const SizedBox(height: 12),
+          const Text(
+            '이 이벤트에 대해 확인이 필요한 내용을 운영자에게 보낼 수 있습니다.',
+            style: ZGumDialogTextStyles.body,
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _FeedbackChoiceChip(
+                  label: _items[0],
+                  selected: _selectedIndex == 0,
+                  onTap: () => setState(() => _selectedIndex = 0),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _FeedbackChoiceChip(
+                  label: _items[1],
+                  selected: _selectedIndex == 1,
+                  onTap: () => setState(() => _selectedIndex = 1),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _FeedbackChoiceChip(
+                  label: _items[2],
+                  selected: _selectedIndex == 2,
+                  onTap: () => setState(() => _selectedIndex = 2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _FeedbackChoiceChip(
+                  label: _items[3],
+                  selected: _selectedIndex == 3,
+                  onTap: () => setState(() => _selectedIndex = 3),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            '이벤트 제목, 위치, 등록 시간이 함께 전달될 수 있습니다.',
+            style: ZGumDialogTextStyles.caption,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeedbackChoiceChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FeedbackChoiceChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.actionGoldSoft : const Color(0xFFF6F6F7),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? AppColors.actionGoldBorder : Colors.transparent,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color:
+                selected ? AppColors.actionGoldText : const Color(0xFF666666),
+          ),
+        ),
       ),
     );
   }
