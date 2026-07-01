@@ -627,18 +627,18 @@ class _TracePhotoViewerState extends ConsumerState<_TracePhotoViewer> {
                         Navigator.of(context).pop();
                       },
                       child: Container(
-                        width: 34,
                         height: 34,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
                           color: AppColors.actionGold.withValues(alpha: 0.86),
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(999),
                         ),
                         alignment: Alignment.center,
                         child: const Text(
                           '잊기',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -716,32 +716,41 @@ class _TracePhotoViewerState extends ConsumerState<_TracePhotoViewer> {
             )
           else
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 2, 18, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    record.memo ?? '',
-                    style: const TextStyle(
-                      color: Color(0xFF333333),
-                      fontSize: 14,
-                      height: 1.6,
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+              child: SizedBox(
+                height: screenHeight * 0.22,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: Text(
+                          record.memo ?? '',
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF333333),
+                            fontSize: 14,
+                            height: 1.6,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${record.venue}  ·  ${dt.month}.${dt.day.toString().padLeft(2, '0')}',
-                    style: const TextStyle(
-                      color: Color(0xFF9AA4AD),
-                      fontSize: 12,
-                      height: 1.45,
+                    Text(
+                      '${record.venue}  ·  ${dt.month}.${dt.day.toString().padLeft(2, '0')}',
+                      style: const TextStyle(
+                        color: Color(0xFF9AA4AD),
+                        fontSize: 12,
+                        height: 1.45,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             ),
-          const SizedBox(height: 2),
         ],
       ),
     );

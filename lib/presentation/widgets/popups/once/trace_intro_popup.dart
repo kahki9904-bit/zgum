@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/popup_layout.dart';
@@ -33,8 +34,10 @@ Future<void> showTraceIntroPopup(BuildContext context) async {
         child: GestureDetector(
           onTap: () {},
           child: ZGumDialog(
-            heightFactor: PopupLayoutSpec.current.introLongFactor,
-            contentPadding: const EdgeInsets.fromLTRB(24, 26, 24, 0),
+            heightFactor: Platform.isAndroid
+                ? PopupLayoutSpec.current.introLongFactor
+                : PopupLayoutSpec.current.introShortFactor,
+            contentPadding: EdgeInsets.fromLTRB(24, Platform.isAndroid ? 26 : 22, 24, 0),
             child: const Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,

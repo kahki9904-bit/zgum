@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _kEmailRecoveryPopupShown = 'email_recovery_popup_shown';
 const _kEmailRecoveryAddress = 'email_recovery_address';
 const _kEmailPendingVerification = 'email_recovery_pending';
+const _kRecoveryPendingAddress = 'email_recovery_recovery_address';
 
 // 나의 방에서 팝업 표시 트리거
 final emailRecoveryPromptProvider = StateProvider<bool>((ref) => false);
@@ -48,7 +49,7 @@ class EmailRecoveryNotifier extends AsyncNotifier<EmailRecoveryState> {
     state = const AsyncLoading();
     try {
       final actionCodeSettings = ActionCodeSettings(
-        url: 'https://zgum-6cc66.firebaseapp.com/email-recovery',
+        url: 'https://zgum-6cc66.web.app/email-recovery',
         handleCodeInApp: true,
         androidPackageName: 'com.zgum.app',
         androidMinimumVersion: '21',
@@ -87,11 +88,54 @@ class EmailRecoveryNotifier extends AsyncNotifier<EmailRecoveryState> {
   }
 
   Future<void> clearRegistration() async {
+    try {
+      await FirebaseAuth.instance.currentUser?.unlink(EmailAuthProvider.PROVIDER_ID);
+    } catch (_) {}
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kEmailRecoveryAddress);
     await prefs.remove(_kEmailPendingVerification);
     _cachedEmail = null;
     state = const AsyncData(EmailRecoveryState.notRegistered);
+  }
+
+  Future<void> sendRecoveryLink(String email) async {
+    final actionCodeSettings = ActionCodeSettings(
+      url: 'https://zgum-6cc66.web.app/email-recovery',
+      handleCodeInApp: true,
+      androidPackageName: 'com.zgum.app',
+      androidMinimumVersion: '21',
+      iOSBundleId: 'com.zgum.app',
+    );
+    await FirebaseAuth.instance.sendSignInLinkToEmail(
+      email: email,
+      actionCodeSettings: actionCodeSettings,
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kRecoveryPendingAddress, email);
+  }
+
+  Future<String?> getPendingRecoveryEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_kRecoveryPendingAddress);
+  }
+
+  Future<void> completeRecovery(String email, String emailLink) async {
+    state = const AsyncLoading();
+    try {
+      final credential = EmailAuthProvider.credentialWithLink(
+        email: email,
+        emailLink: emailLink,
+      );
+      await FirebaseAuth.instance.signInWithCredential(credential);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kEmailRecoveryAddress, email);
+      await prefs.setBool(_kEmailPendingVerification, false);
+      await prefs.remove(_kRecoveryPendingAddress);
+      _cachedEmail = email;
+      state = const AsyncData(EmailRecoveryState.registered);
+    } catch (e) {
+      state = AsyncError(e, StackTrace.current);
+    }
   }
 }
 

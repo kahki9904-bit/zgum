@@ -82,5 +82,18 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+
+	<!-- 이메일 복구 딥링크 — com.zgum.app://email-recovery?link=... -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.zgum.app</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

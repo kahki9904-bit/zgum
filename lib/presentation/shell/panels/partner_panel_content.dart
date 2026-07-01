@@ -71,6 +71,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
       maxWidth: 1080,
     );
     if (picked == null || !mounted) return;
+    FocusScope.of(context).unfocus();
     setState(() => _photos.add(File(picked.path)));
   }
 
@@ -351,7 +352,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
             Positioned(
               left: 24,
               right: 24,
-              bottom: Platform.isIOS ? 0 : 24 + bottomSafe,
+              bottom: Platform.isIOS ? 16 : 24 + bottomSafe,
               child: Center(
                 child: SizedBox(
                   width: MediaQuery.sizeOf(context).width * 0.5,
@@ -383,7 +384,7 @@ class _PartnerPanelContentState extends ConsumerState<PartnerPanelContent> {
           ],
         ),
         if (_photos.length > 1) ...[
-          SizedBox(height: compactHint ? 2 : 6),
+          SizedBox(height: compactHint ? 0 : 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

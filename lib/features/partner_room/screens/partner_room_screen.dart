@@ -608,9 +608,6 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
     super.dispose();
   }
 
-  String _shortDate(DateTime dt) => '${dt.month}월 ${dt.day}일';
-  String _hhmm(DateTime dt) =>
-      '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   String _startDateLabel(DateTime dt) =>
       '${dt.year.toString().substring(2)}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')} ${dt.hour}시${dt.minute.toString().padLeft(2, '0')}분';
 
@@ -860,9 +857,7 @@ class _EventDetailPopupState extends State<_EventDetailPopup> {
                       ),
                     ),
                     Text(
-                      Platform.isAndroid
-                          ? _startDateLabel(event.startsAt)
-                          : '${_shortDate(event.startsAt)}  ${_hhmm(event.startsAt)} ~ ${_hhmm(event.expiresAt)}',
+                      _startDateLabel(event.startsAt),
                       style: const TextStyle(
                           fontSize: 13, color: Color(0xFF555555)),
                     ),

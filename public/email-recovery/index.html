@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Z:GUM 이메일 인증</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #fff; }
+    .card { text-align: center; padding: 40px 28px; }
+    .title { font-size: 22px; font-weight: 800; color: #6D5633; margin-bottom: 12px; }
+    .body { font-size: 14px; color: #888; line-height: 1.7; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="title">Z:GUM</div>
+    <div class="body" id="msg">인증 중입니다...</div>
+  </div>
+  <script>
+    (function() {
+      var fullUrl = window.location.href;
+      var scheme = 'com.zgum.app://email-recovery?link=' + encodeURIComponent(fullUrl);
+      window.location.href = scheme;
+      setTimeout(function() {
+        document.getElementById('msg').innerHTML =
+          '앱이 자동으로 열리지 않으면<br>Z:GUM 앱을 직접 열어주세요.';
+      }, 1500);
+    })();
+  </script>
+</body>
+</html>
