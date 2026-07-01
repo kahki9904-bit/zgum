@@ -445,7 +445,7 @@ class _SheetWrapperState extends ConsumerState<_SheetWrapper> {
           const SizedBox(height: 16),
           TextField(
             controller: _memoCtrl,
-            maxLines: 3,
+            maxLines: Platform.isAndroid ? 2 : 3,
             maxLength: 100,
             style: const TextStyle(fontSize: 14, color: Color(0xFF333333)),
             decoration: InputDecoration(
