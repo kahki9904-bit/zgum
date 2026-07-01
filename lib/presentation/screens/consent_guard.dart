@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 import '../../features/user_room/providers/auth_provider.dart';
+
+const _kLocationShownKey = 'zgum_location_popup_shown';
 
 enum _Step { location, identity, done }
 
@@ -23,6 +26,19 @@ class ConsentGuard extends ConsumerStatefulWidget {
 class _ConsentGuardState extends ConsumerState<ConsentGuard> {
   _Step _step = _Step.location;
 
+  @override
+  void initState() {
+    super.initState();
+    _checkIfShown();
+  }
+
+  Future<void> _checkIfShown() async {
+    final prefs = await SharedPreferences.getInstance();
+    if ((prefs.getBool(_kLocationShownKey) ?? false) && mounted) {
+      setState(() => _step = _Step.done);
+    }
+  }
+
   Future<void> _confirmIdentity() async {
     await ref.read(authStateProvider.notifier).adminVerify();
     if (mounted) setState(() => _step = _Step.location);
@@ -31,12 +47,12 @@ class _ConsentGuardState extends ConsumerState<ConsentGuard> {
   void _skipIdentity() => setState(() => _step = _Step.location);
 
   Future<void> _requestLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kLocationShownKey, true);
     await Permission.locationWhenInUse.request();
     if (!mounted) return;
     setState(() => _step = _Step.done);
   }
-
-  void _denyLocation() => setState(() => _step = _Step.done);
 
   @override
   Widget build(BuildContext context) {
@@ -52,8 +68,7 @@ class _ConsentGuardState extends ConsumerState<ConsentGuard> {
                   onSkip: _skipIdentity,
                 )
               : _LocationCard(
-                  onAllow: _requestLocation,
-                  onDeny: _denyLocation,
+                  onConfirm: _requestLocation,
                 ),
         ),
       ),
@@ -93,13 +108,12 @@ class _GlassCard extends StatelessWidget {
   }
 }
 
-// ── 위치 동의 카드 ────────────────────────────────────────────────────────────
+// ── 위치 안내 카드 ────────────────────────────────────────────────────────────
 
 class _LocationCard extends StatelessWidget {
-  final VoidCallback onAllow;
-  final VoidCallback onDeny;
+  final VoidCallback onConfirm;
 
-  const _LocationCard({required this.onAllow, required this.onDeny});
+  const _LocationCard({required this.onConfirm});
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +147,7 @@ class _LocationCard extends StatelessWidget {
               height: 1),
           const SizedBox(height: 20),
           const Text(
-            '위치 정보 사용 동의',
+            '위치 정보 안내',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: AppColors.actionGoldText,
@@ -152,57 +166,27 @@ class _LocationCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 28),
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 50,
-                  child: OutlinedButton(
-                    onPressed: onDeny,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.actionGoldText,
-                      side: const BorderSide(
-                        color: AppColors.actionGoldBorder,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      '미동의',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: onConfirm,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.actionGold,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: onAllow,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.actionGold,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      '동의',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+              child: const Text(
+                '확인',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ],
+            ),
           ),
         ],
       ),

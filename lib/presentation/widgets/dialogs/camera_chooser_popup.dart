@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../presentation/widgets/dialogs/zgum_dialog.dart';
@@ -28,10 +27,10 @@ Future<void> showCameraChooserPopup(BuildContext context) async {
         child: GestureDetector(
           onTap: () {},
           child: ZGumDialog(
-            heightFactor: Platform.isAndroid ? 0.20 : 0.38,
-            child: Text(
-              '기기 설정에서 카메라 기본값을 해제하면\n원하는 앱으로 찍을 수 있습니다.',
-              textAlign: TextAlign.center,
+            heightFactor: 0.20,
+            child: const Text(
+              '기기 설정에서 카메라 기본값을 해제하면 원하는 앱으로 촬영 가능합니다.',
+              textAlign: TextAlign.left,
               style: ZGumDialogTextStyles.confirmBody,
             ),
           ),

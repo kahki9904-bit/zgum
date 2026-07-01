@@ -7,25 +7,6 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:617839795124:android:6c6fe2ec80899adfadb0e1",
-        "android_client_info": {
-          "package_name": "com.example.zgum"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDfspFfmBN0jE-1ZduudYJwGnzgcbJCVBA"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
         "mobilesdk_app_id": "1:617839795124:android:a1fcaa03a1a44114adb0e1",
         "android_client_info": {
           "package_name": "com.zgum.app"

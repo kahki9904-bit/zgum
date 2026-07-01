@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>위치 팝업 시안</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #f0f0f0;
+    font-family: -apple-system, 'Apple SD Gothic Neo', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 40px;
+    padding: 40px 20px;
+    flex-wrap: wrap;
+  }
+
+  .phone {
+    width: 320px;
+    height: 620px;
+    background: #1a1a2e;
+    border-radius: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    flex-direction: column;
+  }
+
+  .phone-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #555;
+    margin-bottom: 12px;
+    letter-spacing: 0.3px;
+  }
+
+  .card {
+    background: rgba(255,255,255,0.92);
+    border-radius: 24px;
+    border: 1.5px solid rgba(255,255,255,0.75);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+    padding: 32px 28px 28px;
+    width: 260px;
+  }
+
+  .zgum-title {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 800;
+    color: #6D5633;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+
+  .zgum-sub {
+    text-align: center;
+    font-size: 12px;
+    color: rgba(109,86,51,0.56);
+    margin-bottom: 18px;
+  }
+
+  .divider {
+    height: 1px;
+    background: rgba(217,189,122,0.3);
+    margin-bottom: 18px;
+  }
+
+  .section-title {
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: #6D5633;
+    margin-bottom: 10px;
+  }
+
+  .section-body {
+    text-align: center;
+    font-size: 13px;
+    color: rgba(109,86,51,0.78);
+    line-height: 1.75;
+    margin-bottom: 28px;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-outline {
+    flex: 1;
+    height: 48px;
+    border: 1.5px solid #D9BD7A;
+    border-radius: 14px;
+    background: transparent;
+    color: #6D5633;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .btn-solid {
+    flex: 1;
+    height: 48px;
+    border: none;
+    border-radius: 14px;
+    background: #5A452D;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-solid-full {
+    width: 100%;
+    height: 48px;
+    border: none;
+    border-radius: 14px;
+    background: #5A452D;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .tag-before {
+    display: inline-block;
+    background: #e8e8e8;
+    color: #888;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+
+  .tag-after {
+    display: inline-block;
+    background: #e8f4e8;
+    color: #3a8a3a;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+
+  .change-note {
+    font-size: 11px;
+    color: #e05050;
+    text-align: center;
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+
+  .keep-note {
+    font-size: 11px;
+    color: #999;
+    text-align: center;
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+
+<!-- 현재 -->
+<div style="display:flex; flex-direction:column; align-items:center;">
+  <div class="phone-label">현재</div>
+  <div class="phone">
+    <div class="card">
+      <div class="zgum-title">Z:GUM</div>
+      <div class="zgum-sub">개인정보를 수집하지 않습니다.</div>
+      <div class="divider"></div>
+      <div class="section-title">위치 정보 사용 동의</div>
+      <div class="section-body">주변을 발견하는<br>역할만 합니다.</div>
+      <div class="btn-row">
+        <button class="btn-outline">미동의</button>
+        <button class="btn-solid">동의</button>
+      </div>
+    </div>
+  </div>
+  <div class="change-note">매 실행마다 표시됨<br>미동의 선택지 혼란 유발</div>
+</div>
+
+<!-- 변경 후 -->
+<div style="display:flex; flex-direction:column; align-items:center;">
+  <div class="phone-label">변경 후</div>
+  <div class="phone">
+    <div class="card">
+      <div class="zgum-title">Z:GUM</div>
+      <div class="zgum-sub">개인정보를 수집하지 않습니다.</div>
+      <div class="divider"></div>
+      <div class="section-title">위치 정보 안내</div>
+      <div class="section-body">주변을 발견하는<br>역할만 합니다.</div>
+      <button class="btn-solid-full">확인</button>
+    </div>
+  </div>
+  <div class="keep-note">최초 1회만 표시</div>
+</div>
+
+</body>
+</html>

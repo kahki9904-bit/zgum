@@ -1,3 +1,5 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -50,15 +52,35 @@ class _NotificationSettingScreenState
   }
 
   Future<void> _onResume() async {
+    await Future.delayed(const Duration(milliseconds: 300));
     await _loadSettings();
   }
 
+  Future<void> _onToggleNotif() async {
+    final settings = await FirebaseMessaging.instance.getNotificationSettings();
+    final status = settings.authorizationStatus;
+    if (status == AuthorizationStatus.authorized ||
+        status == AuthorizationStatus.provisional) {
+      await openAppSettings();
+    } else {
+      final result = await FirebaseMessaging.instance.requestPermission();
+      if (result.authorizationStatus == AuthorizationStatus.authorized ||
+          result.authorizationStatus == AuthorizationStatus.provisional) {
+        await _loadSettings();
+      } else {
+        await openAppSettings();
+      }
+    }
+  }
+
   Future<void> _loadSettings() async {
-    final status = await Permission.notification.status;
+    final settings = await FirebaseMessaging.instance.getNotificationSettings();
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      _notifGranted = status.isGranted;
+      _notifGranted =
+          settings.authorizationStatus == AuthorizationStatus.authorized ||
+              settings.authorizationStatus == AuthorizationStatus.provisional;
       _eventRadiusM = prefs.getInt(_kEventRadiusKey);
       _friendRadiusM = prefs.getInt(_kFriendRadiusKey);
     });
@@ -121,7 +143,23 @@ class _NotificationSettingScreenState
                   icon: Icons.notifications_outlined,
                   label: '알림 허용',
                   value: _notifGranted,
-                  onToggle: openAppSettings,
+                  onToggle: _onToggleNotif,
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(left: 58),
+                  child: _Rule(),
+                ),
+                const _InfoRow(
+                  icon: Icons.people_outline,
+                  label: '이어진 친구를 감지 합니다.',
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(left: 58),
+                  child: _Rule(),
+                ),
+                const _InfoRow(
+                  icon: Icons.campaign_outlined,
+                  label: '새로운 이벤트를 알려줍니다.',
                 ),
                 // [최신이벤트알림 — 비활성화]
                 // 파트너 이벤트 등록 시 반경 내 사용자에게 FCM 푸시를 보내는 기능.
@@ -308,10 +346,49 @@ class _ToggleRow extends StatelessWidget {
                 style: const TextStyle(color: Color(0xFF333333), fontSize: 15),
               ),
             ),
-            Switch(
+            CupertinoSwitch(
               value: value,
               onChanged: (_) => onToggle(),
-              activeThumbColor: AppColors.actionGold,
+              activeTrackColor: AppColors.actionGoldBright,
+              inactiveTrackColor: const Color(0xFFE0E0E0),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _InfoRow({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SizedBox(
+        height: 44,
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F0F0),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 17, color: const Color(0xFFAAAAAA)),
+            ),
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF888888),
+                fontSize: 13,
+              ),
             ),
           ],
         ),

@@ -18,7 +18,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDfspFfmBN0jE-1ZduudYJwGnzgcbJCVBA',
-    appId: '1:617839795124:android:6c6fe2ec80899adfadb0e1',
+    appId: '1:617839795124:android:a1fcaa03a1a44114adb0e1',
     messagingSenderId: '617839795124',
     projectId: 'zgum-6cc66',
     storageBucket: 'zgum-6cc66.firebasestorage.app',
@@ -30,6 +30,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '617839795124',
     projectId: 'zgum-6cc66',
     storageBucket: 'zgum-6cc66.firebasestorage.app',
-    iosBundleId: 'com.example.zgum',
+    iosBundleId: 'com.zgum.app',
   );
 }
