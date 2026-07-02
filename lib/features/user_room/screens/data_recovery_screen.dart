@@ -534,7 +534,7 @@ class _DataRecoveryScreenState extends ConsumerState<DataRecoveryScreen> {
               ),
               const SizedBox(height: 24),
               ZGumButton(
-                label: _recoverySending ? '전송 중...' : '이메일로 복구하기',
+                label: _recoverySending ? '전송 중...' : '이 기기로 가져오기',
                 onTap: _recoverySending ? () {} : _onRecover,
                 widthFactor: 1,
               ),
