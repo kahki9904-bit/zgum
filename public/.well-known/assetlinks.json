@@ -5,7 +5,9 @@
       "namespace": "android_app",
       "package_name": "com.zgum.app",
       "sha256_cert_fingerprints": [
-        "37:9E:6A:06:41:C0:38:8C:5F:CE:89:D2:65:5F:ED:9A:81:12:91:3C:8D:ED:EA:89:CF:7E:94:25:77:BB:DF:83"
+        "37:9E:6A:06:41:C0:38:8C:5F:CE:89:D2:65:5F:ED:9A:81:12:91:3C:8D:ED:EA:89:CF:7E:94:25:77:BB:DF:83",
+        "2F:AB:9F:C8:F3:7A:A0:45:F0:FA:A8:35:23:D3:2A:F1:C6:FD:27:99:1A:76:5A:62:14:A6:42:99:65:FE:4D:44",
+        "4A:5A:2F:32:D9:3E:7F:19:12:85:95:5F:71:5E:2C:EB:45:89:DF:BB:03:62:78:98:73:B4:4D:F9:B2:B0:6A:05"
       ]
     }
   }

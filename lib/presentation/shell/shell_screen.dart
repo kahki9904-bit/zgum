@@ -352,8 +352,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                                 panelAnim: _panelAnim,
                                 currentPage: _page,
                                 mapReady: _mapReady,
-                                onDragUpdate: _onNowDragUpdate,
-                                onDragEnd: _onNowDragEnd,
                                 onClose: _closeNow,
                               ),
                             ),
@@ -440,8 +438,6 @@ class _NowBundle extends StatelessWidget {
   final Animation<double> panelAnim;
   final int currentPage;
   final bool mapReady;
-  final GestureDragUpdateCallback onDragUpdate;
-  final GestureDragEndCallback onDragEnd;
   final VoidCallback onClose;
 
   const _NowBundle({
@@ -451,8 +447,6 @@ class _NowBundle extends StatelessWidget {
     required this.panelAnim,
     required this.currentPage,
     required this.mapReady,
-    required this.onDragUpdate,
-    required this.onDragEnd,
     required this.onClose,
     this.onToggle,
   });
@@ -480,8 +474,6 @@ class _NowBundle extends StatelessWidget {
       panelAnim: panelAnim,
       mapReady: mapReady,
       onToggle: onToggle,
-      onDragUpdate: onDragUpdate,
-      onDragEnd: onDragEnd,
       content: content,
     );
   }
@@ -564,8 +556,6 @@ class _AndroidNowBundle extends StatelessWidget {
   final Animation<double> panelAnim;
   final bool mapReady;
   final VoidCallback? onToggle;
-  final GestureDragUpdateCallback onDragUpdate;
-  final GestureDragEndCallback onDragEnd;
   final Widget content;
 
   const _AndroidNowBundle({
@@ -574,8 +564,6 @@ class _AndroidNowBundle extends StatelessWidget {
     required this.bottomPadding,
     required this.panelAnim,
     required this.mapReady,
-    required this.onDragUpdate,
-    required this.onDragEnd,
     required this.content,
     this.onToggle,
   });
@@ -584,67 +572,55 @@ class _AndroidNowBundle extends StatelessWidget {
   Widget build(BuildContext context) {
     final touchWidth = MediaQuery.sizeOf(context).width * 0.80;
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onVerticalDragUpdate: onDragUpdate,
-      onVerticalDragEnd: onDragEnd,
-      child: AnimatedBuilder(
-        animation: panelAnim,
-        child: _NowPanelSheet(child: content),
-        builder: (_, sheet) {
-          final capsuleBottom = lerpDouble(
-            panelHeight + kShellPanelFloat + bottomPadding,
-            panelHeight - kShellCapsuleHeight + bottomPadding,
-            panelAnim.value,
-          )!;
+    return AnimatedBuilder(
+      animation: panelAnim,
+      child: _NowPanelSheet(child: content),
+      builder: (_, sheet) {
+        final capsuleBottom = lerpDouble(
+          panelHeight + kShellPanelFloat + bottomPadding,
+          panelHeight - kShellCapsuleHeight + bottomPadding,
+          panelAnim.value,
+        )!;
 
-          return Stack(
-            children: [
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: panelHeight + bottomPadding,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onVerticalDragUpdate: onDragUpdate,
-                  onVerticalDragEnd: onDragEnd,
-                  child: sheet!,
-                ),
-              ),
-              _PanelScrollIndicator(
-                panelHeight: panelHeight,
-                panelAnim: panelAnim,
-              ),
-              Positioned(
-                bottom: capsuleBottom,
-                left: 0,
-                right: 0,
-                height: kShellCapsuleHeight,
-                child: Center(
-                  child: SizedBox(
-                    width: touchWidth,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: onToggle,
-                      onVerticalDragUpdate: onDragUpdate,
-                      onVerticalDragEnd: onDragEnd,
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: _NowCapsule(
-                          isOpen: isOpen,
-                          mapReady: mapReady,
-                          buttonStyle: true,
-                        ),
+        return Stack(
+          children: [
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: panelHeight + bottomPadding,
+              child: sheet!,
+            ),
+            _PanelScrollIndicator(
+              panelHeight: panelHeight,
+              panelAnim: panelAnim,
+            ),
+            Positioned(
+              bottom: capsuleBottom,
+              left: 0,
+              right: 0,
+              height: kShellCapsuleHeight,
+              child: Center(
+                child: SizedBox(
+                  width: touchWidth,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onToggle,
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: _NowCapsule(
+                        isOpen: isOpen,
+                        mapReady: mapReady,
+                        buttonStyle: true,
                       ),
                     ),
                   ),
                 ),
               ),
-            ],
-          );
-        },
-      ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
