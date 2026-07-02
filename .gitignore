@@ -4,6 +4,11 @@ secrets.env
 .env.*
 !*.env.example
 
+# 릴리즈 서명 키 (절대 커밋 금지)
+android/key.properties
+*.jks
+*.keystore
+
 # Miscellaneous
 *.class
 *.log

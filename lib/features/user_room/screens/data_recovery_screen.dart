@@ -6,6 +6,7 @@ import '../../../core/providers/email_recovery_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/deep_link_notifier.dart';
 import '../../../presentation/widgets/dialogs/zgum_dialog.dart';
+import '../providers/check_in_provider.dart';
 
 class DataRecoveryScreen extends ConsumerStatefulWidget {
   const DataRecoveryScreen({super.key});
@@ -35,7 +36,9 @@ class _DataRecoveryScreenState extends ConsumerState<DataRecoveryScreen> {
   void initState() {
     super.initState();
     _authSub = emailAuthCompletedController.stream.listen((_) {
-      if (mounted) ref.invalidate(emailRecoveryStatusProvider);
+      if (!mounted) return;
+      ref.invalidate(emailRecoveryStatusProvider);
+      ref.invalidate(checkInProvider);
     });
     _restorePendingRecovery();
   }
