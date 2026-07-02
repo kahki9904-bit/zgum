@@ -7,7 +7,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
 import 'core/providers/email_recovery_provider.dart';
@@ -138,9 +137,7 @@ Future<void> _handleDeepLink(Uri uri) async {
       await prefs.setString('email_recovery_address', registerEmail); // 완료 후 메인 키에 저장
       await prefs.remove('email_recovery_register_pending');
       await prefs.setBool('email_recovery_pending', false);
-      final token = await getOrCreateDeviceToken(prefs);
-      await FirebaseFirestore.instance.collection('email_recovery_active').doc(registerEmail).set(
-          {'deviceToken': token, 'updatedAt': FieldValue.serverTimestamp()});
+      await writeActiveDevice(registerEmail);
       emailAuthCompletedController.add(null);
     } catch (e) {
       final code = (e as FirebaseAuthException?)?.code;
@@ -148,9 +145,7 @@ Future<void> _handleDeepLink(Uri uri) async {
         await prefs.setString('email_recovery_address', registerEmail);
         await prefs.remove('email_recovery_register_pending');
         await prefs.setBool('email_recovery_pending', false);
-        final token = await getOrCreateDeviceToken(prefs);
-        await FirebaseFirestore.instance.collection('email_recovery_active').doc(registerEmail).set(
-            {'deviceToken': token, 'updatedAt': FieldValue.serverTimestamp()});
+        await writeActiveDevice(registerEmail);
         emailAuthCompletedController.add(null);
       } else if (code == 'credential-already-in-use' || code == 'email-already-in-use') {
         await prefs.remove('email_recovery_register_pending');

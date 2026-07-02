@@ -25,6 +25,18 @@ Future<String> getOrCreateDeviceToken(SharedPreferences prefs) async {
   return token;
 }
 
+// 이 기기를 해당 이메일의 대표(활성) 기기로 Firestore에 기록
+Future<void> writeActiveDevice(String email) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final deviceToken = await getOrCreateDeviceToken(prefs);
+    await FirebaseFirestore.instance
+        .collection(_kFirestoreCollection)
+        .doc(email)
+        .set({'deviceToken': deviceToken, 'updatedAt': FieldValue.serverTimestamp()});
+  } catch (_) {}
+}
+
 // 등록된 적 없는 이메일로 복구 시도 시 발생
 class RecoveryNoDataException implements Exception {
   const RecoveryNoDataException();
@@ -77,17 +89,6 @@ class EmailRecoveryNotifier extends AsyncNotifier<EmailRecoveryState> {
 
     if (pendingRegister != null && isPending) return EmailRecoveryState.pendingVerification;
     return EmailRecoveryState.notRegistered;
-  }
-
-  Future<void> _writeActiveDevice(String email) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final deviceToken = await getOrCreateDeviceToken(prefs);
-      await FirebaseFirestore.instance
-          .collection(_kFirestoreCollection)
-          .doc(email)
-          .set({'deviceToken': deviceToken, 'updatedAt': FieldValue.serverTimestamp()});
-    } catch (_) {}
   }
 
   // 완료된 이메일 반환
@@ -197,7 +198,7 @@ class EmailRecoveryNotifier extends AsyncNotifier<EmailRecoveryState> {
       await prefs.setBool(_kEmailPendingVerification, false);
       await prefs.remove(_kRecoveryPendingAddress);
       await prefs.remove(_kRecoveryPendingLink);
-      await _writeActiveDevice(email); // 이 기기를 마지막 활성 기기로 기록
+      await writeActiveDevice(email); // 이 기기를 마지막 활성 기기로 기록
       state = const AsyncData(EmailRecoveryState.registered);
       return email;
     } on RecoveryNoDataException {
