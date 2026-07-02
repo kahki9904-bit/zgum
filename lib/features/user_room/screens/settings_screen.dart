@@ -64,7 +64,7 @@ class SettingsScreen extends ConsumerWidget {
 
                     _SettingRow(
                       icon: Icons.menu_book_outlined,
-                      label: '지금설명서',
+                      label: 'Z:GUM사용방법',
                       onTap: () => Navigator.push(
                         context,
                         _NoSwipeRoute(builder: (_) => const PopupGuideScreen()),
@@ -315,7 +315,7 @@ class _DataRecoverySettingRow extends ConsumerWidget {
               const SizedBox(width: 14),
               const Expanded(
                 child: Text(
-                  '데이터 복구',
+                  '데이터 관리',
                   style: TextStyle(
                     color: Color(0xFF333333),
                     fontSize: 16,

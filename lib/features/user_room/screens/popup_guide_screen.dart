@@ -37,7 +37,7 @@ class _PopupGuideScreenState extends State<PopupGuideScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.actionGoldText),
         title: const Text(
-          '지금설명서',
+          'Z:GUM사용방법',
           style: TextStyle(
             color: AppColors.actionGoldText,
             fontSize: 16,

@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.zgum.app",
+      "sha256_cert_fingerprints": [
+        "37:9E:6A:06:41:C0:38:8C:5F:CE:89:D2:65:5F:ED:9A:81:12:91:3C:8D:ED:EA:89:CF:7E:94:25:77:BB:DF:83"
+      ]
+    }
+  }
+]

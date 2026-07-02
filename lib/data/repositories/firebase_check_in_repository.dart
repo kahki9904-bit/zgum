@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
@@ -86,7 +87,7 @@ class FirebaseCheckInRepository implements CheckInRepository {
   }
 
   Future<String> _currentUserId() async {
-    return DeviceIdService.getId();
+    return FirebaseAuth.instance.currentUser?.uid ?? await DeviceIdService.getId();
   }
 
   Future<String?> _uploadPhotoIfNeeded(

@@ -37,6 +37,16 @@ class _DataRecoveryScreenState extends ConsumerState<DataRecoveryScreen> {
     _authSub = emailAuthCompletedController.stream.listen((_) {
       if (mounted) ref.invalidate(emailRecoveryStatusProvider);
     });
+    _restorePendingRecovery();
+  }
+
+  Future<void> _restorePendingRecovery() async {
+    final email = await ref
+        .read(emailRecoveryStatusProvider.notifier)
+        .getPendingRecoveryEmail();
+    if (email == null || !mounted) return;
+    _recoveryEmailCtrl.text = email;
+    setState(() => _recoveryPending = true);
   }
 
   @override
@@ -122,7 +132,7 @@ class _DataRecoveryScreenState extends ConsumerState<DataRecoveryScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.actionGoldText),
         title: const Text(
-          '데이터 복구',
+          '데이터 관리',
           style: TextStyle(
             color: AppColors.actionGoldText,
             fontSize: 16,
@@ -140,7 +150,7 @@ class _DataRecoveryScreenState extends ConsumerState<DataRecoveryScreen> {
                 onPageChanged: (p) => setState(() => _currentPage = p),
                 children: [
                   _buildPreservePage(isLoading, isRegistered, isPending),
-                  _buildRecoveryPage(),
+                  _buildRecoveryPage(isRegistered),
                 ],
               ),
             ),
@@ -297,7 +307,7 @@ class _DataRecoveryScreenState extends ConsumerState<DataRecoveryScreen> {
     );
   }
 
-  Widget _buildRecoveryPage() {
+  Widget _buildRecoveryPage(bool isRegistered) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
       child: Column(
@@ -321,7 +331,21 @@ class _DataRecoveryScreenState extends ConsumerState<DataRecoveryScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          if (_recoveryPending) ...[
+          if (isRegistered) ...[
+            FutureBuilder<String?>(
+              future: ref
+                  .read(emailRecoveryStatusProvider.notifier)
+                  .getStoredEmail(),
+              builder: (_, snap) {
+                final email = snap.data ?? '';
+                return _StatusBox(
+                  icon: Icons.check_circle_outline,
+                  color: AppColors.actionGold,
+                  text: '복구가 완료되었습니다.\n$email',
+                );
+              },
+            ),
+          ] else if (_recoveryPending) ...[
             _StatusBox(
               icon: Icons.mark_email_unread_outlined,
               color: const Color(0xFFAAAAAA),
