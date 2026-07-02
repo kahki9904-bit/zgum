@@ -115,25 +115,16 @@ Future<void> _handleDeepLink(Uri uri) async {
 
   final prefs = await SharedPreferences.getInstance();
 
-  // 복구 대기 중인 이메일이 있으면 복구 처리
+  // 복구 대기 중인 이메일이 있으면 — 링크만 저장하고 사용자 확인 대기
   final recoveryEmail = prefs.getString('email_recovery_recovery_address');
   if (recoveryEmail != null) {
-    try {
-      final credential = EmailAuthProvider.credentialWithLink(
-        email: recoveryEmail,
-        emailLink: link,
-      );
-      await FirebaseAuth.instance.signInWithCredential(credential);
-      await prefs.setString('email_recovery_address', recoveryEmail);
-      await prefs.setBool('email_recovery_pending', false);
-      await prefs.remove('email_recovery_recovery_address');
-      emailAuthCompletedController.add(null);
-    } catch (_) {}
+    await prefs.setString('email_recovery_recovery_link', link);
+    emailRecoveryConfirmationController.add(recoveryEmail);
     return;
   }
 
   // 등록 대기 중인 이메일이 있으면 등록 처리
-  final registerEmail = prefs.getString('email_recovery_address');
+  final registerEmail = prefs.getString('email_recovery_register_pending');
   final isPending = prefs.getBool('email_recovery_pending') ?? false;
   if (registerEmail != null && isPending) {
     try {
@@ -142,13 +133,24 @@ Future<void> _handleDeepLink(Uri uri) async {
         emailLink: link,
       );
       await FirebaseAuth.instance.currentUser?.linkWithCredential(credential);
+      await prefs.setString('email_recovery_address', registerEmail); // 완료 후 메인 키에 저장
+      await prefs.remove('email_recovery_register_pending');
       await prefs.setBool('email_recovery_pending', false);
       emailAuthCompletedController.add(null);
     } catch (e) {
       final code = (e as FirebaseAuthException?)?.code;
       if (code == 'provider-already-linked') {
+        await prefs.setString('email_recovery_address', registerEmail);
+        await prefs.remove('email_recovery_register_pending');
         await prefs.setBool('email_recovery_pending', false);
         emailAuthCompletedController.add(null);
+      } else if (code == 'credential-already-in-use' || code == 'email-already-in-use') {
+        await prefs.remove('email_recovery_register_pending');
+        await prefs.remove('email_recovery_pending');
+        emailAuthErrorController.add('already-registered');
+      } else {
+        await prefs.remove('email_recovery_register_pending');
+        await prefs.remove('email_recovery_pending');
       }
     }
   }
