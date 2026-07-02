@@ -90,6 +90,9 @@ class _DataRecoveryScreenState extends ConsumerState<DataRecoveryScreen> {
 
     _restorePendingRecovery();
     _loadStoredEmail();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.invalidate(emailRecoveryStatusProvider);
+    });
   }
 
   Future<void> _loadStoredEmail() async {
@@ -254,6 +257,13 @@ class _DataRecoveryScreenState extends ConsumerState<DataRecoveryScreen> {
     final isLoading = status.isLoading;
     final isPending =
         status.valueOrNull == EmailRecoveryState.pendingVerification;
+
+    // 다른 기기가 가져간 경우 힌트 텍스트 초기화
+    ref.listen(emailRecoveryStatusProvider, (_, next) {
+      if (next.valueOrNull == EmailRecoveryState.notRegistered && _storedEmail != null) {
+        setState(() => _storedEmail = null);
+      }
+    });
 
     return Scaffold(
       backgroundColor: Colors.white,
